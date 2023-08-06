@@ -3,7 +3,7 @@
 #include <EepromSecureData.h>
 #include <Bounce2.h>
 #include <ChannelConfig.h>
-#include <Data.h>
+#include <Globals.h>
 
 
 void setup() {

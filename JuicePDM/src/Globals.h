@@ -1,5 +1,9 @@
-#ifndef Data_h
-#define Data_H
+/* Globals.h Global vars, objects and defines.
+ Copyright (c) 2023 Joe Mann.  All right reserved.
+ */
+
+#ifndef Globals_H
+#define Globals_H
 
 #include <Arduino.h>
 #include <EepromSecureData.h>
@@ -22,6 +26,7 @@ EepromSecureData<ChannelConfig> ch4;
 EepromSecureData<ChannelConfig> ch5;
 EepromSecureData<ChannelConfig> ch6;
 
+/// @brief FlexCAN CAN bus interface on CAN 1
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
 
 #endif
