@@ -25,6 +25,12 @@
 
 #include <Arduino.h>
 
+#define PWM_PERIOD 5000
+#define TURN_OFF_DELAY 220          // Maximum turn off delay to 20% Vs as per datasheet
+#define TURN_ON_DELAY 190           // Maximum turn on delay to 80% Vs as per datasheet
+#define MAX_DUTY 90                 // Maximum PWM duty accounting for turn off delay
+#define MIN_DUTY 10                 // Min duty accounting for turn on delay
+
 /// @brief Defines available channel types
 enum ChannelType {
   DIG_ACT_LOW,                      // Digital input, active low
@@ -39,11 +45,13 @@ enum ChannelType {
 class ChannelConfig {
   public:
     ChannelConfig();                // Constructor
-
-    float SetOutput();     
-
+    
+    float SetOutput();              // Set output according to channel parameters
+    void SetDuty(uint8_t percent);  // Sets the PWM duty percentage
+    
     String ChannelName;             // Channel Name
     ChannelType ChanType;           // Channel type
+    uint8_t PWMSetDuty;             // Current duty set percentage
     bool Enabled;                   // Channel enabled flag
     float CurrentLimitHigh;         // Absolute current limit high
     float CurrentLimitLow;          // Absolute current limit low
@@ -56,6 +64,11 @@ class ChannelConfig {
     uint8_t GroupNumber;            // Group membership number
     uint8_t ControlPin;             // Digital uC control pin 
     uint8_t CurrentSensePin;        // Current sense input pin
+
+    private:
+    elapsedMicros turnOffDelay;
+    elapsedMicros turnOnDelay;
+    elapsedMicros dutyPeriod;
 };
 
 #endif
