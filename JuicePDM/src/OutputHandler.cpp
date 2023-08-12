@@ -1,4 +1,5 @@
-/*  Globals.h Variables, definitions and global objects.
+/*  OutputHandler.cpp Output handler deals with channel output control.
+    Specifically applies to the Infineon BTS50010 High-Side Driver
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,19 +21,38 @@
     THE SOFTWARE.
 */
 
-#ifndef Globals_H
-#define Globals_H
+#include "OutputHandler.h"
 
-#include <Arduino.h>
+OutputHandler::OutputHandler(int numChannels)
+{
+    Channels = new ChannelConfig[numChannels];
+    numberChannels = numChannels;
+}
 
-#define NUM_CHANNELS 6
+void OutputHandler::Initialize()
+{
+    // Initialize default channel names and enabled status
+    for (int i = 0; i < numberChannels; i++)
+    {
+        Channels[i].ChannelName = "Channel " + String(i + 1);
+        Channels[i].Enabled = false;
+    }
 
-// Timers for main tasks
-elapsedMillis task1;
-elapsedMillis task2;
+    // Begin Soft PWM
+    SoftPWMBegin(SOFTPWM_INVERTED);
+}
 
-// Main task timer intervals (milliseconds)
-#define TASK_1_INTERVAL 10
-#define TASK_2_INTERVAL 50
-
-#endif
+void OutputHandler::SetOutputs()
+{
+    for (int i = 0; i < numberChannels; i++)
+    {
+        if (Channels[i].Enabled)
+        {
+            SoftPWMSetPercent(Channels[i].ControlPin, Channels[i].PWMSetDuty);
+        }
+        else
+        {
+            SoftPWMSetPercent(Channels[i].ControlPin, 0);
+        }
+    }
+}

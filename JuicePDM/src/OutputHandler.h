@@ -1,4 +1,4 @@
-/*  Globals.h Variables, definitions and global objects.
+/*  OutputHandler.h Output handler deals with channel output control.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,19 +20,31 @@
     THE SOFTWARE.
 */
 
-#ifndef Globals_H
-#define Globals_H
+#ifndef OutputHandler_H
+#define OutputHandler_H
 
 #include <Arduino.h>
+#include <ChannelConfig.h>
+#include <SoftPWM.h>
 
-#define NUM_CHANNELS 6
+/// @brief Output handler class
+class OutputHandler
+{
+public:
+    OutputHandler(int numChannels); // Constructor
+    
+    /// @brief Channel configurations
+    ChannelConfig* Channels;
 
-// Timers for main tasks
-elapsedMillis task1;
-elapsedMillis task2;
+    /// @brief Initialize channels
+    void Initialize();
 
-// Main task timer intervals (milliseconds)
-#define TASK_1_INTERVAL 10
-#define TASK_2_INTERVAL 50
+    /// @brief Run channels at their set PWM or output state
+    void SetOutputs();
+
+private:
+    /// @brief Number of channels
+    int numberChannels;
+};
 
 #endif

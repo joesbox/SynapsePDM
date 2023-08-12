@@ -26,49 +26,43 @@
 #include <Arduino.h>
 
 #define PWM_PERIOD 5000
-#define TURN_OFF_DELAY 220          // Maximum turn off delay to 20% Vs as per datasheet
-#define TURN_ON_DELAY 190           // Maximum turn on delay to 80% Vs as per datasheet
-#define MAX_DUTY 90                 // Maximum PWM duty accounting for turn off delay
-#define MIN_DUTY 10                 // Min duty accounting for turn on delay
+#define TURN_OFF_DELAY 220 // Maximum turn off delay to 20% Vs as per datasheet
+#define TURN_ON_DELAY 190  // Maximum turn on delay to 80% Vs as per datasheet
+#define MAX_DUTY 90        // Maximum PWM duty accounting for turn off delay
+#define MIN_DUTY 10        // Min duty accounting for turn on delay
 
 /// @brief Defines available channel types
-enum ChannelType {
-  DIG_ACT_LOW,                      // Digital input, active low
-  DIG_ACT_HIGH,                     // Digital input, active high
-  DIG_ACT_LOW_PWM,                  // Digital input, active low, PWM output
-  DIG_ACT_HIGH_PWM,                 // Digital input, active high, PWM output
-  CAN_DIGITAL,                      // CAN bus controlled digital output
-  CAN_PWM                           // CAN bus controlled PWM output
+enum ChannelType
+{
+  DIG_ACT_LOW,      // Digital input, active low
+  DIG_ACT_HIGH,     // Digital input, active high
+  DIG_ACT_LOW_PWM,  // Digital input, active low, PWM output
+  DIG_ACT_HIGH_PWM, // Digital input, active high, PWM output
+  CAN_DIGITAL,      // CAN bus controlled digital output
+  CAN_PWM           // CAN bus controlled PWM output
 };
 
 /// @brief Channel config class
-class ChannelConfig {
-  public:
-    ChannelConfig();                // Constructor
-    
-    float SetOutput();              // Set output according to channel parameters
-    void SetDuty(uint8_t percent);  // Sets the PWM duty percentage
-    
-    String ChannelName;             // Channel Name
-    ChannelType ChanType;           // Channel type
-    uint8_t PWMSetDuty;             // Current duty set percentage
-    bool Enabled;                   // Channel enabled flag
-    float CurrentLimitHigh;         // Absolute current limit high
-    float CurrentLimitLow;          // Absolute current limit low
-    float CurrentThresholdHigh;     // Turn off threshold high
-    float CurrentThresholdLow;      // Turn off threshold low
-    bool Retry;                     // Retry after current threshold reached
-    uint8_t RetryCount;             // Number of retries
-    float RetryDelay;               // Retry delay in seconds
-    bool MultiChannel;              // Grouped with other channels. Allows higher current loads
-    uint8_t GroupNumber;            // Group membership number
-    uint8_t ControlPin;             // Digital uC control pin 
-    uint8_t CurrentSensePin;        // Current sense input pin
+class ChannelConfig
+{
+public:
+  ChannelConfig(); // Constructor
 
-    private:
-    elapsedMicros turnOffDelay;
-    elapsedMicros turnOnDelay;
-    elapsedMicros dutyPeriod;
+  String ChannelName;         // Channel Name
+  ChannelType ChanType;       // Channel type
+  uint8_t PWMSetDuty;         // Current duty set percentage
+  bool Enabled;               // Channel enabled flag
+  float CurrentLimitHigh;     // Absolute current limit high
+  float CurrentLimitLow;      // Absolute current limit low
+  float CurrentThresholdHigh; // Turn off threshold high
+  float CurrentThresholdLow;  // Turn off threshold low
+  bool Retry;                 // Retry after current threshold reached
+  uint8_t RetryCount;         // Number of retries
+  float RetryDelay;           // Retry delay in seconds
+  bool MultiChannel;          // Grouped with other channels. Allows higher current loads
+  uint8_t GroupNumber;        // Group membership number
+  uint8_t ControlPin;         // Digital uC control pin
+  uint8_t CurrentSensePin;    // Current sense input pin
 };
 
 #endif
