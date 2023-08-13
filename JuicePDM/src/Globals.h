@@ -1,4 +1,4 @@
-/*  Globals.h Variables, definitions and global objects.
+/*  Globals.h Global variables, definitions and functions.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -24,15 +24,43 @@
 #define Globals_H
 
 #include <Arduino.h>
+#include <ChannelConfig.h>
 
+// Number of hardware output channels
 #define NUM_CHANNELS 6
 
+// Channel digital output pins
+const uint8_t channelOutputPins[NUM_CHANNELS] = {5, 4, 3, 2, 1, 0};
+
+// Channel analog current sense pins
+const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {A1, A10, A17, A16, A15, A14};  
+
+// Delay (microseconds) before makking an analog reading
+#define ANALOG_DELAY 250
+
+// Microsecond representation of a CPU tick
+#define CPU_TICK_MICROS (1E6/F_CPU)
+
+// Interval in microseconds for taking analog readings
+#define ANALOG_READ_INTERVAL 50
+
+// 8-bit value that determines the priority of the analog read timer. May be useful to tune this value.
+#define ANALOG_READ_TIMER_PRIORITY 128
+
+// Maximum per-channel current supported by hardware. No channel can exceed this limit.
+#define CURRENT_MAX 13000
+
 // Timers for main tasks
-elapsedMillis task1;
-elapsedMillis task2;
+extern elapsedMillis task1;
+extern elapsedMillis task2;
 
 // Main task timer intervals (milliseconds)
 #define TASK_1_INTERVAL 10
 #define TASK_2_INTERVAL 50
+
+/// @brief Channel configurations
+extern ChannelConfig Channels[NUM_CHANNELS];
+
+void InititalizeData();
 
 #endif

@@ -1,4 +1,4 @@
-/*  OutputHandler.h Output handler deals with channel output control.
+/*  Globals.h Global variables, definitions and functions.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,31 +20,23 @@
     THE SOFTWARE.
 */
 
-#ifndef OutputHandler_H
-#define OutputHandler_H
+#include "Globals.h"
+elapsedMillis task1;
+elapsedMillis task2;
+ChannelConfig Channels[NUM_CHANNELS];
 
-#include <Arduino.h>
-#include <SoftPWM.h>
-#include <ADC.h>
-#include <IntervalTimer.h>
-#include <Globals.h>
+/// @brief Inititlise global data
+void InititalizeData()
+{
+    // Initialise channels to default values, ensure they are initially off
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+        Channels[i].ChannelName = "Channel " + String(i + 1);
+        Channels[i].Enabled = false;
+        Channels[i].ControlPin = channelOutputPins[i];
+        Channels[i].CurrentSensePin = channelCurrentSensePins[i];
 
-// 50µs iterval timer checks output status flags set by each channel ISR. If the appropriate time has passed since turning on 
-// the output (250µs for the BTS50010. See the datasheet), the analog reading from the current sense pin can be read
-extern IntervalTimer analogReadTImer;
-
-/// @brief Run channels at their set PWM or output state
-void Run();
-
-// Channel ISRs which fire on the rising edge of an output
-void CH1_ISR();
-void CH2_ISR();
-void CH3_ISR();
-void CH4_ISR();
-void CH5_ISR();
-void CH6_ISR();
-
-// Analog read function
-void ReadAnalogs();
-
-#endif
+        pinMode(Channels[i].ControlPin, OUTPUT);
+        digitalWrite(Channels[i].ControlPin, LOW);
+    }
+}

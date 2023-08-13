@@ -4,14 +4,14 @@
 #include <Globals.h>
 #include <OutputHandler.h>
 
-OutputHandler outHandler(NUM_CHANNELS);
-
 void setup()
 {
   Serial.begin(9600);
-  outHandler.Initialize();
-  delay(10);
-  
+  InititalizeData();
+  Channels[1].ChanType = DIG_ACT_HIGH_PWM;
+  Channels[1].Enabled = true;
+  Channels[1].PWMSetDuty = 255;
+  Run();
 }
 
 void loop()
@@ -19,7 +19,7 @@ void loop()
   if (task1 >= 1000)
   {
     task1 = 0;
-    Serial.print("Channel 1 name: ");
-  Serial.println(outHandler.Channels[0].ChannelName);
+    Serial.print("Channel 1 analog: ");
+    Serial.println(CPU_TICK_MICROS, 32);
   }
 }

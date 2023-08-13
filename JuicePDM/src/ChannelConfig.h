@@ -52,6 +52,8 @@ public:
   ChannelType ChanType;       // Channel type
   uint8_t PWMSetDuty;         // Current duty set percentage
   bool Enabled;               // Channel enabled flag
+  int AnalogRaw;              // Raw analog value. Used for calibration
+  float CurrentValue;         // Active current value
   float CurrentLimitHigh;     // Absolute current limit high
   float CurrentLimitLow;      // Absolute current limit low
   float CurrentThresholdHigh; // Turn off threshold high
