@@ -28,12 +28,21 @@
 #include <ADC.h>
 #include <IntervalTimer.h>
 #include <Globals.h>
+#include <TeensyTimerTool.h>
 
-// 50µs iterval timer checks output status flags set by each channel ISR. If the appropriate time has passed since turning on 
+using namespace TeensyTimerTool;
+
+// Checks output status flags set by each channel ISR. If the appropriate time has passed since turning on 
 // the output (250µs for the BTS50010. See the datasheet), the analog reading from the current sense pin can be read
-extern IntervalTimer analogReadTImer;
+extern PeriodicTimer analogPWMReadTImer;
 
-/// @brief Run channels at their set PWM or output state
+// Digital read timer reads the current sense pin associated with the channel after the maximum turn on delay for the HSD
+extern PeriodicTimer analogDigitalReadTImer;
+
+// Calculates real (ampere) current values for each channel, taking into account configured calibrations
+extern PeriodicTimer calculateAnalogsTimer;
+
+// Run channels at their set PWM or output state
 void Run();
 
 // Channel ISRs which fire on the rising edge of an output
@@ -44,7 +53,13 @@ void CH4_ISR();
 void CH5_ISR();
 void CH6_ISR();
 
-// Analog read function
-void ReadAnalogs();
+// Analog read function. Applies to PWM channels only.
+void ReadPWMAnalogs();
+
+// Analog read function. Applies to digital channels only.
+void ReadDigitalAnalogs();
+
+// Calculate channel current in amps
+void CalculateAnalogs();
 
 #endif

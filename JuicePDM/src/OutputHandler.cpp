@@ -14,7 +14,7 @@
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE,
     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -27,7 +27,11 @@ volatile bool channelOutputStatus[NUM_CHANNELS];
 
 volatile uint32_t analogReadIntervals[NUM_CHANNELS];
 
-IntervalTimer analogReadTImer;
+PeriodicTimer analogPWMReadTImer;
+
+PeriodicTimer analogDigitalReadTImer;
+
+PeriodicTimer calculateAnalogsTimer;
 
 void Run()
 {
@@ -39,11 +43,11 @@ void Run()
   attachInterrupt(Channels[4].ControlPin, CH5_ISR, RISING);
   attachInterrupt(Channels[5].ControlPin, CH6_ISR, RISING);
 
-  // Analog read interval timer start
-  analogReadTImer.begin(ReadAnalogs, ANALOG_READ_INTERVAL);
+  // Analog PWM read interval timer start
+  analogPWMReadTImer.begin(ReadPWMAnalogs, ANALOG_PWM_READ_INTERVAL, true);
 
-  // Sets the interrupt priority for the analog read timer
-  analogReadTImer.priority(ANALOG_READ_TIMER_PRIORITY);
+  // Analog digital read interval timer start
+  analogDigitalReadTImer.begin(ReadDigitalAnalogs, ANALOG_DIGITAL_READ_INTERVAL, true);
 
   // Start PWM
   SoftPWMBegin();
@@ -71,6 +75,7 @@ void Run()
       if (Channels[i].Enabled)
       {
         digitalWrite(Channels[i].ControlPin, HIGH);
+        analogReadIntervals[i] = ARM_DWT_CYCCNT;
       }
       else
       {
@@ -84,20 +89,43 @@ void Run()
   }
 }
 
-/// @brief Take analog readings at the pre-defined interval
-void ReadAnalogs()
-{  
+/// @brief Take analog readings at the pre-defined interval for PWM-enabled channels
+void ReadPWMAnalogs()
+{
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
     if (channelOutputStatus[i])
     {
+      // Ensure the maximum turn on time for the BTS50010 has passed before taking an analog reading. Reset the output status flag.
       if (ARM_DWT_CYCCNT - analogReadIntervals[i] >= ANALOG_DELAY / CPU_TICK_MICROS)
       {
-        // TODO: implement analog read
+        Channels[i].AnalogRaw = analogRead(Channels[i].CurrentSensePin);
+        channelOutputStatus[i] = false;
       }
     }
   }
+}
 
+/// @brief Take analog readings for digital-enabled channels
+void ReadDigitalAnalogs()
+{
+  for (int i = 0; i < NUM_CHANNELS; i++)
+  {
+    switch (Channels[i].ChanType)
+    {
+    case DIG_ACT_LOW:
+    case DIG_ACT_HIGH:
+    case CAN_DIGITAL:
+      // Ensure the maximum turn on time for the BTS50010 has passed before taking an analog reading.
+      if (ARM_DWT_CYCCNT - analogReadIntervals[i] >= ANALOG_DELAY / CPU_TICK_MICROS)
+      {
+        Channels[i].AnalogRaw = analogRead(Channels[i].CurrentSensePin);
+      }
+      break;
+    default:
+      break;
+    }
+  }
 }
 
 /// @brief Channel 1 ISR. Sets the channel output status to true and sets the clock cycle counter value

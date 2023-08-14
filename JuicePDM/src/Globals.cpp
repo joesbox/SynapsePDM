@@ -32,9 +32,11 @@ void InititalizeData()
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
         Channels[i].ChannelName = "Channel " + String(i + 1);
+        Channels[i].ChanType = DIG_ACT_HIGH;
         Channels[i].Enabled = false;
         Channels[i].ControlPin = channelOutputPins[i];
         Channels[i].CurrentSensePin = channelCurrentSensePins[i];
+        Channels[i].CurrentSenseValue = DEFAULT_DK_VALUE;
 
         pinMode(Channels[i].ControlPin, OUTPUT);
         digitalWrite(Channels[i].ControlPin, LOW);

@@ -29,38 +29,48 @@
 // Number of hardware output channels
 #define NUM_CHANNELS 6
 
-// Channel digital output pins
-const uint8_t channelOutputPins[NUM_CHANNELS] = {5, 4, 3, 2, 1, 0};
-
-// Channel analog current sense pins
-const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {A1, A10, A17, A16, A15, A14};  
-
 // Delay (microseconds) before makking an analog reading
 #define ANALOG_DELAY 250
 
 // Microsecond representation of a CPU tick
 #define CPU_TICK_MICROS (1E6/F_CPU)
 
-// Interval in microseconds for taking analog readings
-#define ANALOG_READ_INTERVAL 50
+// Interval in microseconds for taking PWM analog readings
+#define ANALOG_PWM_READ_INTERVAL 50
 
-// 8-bit value that determines the priority of the analog read timer. May be useful to tune this value.
-#define ANALOG_READ_TIMER_PRIORITY 128
+// Interval in microseconds for taking PWM analog readings. Must be frequent enough to capture over or under current events.
+#define ANALOG_DIGITAL_READ_INTERVAL 20000
+
+// Interval in microseconds for taking PWM analog readings. Should be the same as the read interval or greater.
+#define ANALOG_CALCULATION_INTERVAL 20000
+
+// Maximum raw current sense value whereby a fault has been detected by the HSD (short to Vs, short to GND or overtemperature)
+#define CURRENT_SENSE_FAULT 1024
 
 // Maximum per-channel current supported by hardware. No channel can exceed this limit.
 #define CURRENT_MAX 13000
 
-// Timers for main tasks
-extern elapsedMillis task1;
-extern elapsedMillis task2;
+// Default current sense ratio as specified by the BTS50010 datasheet
+#define DEFAULT_DK_VALUE 38000
 
 // Main task timer intervals (milliseconds)
 #define TASK_1_INTERVAL 10
 #define TASK_2_INTERVAL 50
 
-/// @brief Channel configurations
+// Channel digital output pins
+const uint8_t channelOutputPins[NUM_CHANNELS] = {5, 4, 3, 2, 1, 0};
+
+// Channel analog current sense pins
+const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {A1, A10, A17, A16, A15, A14};  
+
+// Timers for main tasks
+extern elapsedMillis task1;
+extern elapsedMillis task2;
+
+// Channel configurations
 extern ChannelConfig Channels[NUM_CHANNELS];
 
+// Initialise global data to known defaults
 void InititalizeData();
 
 #endif

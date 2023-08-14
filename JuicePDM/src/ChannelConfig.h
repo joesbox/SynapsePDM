@@ -52,7 +52,7 @@ public:
   ChannelType ChanType;       // Channel type
   uint8_t PWMSetDuty;         // Current duty set percentage
   bool Enabled;               // Channel enabled flag
-  int AnalogRaw;              // Raw analog value. Used for calibration
+  volatile int AnalogRaw;     // Raw analog value. Used for calibration
   float CurrentValue;         // Active current value
   float CurrentLimitHigh;     // Absolute current limit high
   float CurrentLimitLow;      // Absolute current limit low
@@ -65,6 +65,10 @@ public:
   uint8_t GroupNumber;        // Group membership number
   uint8_t ControlPin;         // Digital uC control pin
   uint8_t CurrentSensePin;    // Current sense input pin
+  int CurrentSenseCal1;       // Current sense calibration point 1 (IL1)
+  int CurrentSenseCal2;       // Current sense calibration point 2 (IL2)
+  int CurrentSenseValue;      // Calculated current sense value (dkILIS)
+
 };
 
 #endif
