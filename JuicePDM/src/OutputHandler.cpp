@@ -92,6 +92,10 @@ void Run()
 /// @brief Take analog readings at the pre-defined interval for PWM-enabled channels
 void ReadPWMAnalogs()
 {
+  #ifdef DEBUG
+  digitalWrite(ANALOG_READ_DEBUG_PIN, HIGH);
+  #endif
+
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
     if (channelOutputStatus[i])
@@ -104,6 +108,9 @@ void ReadPWMAnalogs()
       }
     }
   }
+  #ifdef DEBUG
+  digitalWrite(ANALOG_READ_DEBUG_PIN, LOW);
+  #endif
 }
 
 /// @brief Take analog readings for digital-enabled channels

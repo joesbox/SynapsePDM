@@ -38,8 +38,9 @@ void setup()
   InititalizeData();
   Channels[1].ChanType = DIG_ACT_HIGH_PWM;
   Channels[1].Enabled = true;
-  Channels[1].PWMSetDuty = 20;
+  Channels[1].PWMSetDuty = 10;
   Run();
+  
 }
 
 void loop()

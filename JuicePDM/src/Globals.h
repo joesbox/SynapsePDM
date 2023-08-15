@@ -30,7 +30,8 @@
 #define NUM_CHANNELS 6
 
 // Delay (microseconds) before makking an analog reading
-#define ANALOG_DELAY 250
+
+#define ANALOG_DELAY 100 
 
 // Microsecond representation of a CPU tick
 #define CPU_TICK_MICROS (1E6/F_CPU)
@@ -56,6 +57,12 @@
 // Main task timer intervals (milliseconds)
 #define TASK_1_INTERVAL 10
 #define TASK_2_INTERVAL 50
+
+// Unused pin that can be used to debug analog read timings which are critical to obtaining correct current measurements on PWM channels
+#define ANALOG_READ_DEBUG_PIN 20
+
+// Debug flag
+#define DEBUG
 
 // Channel digital output pins
 const uint8_t channelOutputPins[NUM_CHANNELS] = {5, 4, 3, 2, 1, 0};

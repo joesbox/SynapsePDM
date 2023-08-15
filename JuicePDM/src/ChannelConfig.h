@@ -51,23 +51,23 @@ public:
   String ChannelName;         // Channel Name
   ChannelType ChanType;       // Channel type
   uint8_t PWMSetDuty;         // Current duty set percentage
-  bool Enabled;               // Channel enabled flag
+  uint8_t Enabled;               // Channel enabled flag
   volatile int AnalogRaw;     // Raw analog value. Used for calibration
   float CurrentValue;         // Active current value
   float CurrentLimitHigh;     // Absolute current limit high
   float CurrentLimitLow;      // Absolute current limit low
   float CurrentThresholdHigh; // Turn off threshold high
   float CurrentThresholdLow;  // Turn off threshold low
-  bool Retry;                 // Retry after current threshold reached
+  uint8_t Retry;                 // Retry after current threshold reached
   uint8_t RetryCount;         // Number of retries
   float RetryDelay;           // Retry delay in seconds
-  bool MultiChannel;          // Grouped with other channels. Allows higher current loads
+  uint8_t MultiChannel;          // Grouped with other channels. Allows higher current loads
   uint8_t GroupNumber;        // Group membership number
   uint8_t ControlPin;         // Digital uC control pin
   uint8_t CurrentSensePin;    // Current sense input pin
-  int CurrentSenseCal1;       // Current sense calibration point 1 (IL1)
-  int CurrentSenseCal2;       // Current sense calibration point 2 (IL2)
-  int CurrentSenseValue;      // Calculated current sense value (dkILIS)
+  uint32_t CurrentSenseCal1;       // Current sense calibration point 1 (IL1)
+  uint32_t CurrentSenseCal2;       // Current sense calibration point 2 (IL2)
+  uint32_t CurrentSenseValue;      // Calculated current sense value (dkILIS)
 
 };
 
