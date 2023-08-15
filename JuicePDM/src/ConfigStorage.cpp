@@ -1,4 +1,4 @@
-/*  Globals.h Global variables, definitions and functions.
+/*  ConfigStorage.cpp Functions and variables for EEPROM storage of configuration data.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,27 +20,10 @@
     THE SOFTWARE.
 */
 
-#include "Globals.h"
-elapsedMillis task1;
-elapsedMillis task2;
-ChannelConfig Channels[NUM_CHANNELS];
+#include "ConfigStorage.h"
 
-/// @brief Inititlise global data
-void InititalizeData()
+/// @brief Saves all current config data
+void SaveConfig()
 {
-    // Initialise channels to default values, ensure they are initially off
-    for (int i = 0; i < NUM_CHANNELS; i++)
-    {
-        Channels[i].ChannelName = "Channel " + String(i + 1);
-        Channels[i].ChanType = DIG_ACT_HIGH;
-        Channels[i].Enabled = false;
-        Channels[i].ControlPin = channelOutputPins[i];
-        Channels[i].CurrentSensePin = channelCurrentSensePins[i];
-        Channels[i].CurrentSenseValue = DEFAULT_DK_VALUE;
-        Channels[i].InputControlPin = channelInputPins[i];
-        pinMode(Channels[i].InputControlPin, INPUT);
 
-        pinMode(Channels[i].ControlPin, OUTPUT);
-        digitalWrite(Channels[i].ControlPin, LOW);
-    }
 }

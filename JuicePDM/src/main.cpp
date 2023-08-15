@@ -31,6 +31,7 @@
 #include <Bounce2.h>
 #include <Globals.h>
 #include <OutputHandler.h>
+#include <InputHandler.h>
 
 void setup()
 {
@@ -39,8 +40,7 @@ void setup()
   Channels[1].ChanType = DIG_ACT_HIGH_PWM;
   Channels[1].Enabled = true;
   Channels[1].PWMSetDuty = 10;
-  Run();
-  
+  HandleOutputs();  
 }
 
 void loop()
@@ -50,5 +50,11 @@ void loop()
     task1 = 0;
     Serial.print("Channel 1 analog: ");
     Serial.println(Channels[1].AnalogRaw);
+  }
+  
+  if (task2 >= TASK_2_INTERVAL)
+  {
+    // Read input channel status
+    HandleInputs();    
   }
 }

@@ -33,7 +33,8 @@ PeriodicTimer analogDigitalReadTImer;
 
 PeriodicTimer calculateAnalogsTimer;
 
-void Run()
+/// @brief Handle output control
+void HandleOutputs()
 {
   // Configure output pin interrupts on the rising edge for PWM outputs
   attachInterrupt(Channels[0].ControlPin, CH1_ISR, RISING);
@@ -133,6 +134,12 @@ void ReadDigitalAnalogs()
       break;
     }
   }
+}
+
+/// @brief Calculate real current value in amps
+void CalculateAnalogs()
+{
+  // TODO: implement current reading formula
 }
 
 /// @brief Channel 1 ISR. Sets the channel output status to true and sets the clock cycle counter value

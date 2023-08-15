@@ -26,7 +26,6 @@
 #include <Arduino.h>
 #include <SoftPWM.h>
 #include <ADC.h>
-#include <IntervalTimer.h>
 #include <Globals.h>
 #include <TeensyTimerTool.h>
 
@@ -43,7 +42,7 @@ extern PeriodicTimer analogDigitalReadTImer;
 extern PeriodicTimer calculateAnalogsTimer;
 
 // Run channels at their set PWM or output state
-void Run();
+void HandleOutputs();
 
 // Channel ISRs which fire on the rising edge of an output
 void CH1_ISR();

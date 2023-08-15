@@ -29,9 +29,15 @@
 // Number of hardware output channels
 #define NUM_CHANNELS 6
 
-// Delay (microseconds) before makking an analog reading
-
+// Delay (microseconds) before making an analog reading
+// TODO: measure actual turn on delay and adjust this value
 #define ANALOG_DELAY 100 
+
+// Maximum PWM duty accounting for turn off delay. Above this value, a PWM channel will be set to 100% duty
+#define MAX_DUTY 90        
+
+// Min duty accounting for turn on delay. Above this value, a PWM channel will be set to 0% duty
+#define MIN_DUTY 10        
 
 // Microsecond representation of a CPU tick
 #define CPU_TICK_MICROS (1E6/F_CPU)
@@ -56,13 +62,16 @@
 
 // Main task timer intervals (milliseconds)
 #define TASK_1_INTERVAL 10
-#define TASK_2_INTERVAL 50
+#define TASK_2_INTERVAL 20
 
 // Unused pin that can be used to debug analog read timings which are critical to obtaining correct current measurements on PWM channels
 #define ANALOG_READ_DEBUG_PIN 20
 
 // Debug flag
 #define DEBUG
+
+// Channel digital input pins (defaults)
+const uint8_t channelInputPins[NUM_CHANNELS] = {24, 25, 26, 29, 28, 27};
 
 // Channel digital output pins
 const uint8_t channelOutputPins[NUM_CHANNELS] = {5, 4, 3, 2, 1, 0};
