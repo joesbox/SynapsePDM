@@ -1,4 +1,4 @@
-/*  ConfigStorage.h Functions and variables for EEPROM storage of configuration data.
+/*  ConfigStorage.h Functions and variables for EEPROM storage and SD data logging.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,15 +20,39 @@
     THE SOFTWARE.
 */
 
-#ifndef ConfigStorage_H
-#define ConfigStorage_H
+#ifndef Storage_H
+#define Storage_H
 
 #include <Arduino.h>
 #include <Globals.h>
 #include <CRC32.h>
+#include <ChannelConfig.h>
+#include <System.h>
 
 // Save configuration data
 void SaveConfig();
 
+// Load config data
+void LoadConfig();
+
+// Log data to SD
+void LogData();
+
+// Structure of stored config data
+struct __attribute__((packed)) ConfigStruct
+{
+    ChannelConfig channelConfigStored[NUM_CHANNELS];
+    SystemParameters sysParams;
+};
+
+// Union for reading and writing from and to EEPROM storage
+union ConfigUnion
+{
+    ConfigStruct data;
+    byte dataBytes[sizeof(ConfigStruct)];
+};
+
+// Config storage union
+extern ConfigUnion ConfigData;
 
 #endif

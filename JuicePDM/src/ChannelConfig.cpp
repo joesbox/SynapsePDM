@@ -21,5 +21,3 @@
     THE SOFTWARE.
 */
 #include "ChannelConfig.h"
-
-ChannelConfig::ChannelConfig(){}

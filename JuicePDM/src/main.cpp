@@ -32,6 +32,7 @@
 #include <Globals.h>
 #include <OutputHandler.h>
 #include <InputHandler.h>
+#include <Storage.h>
 
 void setup()
 {
@@ -40,7 +41,9 @@ void setup()
   Channels[1].ChanType = DIG_ACT_HIGH_PWM;
   Channels[1].Enabled = true;
   Channels[1].PWMSetDuty = 10;
-  HandleOutputs();  
+  HandleOutputs();
+  SaveConfig();
+  Serial.println(ConfigData.data.channelConfigStored[0].ControlPin);
 }
 
 void loop()
@@ -48,13 +51,15 @@ void loop()
   if (task1 >= 1000)
   {
     task1 = 0;
-    Serial.print("Channel 1 analog: ");
-    Serial.println(Channels[1].AnalogRaw);
+   // Serial.print("Channel 1 analog: ");
+   // Serial.println(Channels[1].AnalogRaw);
+   Serial.println(ConfigData.data.channelConfigStored[0].ControlPin);
   }
   
   if (task2 >= TASK_2_INTERVAL)
   {
     // Read input channel status
     HandleInputs();    
+    
   }
 }

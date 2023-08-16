@@ -1,4 +1,4 @@
-/*  ConfigStorage.cpp Functions and variables for EEPROM storage of configuration data.
+/*  System.cpp System variables, functions and system wide data handling.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -20,10 +20,6 @@
     THE SOFTWARE.
 */
 
-#include "ConfigStorage.h"
+#include "System.h"
 
-/// @brief Saves all current config data
-void SaveConfig()
-{
-
-}
+SystemParameters SystemParams;

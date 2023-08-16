@@ -36,33 +36,28 @@ enum ChannelType
   CAN_PWM           // CAN bus controlled PWM output
 };
 
-/// @brief Channel config class
-class ChannelConfig
+/// @brief Channel config structure
+struct __attribute__((packed)) ChannelConfig
 {
-public:
-  ChannelConfig(); // Constructor
-
-  String ChannelName;               // Channel Name
-  ChannelType ChanType;             // Channel type
-  uint8_t PWMSetDuty;               // Current duty set percentage
-  uint8_t Enabled;                  // Channel enabled flag
-  volatile int AnalogRaw;           // Raw analog value. Used for calibration
-  float CurrentValue;               // Active current value
-  float CurrentLimitHigh;           // Absolute current limit high
-  float CurrentThresholdHigh;       // Turn off threshold high
-  float CurrentThresholdLow;        // Turn off threshold low (open circuit detection)
-  uint8_t Retry;                    // Retry after current threshold reached
-  uint8_t RetryCount;               // Number of retries
-  float RetryDelay;                 // Retry delay in seconds
-  uint8_t MultiChannel;             // Grouped with other channels. Allows higher current loads
-  uint8_t GroupNumber;              // Group membership number
-  uint8_t ControlPin;               // Digital uC control pin
-  uint8_t CurrentSensePin;          // Current sense input pin
-  uint8_t InputControlPin;          // Digital input control pin (digital channels only)
-  uint32_t CurrentSenseCal1;        // Current sense calibration point 1 (IL1)
-  uint32_t CurrentSenseCal2;        // Current sense calibration point 2 (IL2)
-  uint32_t CurrentSenseValue;       // Calculated current sense value (dkILIS)
-
+  ChannelType ChanType;       // Channel type
+  uint8_t PWMSetDuty;         // Current duty set percentage
+  uint8_t Enabled;            // Channel enabled flag
+  volatile int AnalogRaw;     // Raw analog value. Used for calibration
+  float CurrentValue;         // Active current value
+  float CurrentLimitHigh;     // Absolute current limit high
+  float CurrentThresholdHigh; // Turn off threshold high
+  float CurrentThresholdLow;  // Turn off threshold low (open circuit detection)
+  uint8_t Retry;              // Retry after current threshold reached
+  uint8_t RetryCount;         // Number of retries
+  float RetryDelay;           // Retry delay in seconds
+  uint8_t MultiChannel;       // Grouped with other channels. Allows higher current loads
+  uint8_t GroupNumber;        // Group membership number
+  uint8_t ControlPin;         // Digital uC control pin
+  uint8_t CurrentSensePin;    // Current sense input pin
+  uint8_t InputControlPin;    // Digital input control pin (digital channels only)
+  uint32_t CurrentSenseCal1;  // Current sense calibration point 1 (IL1)
+  uint32_t CurrentSenseCal2;  // Current sense calibration point 2 (IL2)
+  uint32_t CurrentSenseValue; // Calculated current sense value (dkILIS)
 };
 
 #endif

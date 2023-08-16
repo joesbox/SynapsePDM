@@ -70,6 +70,15 @@
 // Debug flag
 #define DEBUG
 
+// Battery measurement analog input pin
+#define VBATT_ANALOG_PIN A7
+
+// CAN bus termination resistor enable pin
+#define CAN_BUS_RESISTOR_ENABLE 6
+
+// Battery voltage threshold at which power loss is immenent and logging should be stopped
+#define LOGGING_VBATT_THRESHOLD 9.0
+
 // Channel digital input pins (defaults)
 const uint8_t channelInputPins[NUM_CHANNELS] = {24, 25, 26, 29, 28, 27};
 
