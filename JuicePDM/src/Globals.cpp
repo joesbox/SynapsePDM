@@ -38,7 +38,6 @@ void InititalizeData()
         Channels[i].CurrentSenseValue = DEFAULT_DK_VALUE;
         Channels[i].InputControlPin = channelInputPins[i];
         pinMode(Channels[i].InputControlPin, INPUT);
-
         pinMode(Channels[i].ControlPin, OUTPUT);
         digitalWrite(Channels[i].ControlPin, LOW);
     }

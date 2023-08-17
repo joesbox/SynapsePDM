@@ -23,3 +23,17 @@
 #include "System.h"
 
 SystemParameters SystemParams;
+
+void UpdateSystem()
+{   
+    // Get system temperature
+    SystemParams.SystemTemperature = tempmonGetTemp();
+
+    // Get battery voltage analog reading
+    int raw = analogRead(VBATT_ANALOG_PIN);
+
+    // Calculate battery voltage
+    SystemParams.VBatt = raw * 0.003225f;
+
+
+}

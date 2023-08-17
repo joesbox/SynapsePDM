@@ -1,7 +1,7 @@
 /*  JuicePDM - CAN enabled Power Distribution Module with 6 channels.
 
     Code herin specifically applies to the application of Infineon BTS50010 High-Side Drivers
-    
+
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -43,7 +43,6 @@ void setup()
   Channels[1].PWMSetDuty = 10;
   HandleOutputs();
   SaveConfig();
-  Serial.println(ConfigData.data.channelConfigStored[0].ControlPin);
 }
 
 void loop()
@@ -51,15 +50,13 @@ void loop()
   if (task1 >= 1000)
   {
     task1 = 0;
-   // Serial.print("Channel 1 analog: ");
-   // Serial.println(Channels[1].AnalogRaw);
-   Serial.println(ConfigData.data.channelConfigStored[0].ControlPin);
+
+    Serial.println(ConfigData.data.channelConfigStored[0].ControlPin);
   }
-  
+
   if (task2 >= TASK_2_INTERVAL)
   {
     // Read input channel status
-    HandleInputs();    
-    
+    HandleInputs();
   }
 }

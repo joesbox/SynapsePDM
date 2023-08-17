@@ -33,8 +33,10 @@ struct __attribute__((packed)) SystemParameters
     uint8_t CANResEnabled;                  // CAN bus termination resistor enabled
     float VBatt;                            // Battery supply voltage
     float SystemCurrent;                    // Total current draw for all enabled channels
+    uint8_t ErrorFlags;                     // Bitmask for system error flags
 };
 
+/// @brief System parameters
 extern SystemParameters SystemParams;
 
 /// @brief Updates the system parameters

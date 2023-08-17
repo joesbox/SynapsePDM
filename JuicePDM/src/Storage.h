@@ -28,12 +28,14 @@
 #include <CRC32.h>
 #include <ChannelConfig.h>
 #include <System.h>
+#include <CRC32.h>
+#include <EEPROM.h> 
 
 // Save configuration data
 void SaveConfig();
 
 // Load config data
-void LoadConfig();
+bool LoadConfig();
 
 // Log data to SD
 void LogData();
@@ -52,7 +54,13 @@ union ConfigUnion
     byte dataBytes[sizeof(ConfigStruct)];
 };
 
+// CRC-32 EEPROM checksum
+extern CRC32 crc;
+
 // Config storage union
 extern ConfigUnion ConfigData;
+
+// EEPROM read and write index
+extern uint32_t EEPROMindex;
 
 #endif

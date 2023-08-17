@@ -79,6 +79,18 @@
 // Battery voltage threshold at which power loss is immenent and logging should be stopped
 #define LOGGING_VBATT_THRESHOLD 9.0
 
+// System error bitmasks
+#define OVERCURRENT 0x01
+#define OVERTEMP 0x03
+#define UNDERVOLTGAGE 0x07
+#define CRC_CHECK_FAILED 0x0F
+
+// Channel error bitmasks
+#define CHN_OVERCURRENT_RANGE 0x01
+#define CHN_OVERCURRENT_LIMIT 0x03
+#define CHN_UNDERCURRENT_RANGE 0x07
+#define OVERTEMP_GNDSHORT 0x0F
+
 // Channel digital input pins (defaults)
 const uint8_t channelInputPins[NUM_CHANNELS] = {24, 25, 26, 29, 28, 27};
 
