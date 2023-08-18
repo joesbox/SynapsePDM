@@ -52,7 +52,11 @@ void HandleOutputs()
 
   // Start PWM
   SoftPWMBegin();
+}
 
+/// @brief Update PWM or digital outputs
+void UpdateOutputs()
+{
   // Check the type of channel we're dealing with (digital or PWM) and handle output accordingly
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
@@ -63,7 +67,9 @@ void HandleOutputs()
     case CAN_PWM:
       if (Channels[i].Enabled)
       {
-        SoftPWMSet(Channels[i].ControlPin, Channels[i].PWMSetDuty);
+        float squared = (VBATT_NOMINAL / SystemParams.VBatt) * (VBATT_NOMINAL / SystemParams.VBatt);
+        uint8_t pwmActual = round(Channels[i].PWMSetDuty * squared);
+        SoftPWMSet(Channels[i].ControlPin, pwmActual);
       }
       else
       {
@@ -93,9 +99,9 @@ void HandleOutputs()
 /// @brief Take analog readings at the pre-defined interval for PWM-enabled channels
 void ReadPWMAnalogs()
 {
-  #ifdef DEBUG
-  digitalWrite(ANALOG_READ_DEBUG_PIN, HIGH);
-  #endif
+#ifdef DEBUG
+  digitalWrite(ANALOG_READ_DEBUG_PIN, HIGH); // Useful for scoping outputs to validate timing of analog reads
+#endif
 
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
@@ -109,9 +115,9 @@ void ReadPWMAnalogs()
       }
     }
   }
-  #ifdef DEBUG
+#ifdef DEBUG
   digitalWrite(ANALOG_READ_DEBUG_PIN, LOW);
-  #endif
+#endif
 }
 
 /// @brief Take analog readings for digital-enabled channels
@@ -139,7 +145,7 @@ void ReadDigitalAnalogs()
 /// @brief Calculate real current value in amps
 void CalculateAnalogs()
 {
-  // TODO: implement current reading formula
+  // TODO: implement current reading formula. Will need to consider calibration points.
 }
 
 /// @brief Channel 1 ISR. Sets the channel output status to true and sets the clock cycle counter value

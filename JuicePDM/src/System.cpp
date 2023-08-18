@@ -24,16 +24,60 @@
 
 SystemParameters SystemParams;
 
+bool CRCFailed;
+
 void UpdateSystem()
-{   
+{
     // Get system temperature
     SystemParams.SystemTemperature = tempmonGetTemp();
 
-    // Get battery voltage analog reading
-    int raw = analogRead(VBATT_ANALOG_PIN);
-
     // Calculate battery voltage
-    SystemParams.VBatt = raw * 0.003225f;
+    SystemParams.VBatt = analogRead(VBATT_ANALOG_PIN) * 0.003225f;
 
+    // Calculate system current draw
+    SystemParams.SystemCurrent = 0.0f;
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+        SystemParams.SystemCurrent += Channels[i].CurrentValue;
+    }
 
+    // Check system temperature limit
+    if (SystemParams.SystemTemperature > SYSTEM_TEMP_LIMIT)
+    {
+        SystemParams.ErrorFlags |= OVERTEMP;
+    }
+    else
+    {
+        SystemParams.ErrorFlags ^= OVERTEMP;
+    }
+
+    // Check battery voltage
+    if (SystemParams.VBatt <= LOGGING_VBATT_THRESHOLD)
+    {
+        SystemParams.ErrorFlags |= UNDERVOLTGAGE;
+    }
+    else
+    {
+        SystemParams.ErrorFlags ^= UNDERVOLTGAGE;
+    }
+
+    // Check current limit
+    if (SystemParams.SystemCurrent > SYSTEM_CURRENT_MAX)
+    {
+        SystemParams.ErrorFlags |= OVERCURRENT;
+    }
+    else
+    {
+        SystemParams.ErrorFlags ^= OVERCURRENT;
+    }
+
+    // Check CRC
+    if (CRCFailed)
+    {
+        SystemParams.ErrorFlags |= CRC_CHECK_FAILED;
+    }
+    else
+    {
+        SystemParams.ErrorFlags ^= CRC_CHECK_FAILED;
+    }
 }

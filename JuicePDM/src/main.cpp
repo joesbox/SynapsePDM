@@ -1,6 +1,6 @@
 /*  JuicePDM - CAN enabled Power Distribution Module with 6 channels.
 
-    Code herin specifically applies to the application of Infineon BTS50010 High-Side Drivers
+    Code herein specifically applies to the application of Infineon BTS50010 High-Side Drivers
 
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
@@ -33,30 +33,61 @@
 #include <OutputHandler.h>
 #include <InputHandler.h>
 #include <Storage.h>
+#include <Watchdog_t4.h>
+#include <CANComms.h>
+
+WDT_T4<WDT1> wdt;
 
 void setup()
 {
   Serial.begin(9600);
+
+  WDT_timings_t config;
+  config.trigger = 3; /* in seconds, 0->128 */
+  config.timeout = 5; /* in seconds, 0->128 */
+  wdt.begin(config);
+
   InititalizeData();
-  Channels[1].ChanType = DIG_ACT_HIGH_PWM;
+  Channels[1].ChanType = CAN_PWM;
   Channels[1].Enabled = true;
   Channels[1].PWMSetDuty = 10;
   HandleOutputs();
-  SaveConfig();
+  CRCFailed = LoadConfig();
 }
 
 void loop()
 {
-  if (task1 >= 1000)
+  // High priority tasks
+  if (task1 >= TASK_1_INTERVAL)
   {
-    task1 = 0;
+    // Update channel outputs
+    UpdateOutputs();
 
-    Serial.println(ConfigData.data.channelConfigStored[0].ControlPin);
-  }
-
-  if (task2 >= TASK_2_INTERVAL)
-  {
     // Read input channel status
     HandleInputs();
+
+    task1 = 0;
   }
+
+  // Lower priority tasks
+  if (task2 >= TASK_2_INTERVAL)
+  {
+    // Update system parameters
+    //UpdateSystem();
+
+    // Broadcast CAN updates
+    //SendCANMessages();
+
+    task2 = 0;
+  }
+
+  // Lower priority tasks
+  if (task3 >= TASK_3_INTERVAL)
+  {
+    Serial.println("Test");
+    task3 = 0;
+  }
+
+  // Feed the dog.
+  wdt.feed();
 }

@@ -43,7 +43,7 @@
 #define CPU_TICK_MICROS (1E6/F_CPU)
 
 // Interval in microseconds for taking PWM analog readings
-#define ANALOG_PWM_READ_INTERVAL 50
+#define ANALOG_PWM_READ_INTERVAL 20
 
 // Interval in microseconds for taking PWM analog readings. Must be frequent enough to capture over or under current events.
 #define ANALOG_DIGITAL_READ_INTERVAL 20000
@@ -55,14 +55,20 @@
 #define CURRENT_SENSE_FAULT 1024
 
 // Maximum per-channel current supported by hardware. No channel can exceed this limit.
-#define CURRENT_MAX 13000
+#define CURRENT_MAX 13.0
+
+// Sytem current max (total). Should never reach this as each channel is independantly monitored
+#define SYSTEM_CURRENT_MAX 78.0
 
 // Default current sense ratio as specified by the BTS50010 datasheet
 #define DEFAULT_DK_VALUE 38000
 
 // Main task timer intervals (milliseconds)
 #define TASK_1_INTERVAL 10
-#define TASK_2_INTERVAL 20
+#define TASK_2_INTERVAL 50
+#define TASK_3_INTERVAL 250
+
+#define WATCHDOG_INTERVAL 2500
 
 // Unused pin that can be used to debug analog read timings which are critical to obtaining correct current measurements on PWM channels
 #define ANALOG_READ_DEBUG_PIN 20
@@ -73,11 +79,17 @@
 // Battery measurement analog input pin
 #define VBATT_ANALOG_PIN A7
 
+// Nominal battery voltage
+#define VBATT_NOMINAL 13.8
+
 // CAN bus termination resistor enable pin
 #define CAN_BUS_RESISTOR_ENABLE 6
 
 // Battery voltage threshold at which power loss is immenent and logging should be stopped
 #define LOGGING_VBATT_THRESHOLD 9.0
+
+// Maximum permissible system temperature
+#define SYSTEM_TEMP_LIMIT 80.0
 
 // System error bitmasks
 #define OVERCURRENT 0x01
@@ -91,6 +103,9 @@
 #define CHN_UNDERCURRENT_RANGE 0x07
 #define OVERTEMP_GNDSHORT 0x0F
 
+// ECU CAN address
+#define ECU_ADDR 0x800;
+
 // Channel digital input pins (defaults)
 const uint8_t channelInputPins[NUM_CHANNELS] = {24, 25, 26, 29, 28, 27};
 
@@ -103,6 +118,7 @@ const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {A1, A10, A17, A16, A15, A
 // Timers for main tasks
 extern elapsedMillis task1;
 extern elapsedMillis task2;
+extern elapsedMillis task3;
 
 // Channel configurations
 extern ChannelConfig Channels[NUM_CHANNELS];

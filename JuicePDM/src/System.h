@@ -39,6 +39,9 @@ struct __attribute__((packed)) SystemParameters
 /// @brief System parameters
 extern SystemParameters SystemParams;
 
+/// @brief CRC check failed flag
+extern bool CRCFailed;
+
 /// @brief Updates the system parameters
 void UpdateSystem();
 

@@ -28,6 +28,7 @@
 #include <ADC.h>
 #include <Globals.h>
 #include <TeensyTimerTool.h>
+#include <System.h>
 
 using namespace TeensyTimerTool;
 
@@ -41,8 +42,11 @@ extern PeriodicTimer analogDigitalReadTImer;
 // Calculates real (ampere) current values for each channel, taking into account configured calibrations
 extern PeriodicTimer calculateAnalogsTimer;
 
-// Run channels at their set PWM or output state
+// Setup interrupts and analog read timers
 void HandleOutputs();
+
+// Set PWM or digital outputs
+void UpdateOutputs();
 
 // Channel ISRs which fire on the rising edge of an output
 void CH1_ISR();
