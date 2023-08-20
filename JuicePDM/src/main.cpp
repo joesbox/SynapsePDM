@@ -51,6 +51,7 @@ void setup()
   Channels[1].ChanType = CAN_PWM;
   Channels[1].Enabled = true;
   Channels[1].PWMSetDuty = 10;
+  InitialiseLEDs();
   HandleOutputs();
   CRCFailed = LoadConfig();
 }

@@ -29,6 +29,7 @@
 #include <Globals.h>
 #include <TeensyTimerTool.h>
 #include <System.h>
+#include <FastLED.h>
 
 using namespace TeensyTimerTool;
 
@@ -41,6 +42,12 @@ extern PeriodicTimer analogDigitalReadTImer;
 
 // Calculates real (ampere) current values for each channel, taking into account configured calibrations
 extern PeriodicTimer calculateAnalogsTimer;
+
+// RGB LEDs
+extern CRGB leds[NUM_CHANNELS];
+
+// Rainbow scroll
+extern CRGB Scroll(int pos);
 
 // Setup interrupts and analog read timers
 void HandleOutputs();
@@ -64,5 +71,11 @@ void ReadDigitalAnalogs();
 
 // Calculate channel current in amps
 void CalculateAnalogs();
+
+// Initialise the RGB LEDs
+void InitialiseLEDs();
+
+// Update the RGB LEDs
+void UpdateLEDs();
 
 #endif

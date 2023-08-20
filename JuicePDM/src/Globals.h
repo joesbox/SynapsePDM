@@ -68,7 +68,11 @@
 #define TASK_2_INTERVAL 50
 #define TASK_3_INTERVAL 250
 
+// Watchdog timer interval
 #define WATCHDOG_INTERVAL 2500
+
+// RGB LED serial data pin
+#define RGB_PIN 9
 
 // Unused pin that can be used to debug analog read timings which are critical to obtaining correct current measurements on PWM channels
 #define ANALOG_READ_DEBUG_PIN 20
