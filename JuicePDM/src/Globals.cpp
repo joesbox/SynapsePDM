@@ -42,4 +42,8 @@ void InititalizeData()
         pinMode(Channels[i].ControlPin, OUTPUT);
         digitalWrite(Channels[i].ControlPin, LOW);
     }
+
+    // Initialise default system data
+
+    SystemParams.LEDBrightness = DEFAULT_RGB_BRIGHTNESS;
 }

@@ -25,6 +25,7 @@
 
 #include <Arduino.h>
 #include <ChannelConfig.h>
+#include <System.h>
 
 // Number of hardware output channels
 #define NUM_CHANNELS 6
@@ -74,6 +75,9 @@
 // RGB LED serial data pin
 #define RGB_PIN 9
 
+// Default RGB LED brightness
+#define DEFAULT_RGB_BRIGHTNESS 64
+
 // Unused pin that can be used to debug analog read timings which are critical to obtaining correct current measurements on PWM channels
 #define ANALOG_READ_DEBUG_PIN 20
 
@@ -106,6 +110,7 @@
 #define CHN_OVERCURRENT_LIMIT 0x03
 #define CHN_UNDERCURRENT_RANGE 0x07
 #define OVERTEMP_GNDSHORT 0x0F
+#define WATCHDOG_TIMEOUT 0x1F
 
 // ECU CAN address
 #define ECU_ADDR 0x800;

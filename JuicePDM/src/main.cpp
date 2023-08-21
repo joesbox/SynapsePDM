@@ -1,6 +1,7 @@
 /*  JuicePDM - CAN enabled Power Distribution Module with 6 channels.
 
     Code herein specifically applies to the application of Infineon BTS50010 High-Side Drivers
+    on the JuicePDM hardware. See https://wiki.joeblogs.uk for more info.
 
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
@@ -38,19 +39,42 @@
 
 WDT_T4<WDT1> wdt;
 
+void wdtCallback(); 
+
 void setup()
 {
   Serial.begin(9600);
 
   WDT_timings_t config;
   config.trigger = 3; /* in seconds, 0->128 */
-  config.timeout = 5; /* in seconds, 0->128 */
+  config.timeout = 5; /* in seconds, 0->128 */  
+  config.callback = wdtCallback;
   wdt.begin(config);
 
   InititalizeData();
+
+  // LED debugging
+  /*
+  Channels[0].ChanType = DIG_ACT_HIGH;
+  Channels[0].Enabled = true;
+
   Channels[1].ChanType = CAN_PWM;
   Channels[1].Enabled = true;
   Channels[1].PWMSetDuty = 10;
+
+  Channels[2].ChanType = DIG_ACT_HIGH;
+  Channels[2].Enabled = true;
+
+  Channels[3].ChanType = DIG_ACT_HIGH;
+  Channels[3].Enabled = true;
+
+  Channels[4].ChanType = DIG_ACT_HIGH;
+  Channels[4].Enabled = true;
+
+  Channels[5].ChanType = DIG_ACT_HIGH;
+  Channels[5].Enabled = true;  
+  */
+
   InitialiseLEDs();
   HandleOutputs();
   CRCFailed = LoadConfig();
@@ -85,10 +109,22 @@ void loop()
   // Lower priority tasks
   if (task3 >= TASK_3_INTERVAL)
   {
-    Serial.println("Test");
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+      Serial.print("Pin: ");
+      Serial.println(Channels[i].CurrentSensePin);
+      Serial.print("Raw value: ");
+      Serial.println(Channels[i].AnalogRaw);
+    }
     task3 = 0;
   }
 
   // Feed the dog.
   wdt.feed();
+}
+
+void wdtCallback()
+{
+    // If we've landed here, the watchdog looks like it may timeout. Set the error flag which may or may not get logged to the SD card.
+    SystemParams.ErrorFlags |= WATCHDOG_TIMEOUT;
 }

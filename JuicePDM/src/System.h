@@ -34,6 +34,7 @@ struct __attribute__((packed)) SystemParameters
     float VBatt;                            // Battery supply voltage
     float SystemCurrent;                    // Total current draw for all enabled channels
     uint8_t ErrorFlags;                     // Bitmask for system error flags
+    uint8_t LEDBrightness;                  // RGB LED brightness
 };
 
 /// @brief System parameters

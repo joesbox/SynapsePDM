@@ -35,6 +35,8 @@ PeriodicTimer calculateAnalogsTimer;
 
 CRGB leds[NUM_CHANNELS];
 
+uint8_t toggle[NUM_CHANNELS];
+
 /// @brief Handle output control
 void HandleOutputs()
 {
@@ -72,10 +74,32 @@ void UpdateOutputs()
         float squared = (VBATT_NOMINAL / SystemParams.VBatt) * (VBATT_NOMINAL / SystemParams.VBatt);
         uint8_t pwmActual = round(Channels[i].PWMSetDuty * squared);
         SoftPWMSet(Channels[i].ControlPin, pwmActual);
+        if (Channels[i].ErrorFlags == 0)
+        {
+          leds[i] = CRGB::DeepSkyBlue;
+        }
+        else
+        {
+          if (toggle[i] >= 128)
+          {
+              leds[i] = CRGB::DeepSkyBlue;
+              if (toggle[i] == 255)
+              {
+                toggle[i] = 0;
+              }
+              toggle[i]++;
+          }
+          else
+          {
+              leds[i] = CRGB::DarkRed;
+              toggle[i]++;
+          }
+        }
       }
       else
       {
         SoftPWMSet(Channels[i].ControlPin, 0);
+        leds[i] = CRGB::Black;
       }
       break;
     case DIG_ACT_LOW:
@@ -85,17 +109,21 @@ void UpdateOutputs()
       {
         digitalWrite(Channels[i].ControlPin, HIGH);
         analogReadIntervals[i] = ARM_DWT_CYCCNT;
+        leds[i] = CRGB::DarkGreen;
       }
       else
       {
         digitalWrite(Channels[i].ControlPin, LOW);
+        leds[i] = CRGB::Black;
       }
       break;
     default:
       digitalWrite(Channels[i].ControlPin, LOW);
+      leds[i] = CRGB::Black;
       break;
     }
   }
+  FastLED.show();
 }
 
 /// @brief Take analog readings at the pre-defined interval for PWM-enabled channels
@@ -218,6 +246,7 @@ void InitialiseLEDs()
     delay(5);
   }
   FastLED.showColor(CRGB::Black);
+  FastLED.setBrightness(SystemParams.LEDBrightness);
 }
 
 CRGB Scroll(int pos)

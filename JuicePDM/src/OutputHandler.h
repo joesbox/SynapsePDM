@@ -49,6 +49,9 @@ extern CRGB leds[NUM_CHANNELS];
 // Rainbow scroll
 extern CRGB Scroll(int pos);
 
+// Toggle error LED
+extern uint8_t toggle[NUM_CHANNELS];
+
 // Setup interrupts and analog read timers
 void HandleOutputs();
 
