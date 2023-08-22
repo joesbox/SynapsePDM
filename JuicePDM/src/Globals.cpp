@@ -44,6 +44,17 @@ void InititalizeData()
     }
 
     // Initialise default system data
-
     SystemParams.LEDBrightness = DEFAULT_RGB_BRIGHTNESS;
+
+    // Sync time with PC if available
+    while (!Serial && millis() < 4000)
+        ;
+    Serial.println("\n" __FILE__ " " __DATE__ " " __TIME__);
+    setSyncProvider(getTeensy3Time);
+}
+
+// Get current time
+time_t getTeensy3Time()
+{
+  return Teensy3Clock.get();
 }

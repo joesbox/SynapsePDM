@@ -30,12 +30,16 @@
 #include <System.h>
 #include <CRC32.h>
 #include <EEPROM.h> 
+#include <SD.h>
 
 // Save configuration data
 void SaveConfig();
 
 // Load config data
 bool LoadConfig();
+
+// Initialise SD data logging
+void InitialiseSD();
 
 // Log data to SD
 void LogData();
@@ -62,5 +66,8 @@ extern ConfigUnion ConfigData;
 
 // EEPROM read and write index
 extern uint32_t EEPROMindex;
+
+// Current log file name in use
+extern String fileName;
 
 #endif

@@ -98,7 +98,7 @@ void loop()
   if (task2 >= TASK_2_INTERVAL)
   {
     // Update system parameters
-    //UpdateSystem();
+    UpdateSystem();
 
     // Broadcast CAN updates
     //SendCANMessages();
@@ -109,13 +109,7 @@ void loop()
   // Lower priority tasks
   if (task3 >= TASK_3_INTERVAL)
   {
-    for (int i = 0; i < NUM_CHANNELS; i++)
-    {
-      Serial.print("Pin: ");
-      Serial.println(Channels[i].CurrentSensePin);
-      Serial.print("Raw value: ");
-      Serial.println(Channels[i].AnalogRaw);
-    }
+    Serial.println(analogRead(VBATT_ANALOG_PIN));
     task3 = 0;
   }
 

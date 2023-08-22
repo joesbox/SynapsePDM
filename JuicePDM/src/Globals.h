@@ -26,6 +26,7 @@
 #include <Arduino.h>
 #include <ChannelConfig.h>
 #include <System.h>
+#include <TimeLib.h>
 
 // Number of hardware output channels
 #define NUM_CHANNELS 6
@@ -134,5 +135,8 @@ extern ChannelConfig Channels[NUM_CHANNELS];
 
 // Initialise global data to known defaults
 void InititalizeData();
+
+// Sync time function
+time_t getTeensy3Time();
 
 #endif

@@ -28,20 +28,22 @@ CRC32 crc;
 
 uint32_t EEPROMindex;
 
+String fileName;
+
 /// @brief Saves all current config data
 void SaveConfig()
 {
     EEPROMindex = 0;
     // Copy current channel info to storage structure
     memcpy(&ConfigData.data.channelConfigStored, &Channels, sizeof(Channels));
-    
+
     // Calculate stored config bytes CRC
     uint32_t checksum = CRC32::calculate(ConfigData.dataBytes, sizeof(ConfigStruct));
 
     // Store data and CRC value
     EEPROM.put(EEPROMindex, ConfigData.dataBytes);
     EEPROMindex += sizeof(ConfigStruct);
-    EEPROM.put(EEPROMindex, checksum);  
+    EEPROM.put(EEPROMindex, checksum);
 
     // Reset EEPROM index
     EEPROMindex = 0;
@@ -55,8 +57,8 @@ bool LoadConfig()
     bool validCRC = false;
 
     // Reset index
-    EEPROMindex = 0; 
-    
+    EEPROMindex = 0;
+
     // Reset CRC result
     uint32_t result = 0;
 
@@ -76,6 +78,40 @@ bool LoadConfig()
 
     // Reset EEPROM index
     EEPROMindex = 0;
-    
+
     return validCRC;
+}
+
+// Initialise SD card and new data log
+void InitialiseSD()
+{
+    // DMA on Teensy 4.1
+    SD.sdfs.begin(SdioConfig(DMA_SDIO));
+    String yearStr = year();
+    String monthStr = month();
+    String dayStr = day();
+    String hourStr = hour();
+    String minuteStr = minute();
+    String secondStr = second();
+    fileName = yearStr + "_" + monthStr + "_" + dayStr + "_" + hourStr + "_" + minuteStr + "_" + secondStr + ".csv";
+    String fileHeader = "Time,System Temp,System Voltage,System Current,Error Flags";
+
+    FsFile myfile = SD.sdfs.open(fileName, O_WRITE | O_CREAT);
+
+    if (myfile.preAllocate(40 * 1024 * 1024))
+    {
+        Serial.print("  Allocate 40 megabytes for datalog.bin");
+    }
+    else
+    {
+        Serial.print("  unable to preallocate this file");
+    }
+
+    myfile.print(fileHeader);
+    myfile.write((uint8_t)'\0'); // add a null byte to mark end of string
+    myfile.close();
+}
+
+void LogData()
+{
 }
