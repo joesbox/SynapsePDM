@@ -28,6 +28,10 @@ CRC32 crc;
 
 uint32_t EEPROMindex;
 
+bool StopLogging;
+
+File myfile;
+
 String fileName;
 
 /// @brief Saves all current config data
@@ -96,22 +100,33 @@ void InitialiseSD()
     fileName = yearStr + "_" + monthStr + "_" + dayStr + "_" + hourStr + "_" + minuteStr + "_" + secondStr + ".csv";
     String fileHeader = "Time,System Temp,System Voltage,System Current,Error Flags";
 
-    FsFile myfile = SD.sdfs.open(fileName, O_WRITE | O_CREAT);
+    myfile = SD.open(fileName.c_str(), FILE_WRITE_BEGIN);
 
-    if (myfile.preAllocate(40 * 1024 * 1024))
-    {
-        Serial.print("  Allocate 40 megabytes for datalog.bin");
-    }
-    else
-    {
-        Serial.print("  unable to preallocate this file");
-    }
-
-    myfile.print(fileHeader);
-    myfile.write((uint8_t)'\0'); // add a null byte to mark end of string
+    myfile.println(fileHeader);
     myfile.close();
+    
 }
 
 void LogData()
 {
+    if (!StopLogging)
+    {
+        Serial.print("Start SD log entry: ");
+        Serial.println(millis());
+        myfile = SD.open(fileName.c_str(), FILE_WRITE);
+        String logEntry = SystemParams.VBatt;
+        logEntry = logEntry + "," + SystemParams.SystemCurrent;
+        logEntry = logEntry + "," + SystemParams.ErrorFlags;
+        if (myfile)
+        {
+            myfile.println(logEntry);
+            myfile.close();
+        }
+        Serial.print("Stop SD log entry: ");
+        Serial.println(millis());
+    }
+    else
+    {
+        myfile.close();
+    }
 }

@@ -53,6 +53,8 @@ void setup()
 
   InititalizeData();
 
+  InitialiseSD();
+
   // LED debugging
   /*
   Channels[0].ChanType = DIG_ACT_HIGH;
@@ -109,7 +111,8 @@ void loop()
   // Lower priority tasks
   if (task3 >= TASK_3_INTERVAL)
   {
-    Serial.println(analogRead(VBATT_ANALOG_PIN));
+    // Log SD card data
+    LogData();
     task3 = 0;
   }
 

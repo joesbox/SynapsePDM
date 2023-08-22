@@ -67,7 +67,13 @@ extern ConfigUnion ConfigData;
 // EEPROM read and write index
 extern uint32_t EEPROMindex;
 
+// Log file object
+extern File myfile;
+
 // Current log file name in use
 extern String fileName;
+
+// Keep the file open while the log is running
+extern bool StopLogging;
 
 #endif

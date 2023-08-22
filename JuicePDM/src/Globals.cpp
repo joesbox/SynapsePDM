@@ -47,7 +47,7 @@ void InititalizeData()
     SystemParams.LEDBrightness = DEFAULT_RGB_BRIGHTNESS;
 
     // Sync time with PC if available
-    while (!Serial && millis() < 4000)
+    while (!Serial && millis() < 800)
         ;
     Serial.println("\n" __FILE__ " " __DATE__ " " __TIME__);
     setSyncProvider(getTeensy3Time);
