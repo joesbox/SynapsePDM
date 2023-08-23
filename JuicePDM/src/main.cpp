@@ -79,7 +79,7 @@ void setup()
 
   InitialiseLEDs();
   HandleOutputs();
-  CRCFailed = LoadConfig();
+  CRCValid = LoadConfig();
 }
 
 void loop()
@@ -124,4 +124,5 @@ void wdtCallback()
 {
     // If we've landed here, the watchdog looks like it may timeout. Set the error flag which may or may not get logged to the SD card.
     SystemParams.ErrorFlags |= WATCHDOG_TIMEOUT;
+    Serial.println("Hit the watchdog timer");
 }

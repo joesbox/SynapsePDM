@@ -32,48 +32,49 @@
 #include <EEPROM.h> 
 #include <SD.h>
 
-// Save configuration data
+/// @brief Saves the config data to EEPROM along with a calculated CRC
 void SaveConfig();
 
-// Load config data
+/// @brief Loads the config data from EEPROM storage
+/// @return True if the CRC check was successful
 bool LoadConfig();
 
-// Initialise SD data logging
+/// @brief Initialises SD datalogging
 void InitialiseSD();
 
-// Log data to SD
+/// @brief Logs current system and channel data to the SD card
 void LogData();
 
-// Structure of stored config data
+/// @brief Configuration structure
 struct __attribute__((packed)) ConfigStruct
 {
     ChannelConfig channelConfigStored[NUM_CHANNELS];
     SystemParameters sysParams;
 };
 
-// Union for reading and writing from and to EEPROM storage
+/// @brief  Union for reading and writing from and to EEPROM storage
 union ConfigUnion
 {
     ConfigStruct data;
     byte dataBytes[sizeof(ConfigStruct)];
 };
 
-// CRC-32 EEPROM checksum
+/// @brief CRC-32 EEPROM checksum
 extern CRC32 crc;
 
-// Config storage union
+/// @brief Config storage union
 extern ConfigUnion ConfigData;
 
-// EEPROM read and write index
+/// @brief EEPROM read and write index
 extern uint32_t EEPROMindex;
 
-// Log file object
+/// @brief Log file object
 extern File myfile;
 
-// Current log file name in use
+/// @brief Current log file name in use
 extern String fileName;
 
-// Keep the file open while the log is running
+/// @brief Keep the file open while the log is running
 extern bool StopLogging;
 
 #endif

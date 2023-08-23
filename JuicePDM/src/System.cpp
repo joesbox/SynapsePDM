@@ -24,7 +24,7 @@
 
 SystemParameters SystemParams;
 
-bool CRCFailed;
+bool CRCValid;
 
 void UpdateSystem()
 {
@@ -72,7 +72,7 @@ void UpdateSystem()
     }
 
     // Check CRC
-    if (CRCFailed)
+    if (!CRCValid)
     {
         SystemParams.ErrorFlags |= CRC_CHECK_FAILED;
     }
