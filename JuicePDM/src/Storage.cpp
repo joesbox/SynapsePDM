@@ -28,6 +28,8 @@ uint32_t EEPROMindex;
 bool StopLogging;
 File myfile;
 String fileName;
+Sd2Card card;
+bool CardPresent;
 
 void SaveConfig()
 {
@@ -80,35 +82,40 @@ bool LoadConfig()
 
 void InitialiseSD()
 {
-    // DMA on Teensy 4.1
-    SD.sdfs.begin(SdioConfig(DMA_SDIO));
-    String yearStr = year();
-    String monthStr = month();
-    String dayStr = day();
-    String hourStr = hour();
-    String minuteStr = minute();
-    String secondStr = second();
-
-    fileName = yearStr + "_" + monthStr + "_" + dayStr + "_" + hourStr + "_" + minuteStr + "_" + secondStr + ".csv";
-    String fileHeader = "Date,Time,System Temp,System Voltage,System Current,Error Flags,";
-
-    for (int i = 0; i < NUM_CHANNELS; i++)
+    // If we can't see a card, don't proceed to initilisation
+    CardPresent = card.init(SPI_FULL_SPEED, BUILTIN_SDCARD);
+    if (CardPresent)
     {
-        fileHeader = fileHeader + "Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,PWM,Multi-Channel,Group Number,Channel Error Flags,";
-    }
-    int length = fileHeader.length();
-    fileHeader.remove(length - 1);
+        // DMA on Teensy 4.1
+        SD.sdfs.begin(SdioConfig(DMA_SDIO));
+        String yearStr = year();
+        String monthStr = month();
+        String dayStr = day();
+        String hourStr = hour();
+        String minuteStr = minute();
+        String secondStr = second();
 
-    myfile = SD.open(fileName.c_str(), FILE_WRITE_BEGIN);
+        fileName = yearStr + "_" + monthStr + "_" + dayStr + "_" + hourStr + "_" + minuteStr + "_" + secondStr + ".csv";
+        String fileHeader = "Date,Time,System Temp,System Voltage,System Current,Error Flags,";
 
-    myfile.println(fileHeader);
-    myfile.close();
+        for (int i = 0; i < NUM_CHANNELS; i++)
+        {
+            fileHeader = fileHeader + "Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,PWM,Multi-Channel,Group Number,Channel Error Flags,";
+        }
+        int length = fileHeader.length();
+        fileHeader.remove(length - 1);
+
+        myfile = SD.open(fileName.c_str(), FILE_WRITE_BEGIN);
+
+        myfile.println(fileHeader);
+        myfile.close();
+    }    
 }
 
 void LogData()
 {
-    // Check stop logging flag hasn't been set (low system voltage)
-    if (!StopLogging)
+    // Check stop logging flag hasn't been set (low system voltage) and that an SD card was detected
+    if (!StopLogging && CardPresent)
     {
         Serial.print("Start building log entry: ");
         Serial.println(millis());

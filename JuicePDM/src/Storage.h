@@ -77,4 +77,10 @@ extern String fileName;
 /// @brief Keep the file open while the log is running
 extern bool StopLogging;
 
+/// @brief SD card object
+extern Sd2Card card;
+
+/// @brief Flag to denote if the SD card was detected
+extern bool CardPresent;
+
 #endif
