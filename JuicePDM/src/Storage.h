@@ -74,9 +74,6 @@ extern File myfile;
 /// @brief Current log file name in use
 extern String fileName;
 
-/// @brief Keep the file open while the log is running
-extern bool StopLogging;
-
 /// @brief SD card object
 extern Sd2Card card;
 

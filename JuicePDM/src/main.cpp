@@ -113,6 +113,8 @@ void loop()
   {
     // Log SD card data
     LogData();
+    Serial.println(SystemParams.VBatt);
+    Serial.println(SystemParams.ErrorFlags);
     task3 = 0;
   }
 

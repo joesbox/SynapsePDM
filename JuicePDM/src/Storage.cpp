@@ -25,7 +25,6 @@
 ConfigUnion ConfigData;
 CRC32 crc;
 uint32_t EEPROMindex;
-bool StopLogging;
 File myfile;
 String fileName;
 Sd2Card card;
@@ -82,12 +81,10 @@ bool LoadConfig()
 
 void InitialiseSD()
 {
-    // If we can't see a card, don't proceed to initilisation
-    CardPresent = card.init(SPI_FULL_SPEED, BUILTIN_SDCARD);
+    // If we can't see a card, don't proceed to initilisation. DMA on Teensy 4.1
+    CardPresent = SD.sdfs.begin(SdioConfig(DMA_SDIO));
     if (CardPresent)
-    {
-        // DMA on Teensy 4.1
-        SD.sdfs.begin(SdioConfig(DMA_SDIO));
+    {        
         String yearStr = year();
         String monthStr = month();
         String dayStr = day();
@@ -114,8 +111,8 @@ void InitialiseSD()
 
 void LogData()
 {
-    // Check stop logging flag hasn't been set (low system voltage) and that an SD card was detected
-    if (!StopLogging && CardPresent)
+    // Check undervoltage flag hasn't been set and that an SD card was detected
+    if (!(SystemParams.ErrorFlags & UNDERVOLTGAGE) && CardPresent)
     {
         Serial.print("Start building log entry: ");
         Serial.println(millis());

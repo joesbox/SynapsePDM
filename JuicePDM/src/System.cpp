@@ -32,7 +32,7 @@ void UpdateSystem()
     SystemParams.SystemTemperature = tempmonGetTemp();
 
     // Calculate battery voltage
-    SystemParams.VBatt = analogRead(VBATT_ANALOG_PIN) * 0.003225f;
+    SystemParams.VBatt = analogRead(VBATT_ANALOG_PIN) * 0.0154f;
 
     // Calculate system current draw
     SystemParams.SystemCurrent = 0.0f;
@@ -48,7 +48,7 @@ void UpdateSystem()
     }
     else
     {
-        SystemParams.ErrorFlags ^= OVERTEMP;
+        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~OVERTEMP;
     }
 
     // Check battery voltage
@@ -58,7 +58,7 @@ void UpdateSystem()
     }
     else
     {
-        SystemParams.ErrorFlags ^= UNDERVOLTGAGE;
+        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~UNDERVOLTGAGE;
     }
 
     // Check current limit
@@ -68,7 +68,7 @@ void UpdateSystem()
     }
     else
     {
-        SystemParams.ErrorFlags ^= OVERCURRENT;
+        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~OVERCURRENT;
     }
 
     // Check CRC
@@ -78,6 +78,6 @@ void UpdateSystem()
     }
     else
     {
-        SystemParams.ErrorFlags ^= CRC_CHECK_FAILED;
+        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~CRC_CHECK_FAILED;
     }
 }
