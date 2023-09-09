@@ -137,16 +137,10 @@ void LogData()
         {
             switch (Channels[i].ChanType)
             {
-            case DIG_ACT_LOW:
-                logEntry = logEntry + "DAL";
-                break;
-            case DIG_ACT_HIGH:
+            case DIG:
                 logEntry = logEntry + "DAH";
                 break;
-            case DIG_ACT_LOW_PWM:
-                logEntry = logEntry + "DALP";
-                break;
-            case DIG_ACT_HIGH_PWM:
+            case DIG_PWM:
                 logEntry = logEntry + "DAHP";
                 break;
             case CAN_DIGITAL:

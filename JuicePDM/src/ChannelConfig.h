@@ -28,10 +28,8 @@
 /// @brief Defines available channel types
 enum ChannelType
 {
-  DIG_ACT_LOW,      // Digital input, active low
-  DIG_ACT_HIGH,     // Digital input, active high
-  DIG_ACT_LOW_PWM,  // Digital input, active low, PWM output
-  DIG_ACT_HIGH_PWM, // Digital input, active high, PWM output
+  DIG,              // Digital input
+  DIG_PWM,          // Digital input, PWM output
   CAN_DIGITAL,      // CAN bus controlled digital output
   CAN_PWM           // CAN bus controlled PWM output
 };

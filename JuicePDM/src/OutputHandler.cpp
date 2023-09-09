@@ -66,8 +66,7 @@ void UpdateOutputs()
   {
     switch (Channels[i].ChanType)
     {
-    case DIG_ACT_LOW_PWM:
-    case DIG_ACT_HIGH_PWM:
+    case DIG_PWM:
     case CAN_PWM:
       if (Channels[i].Enabled)
       {
@@ -102,8 +101,7 @@ void UpdateOutputs()
         leds[i] = CRGB::Black;
       }
       break;
-    case DIG_ACT_LOW:
-    case DIG_ACT_HIGH:
+    case DIG:
     case CAN_DIGITAL:
       if (Channels[i].Enabled)
       {
@@ -157,8 +155,7 @@ void ReadDigitalAnalogs()
   {
     switch (Channels[i].ChanType)
     {
-    case DIG_ACT_LOW:
-    case DIG_ACT_HIGH:
+    case DIG:
     case CAN_DIGITAL:
       // Ensure the maximum turn on time for the BTS50010 has passed before taking an analog reading.
       if (ARM_DWT_CYCCNT - analogReadIntervals[i] >= ANALOG_DELAY / CPU_TICK_MICROS)

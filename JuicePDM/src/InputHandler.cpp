@@ -30,13 +30,8 @@ void HandleInputs()
     {
         switch (Channels[i].ChanType)
         {
-        case DIG_ACT_LOW_PWM:
-        case DIG_ACT_LOW:
-        Channels[i].Enabled = !digitalRead(Channels[i].InputControlPin);
-            break;
-
-        case DIG_ACT_HIGH_PWM:
-        case DIG_ACT_HIGH:
+        case DIG_PWM:
+        case DIG:
         Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
             break;
         default:

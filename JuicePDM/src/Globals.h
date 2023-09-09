@@ -68,7 +68,8 @@
 // Main task timer intervals (milliseconds)
 #define TASK_1_INTERVAL 10
 #define TASK_2_INTERVAL 50
-#define TASK_3_INTERVAL 250
+#define TASK_3_INTERVAL 100
+#define TASK_4_INTERVAL 250
 
 // Watchdog timer interval
 #define WATCHDOG_INTERVAL 2500

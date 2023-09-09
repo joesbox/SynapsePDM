@@ -32,7 +32,7 @@ void InititalizeData()
     // Initialise channels to default values, ensure they are initially off
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
-        Channels[i].ChanType = DIG_ACT_HIGH;
+        Channels[i].ChanType = DIG;
         Channels[i].Enabled = false;
         Channels[i].ControlPin = channelOutputPins[i];
         Channels[i].CurrentSensePin = channelCurrentSensePins[i];
