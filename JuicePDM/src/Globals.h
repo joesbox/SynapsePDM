@@ -65,6 +65,9 @@
 // Default current sense ratio as specified by the BTS50010 datasheet
 #define DEFAULT_DK_VALUE 38000
 
+// Maximum log file size in bytes
+#define MAX_LOGFILE_SIZE 1e+8
+
 // Main task timer intervals (milliseconds)
 #define TASK_1_INTERVAL 10
 #define TASK_2_INTERVAL 50
@@ -130,6 +133,7 @@ const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {A1, A10, A17, A16, A15, A
 extern elapsedMillis task1;
 extern elapsedMillis task2;
 extern elapsedMillis task3;
+extern elapsedMillis task4;
 
 // Channel configurations
 extern ChannelConfig Channels[NUM_CHANNELS];

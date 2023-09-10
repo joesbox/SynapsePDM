@@ -24,6 +24,7 @@
 elapsedMillis task1;
 elapsedMillis task2;
 elapsedMillis task3;
+elapsedMillis task4;
 ChannelConfig Channels[NUM_CHANNELS];
 
 /// @brief Inititlise global data

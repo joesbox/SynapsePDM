@@ -39,7 +39,7 @@
 
 WDT_T4<WDT1> wdt;
 
-void wdtCallback(); 
+void wdtCallback();
 
 void setup()
 {
@@ -47,7 +47,7 @@ void setup()
 
   WDT_timings_t config;
   config.trigger = 3; /* in seconds, 0->128 */
-  config.timeout = 5; /* in seconds, 0->128 */  
+  config.timeout = 5; /* in seconds, 0->128 */
   config.callback = wdtCallback;
   wdt.begin(config);
 
@@ -74,7 +74,7 @@ void setup()
   Channels[4].Enabled = true;
 
   Channels[5].ChanType = DIG_ACT_HIGH;
-  Channels[5].Enabled = true;  
+  Channels[5].Enabled = true;
   */
 
   InitialiseLEDs();
@@ -103,7 +103,7 @@ void loop()
     UpdateSystem();
 
     // Broadcast CAN updates
-    //SendCANMessages();
+    // SendCANMessages();
 
     task2 = 0;
   }
@@ -118,13 +118,19 @@ void loop()
     task3 = 0;
   }
 
+  // Lowest priority tasks
+  if (task4 >= TASK_4_INTERVAL)
+  {
+    task4 = 0;
+  }
+
   // Feed the dog.
   wdt.feed();
 }
 
 void wdtCallback()
 {
-    // If we've landed here, the watchdog looks like it may timeout. Set the error flag which may or may not get logged to the SD card.
-    SystemParams.ErrorFlags |= WATCHDOG_TIMEOUT;
-    Serial.println("Hit the watchdog timer");
+  // If we've landed here, the watchdog looks like it may timeout. Set the error flag which may or may not get logged to the SD card.
+  SystemParams.ErrorFlags |= WATCHDOG_TIMEOUT;
+  Serial.println("Hit the watchdog timer");
 }

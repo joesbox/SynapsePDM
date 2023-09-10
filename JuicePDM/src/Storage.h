@@ -80,4 +80,7 @@ extern Sd2Card card;
 /// @brief Flag to denote if the SD card was detected
 extern bool CardPresent;
 
+/// @brief Accumulative bytes stored in a given log file
+extern ulong BytesStored;
+
 #endif

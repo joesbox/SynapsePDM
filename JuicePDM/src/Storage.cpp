@@ -29,6 +29,7 @@ File myfile;
 String fileName;
 Sd2Card card;
 bool CardPresent;
+ulong BytesStored;
 
 void SaveConfig()
 {
@@ -106,6 +107,7 @@ void InitialiseSD()
 
         myfile.println(fileHeader);
         myfile.close();
+        BytesStored = 0;
     }    
 }
 
@@ -173,13 +175,19 @@ void LogData()
         myfile = SD.open(fileName.c_str(), FILE_WRITE);
         if (myfile)
         {
-            myfile.println(logEntry);
+            BytesStored += myfile.println(logEntry);
             myfile.close();
         }
         Serial.print("Stop SD log entry: ");
         Serial.println(millis());
-        Serial.print("Length: ");
-        Serial.println(logEntry.length());
+        Serial.print("File size: ");
+        Serial.println(BytesStored);        
+
+        // If we've gone over the max log file size, start a new file
+        if (BytesStored > MAX_LOGFILE_SIZE)
+        {
+            InitialiseSD();
+        }
     }
     else
     {
