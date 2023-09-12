@@ -81,6 +81,9 @@ extern Sd2Card card;
 extern bool CardPresent;
 
 /// @brief Accumulative bytes stored in a given log file
-extern ulong BytesStored;
+extern int BytesStored;
+
+/// @brief SD card was initialised at power on
+extern bool SDInit;
 
 #endif

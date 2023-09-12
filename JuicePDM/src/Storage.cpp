@@ -29,7 +29,7 @@ File myfile;
 String fileName;
 Sd2Card card;
 bool CardPresent;
-ulong BytesStored;
+int BytesStored;
 
 void SaveConfig()
 {
@@ -83,9 +83,14 @@ bool LoadConfig()
 void InitialiseSD()
 {
     // If we can't see a card, don't proceed to initilisation. DMA on Teensy 4.1
-    CardPresent = SD.sdfs.begin(SdioConfig(DMA_SDIO));
+    if (!CardPresent)
+    {
+        CardPresent = SD.sdfs.begin(SdioConfig(DMA_SDIO));        
+    }
+    
+    // Card present, continue
     if (CardPresent)
-    {        
+    {
         String yearStr = year();
         String monthStr = month();
         String dayStr = day();
@@ -108,7 +113,8 @@ void InitialiseSD()
         myfile.println(fileHeader);
         myfile.close();
         BytesStored = 0;
-    }    
+        Serial.println("SD Init called");
+    }
 }
 
 void LogData()
@@ -116,8 +122,6 @@ void LogData()
     // Check undervoltage flag hasn't been set and that an SD card was detected
     if (!(SystemParams.ErrorFlags & UNDERVOLTGAGE) && CardPresent)
     {
-        Serial.print("Start building log entry: ");
-        Serial.println(millis());
         // Create date time stamp string
         String yearStr = year();
         String monthStr = month();
@@ -170,18 +174,12 @@ void LogData()
         logEntry.remove(length - 1);
 
         // Write the log entry to the current file
-        Serial.print("Start SD log entry: ");
-        Serial.println(millis());
         myfile = SD.open(fileName.c_str(), FILE_WRITE);
         if (myfile)
         {
             BytesStored += myfile.println(logEntry);
             myfile.close();
         }
-        Serial.print("Stop SD log entry: ");
-        Serial.println(millis());
-        Serial.print("File size: ");
-        Serial.println(BytesStored);        
 
         // If we've gone over the max log file size, start a new file
         if (BytesStored > MAX_LOGFILE_SIZE)

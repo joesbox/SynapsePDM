@@ -66,7 +66,7 @@
 #define DEFAULT_DK_VALUE 38000
 
 // Maximum log file size in bytes
-#define MAX_LOGFILE_SIZE 1e+8
+#define MAX_LOGFILE_SIZE 100000000
 
 // Main task timer intervals (milliseconds)
 #define TASK_1_INTERVAL 10
