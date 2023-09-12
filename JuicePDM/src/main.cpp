@@ -46,8 +46,8 @@ void setup()
   Serial.begin(9600);
 
   WDT_timings_t config;
-  config.trigger = 3; /* in seconds, 0->128 */
-  config.timeout = 5; /* in seconds, 0->128 */
+  config.trigger = 5; /* in seconds, 0->128 */
+  config.timeout = 10; /* in seconds, 0->128 */
   config.callback = wdtCallback;
   wdt.begin(config);
 

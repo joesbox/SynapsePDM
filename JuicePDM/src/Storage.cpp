@@ -82,12 +82,12 @@ bool LoadConfig()
 
 void InitialiseSD()
 {
-    // If we can't see a card, don't proceed to initilisation. DMA on Teensy 4.1
+    // If we can't see a card, don't proceed to initilisation
     if (!CardPresent)
     {
-        CardPresent = SD.sdfs.begin(SdioConfig(DMA_SDIO));        
+        CardPresent = SD.sdfs.begin(SdioConfig(FIFO_SDIO));
     }
-    
+
     // Card present, continue
     if (CardPresent)
     {
@@ -122,6 +122,7 @@ void LogData()
     // Check undervoltage flag hasn't been set and that an SD card was detected
     if (!(SystemParams.ErrorFlags & UNDERVOLTGAGE) && CardPresent)
     {
+        int start = millis();
         // Create date time stamp string
         String yearStr = year();
         String monthStr = month();
@@ -179,6 +180,11 @@ void LogData()
         {
             BytesStored += myfile.println(logEntry);
             myfile.close();
+        }
+        int finish = millis() - start;
+        if (finish > TASK_3_INTERVAL)
+        {
+            Serial.println(finish);
         }
 
         // If we've gone over the max log file size, start a new file
