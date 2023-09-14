@@ -25,6 +25,7 @@
 SystemParameters SystemParams;
 
 bool CRCValid;
+bool SDCardOK;
 
 void UpdateSystem()
 {
@@ -79,5 +80,15 @@ void UpdateSystem()
     else
     {
         SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~CRC_CHECK_FAILED;
+    }
+
+    // Check SD card status
+    if (SDCardOK)
+    {
+        SystemParams.ErrorFlags |= SD_CARD_ERROR;
+    }
+    else
+    {
+        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~SD_CARD_ERROR;
     }
 }

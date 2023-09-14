@@ -25,10 +25,9 @@
 ConfigUnion ConfigData;
 CRC32 crc;
 uint32_t EEPROMindex;
-File myfile;
+FsFile myfile;
 String fileName;
-Sd2Card card;
-bool CardPresent;
+SdFs SD;
 int BytesStored;
 
 void SaveConfig()
@@ -83,13 +82,14 @@ bool LoadConfig()
 void InitialiseSD()
 {
     // If we can't see a card, don't proceed to initilisation
-    if (!CardPresent)
+    if (!SDCardOK)
     {
-        CardPresent = SD.sdfs.begin(SdioConfig(FIFO_SDIO));
+        // Teensy 4.1 DMA.
+        SDCardOK = SD.begin(SdioConfig(DMA_SDIO));
     }
 
     // Card present, continue
-    if (CardPresent)
+    if (SDCardOK)
     {
         String yearStr = year();
         String monthStr = month();
@@ -108,10 +108,14 @@ void InitialiseSD()
         int length = fileHeader.length();
         fileHeader.remove(length - 1);
 
-        myfile = SD.open(fileName.c_str(), FILE_WRITE_BEGIN);
+        // Create new file
+        SDCardOK = myfile.open(fileName.c_str(), O_CREAT | O_WRITE);
 
-        myfile.println(fileHeader);
-        myfile.close();
+        if (SDCardOK)
+        {
+            myfile.println(fileHeader);
+            myfile.close();
+        }
         BytesStored = 0;
         Serial.println("SD Init called");
     }
@@ -120,7 +124,7 @@ void InitialiseSD()
 void LogData()
 {
     // Check undervoltage flag hasn't been set and that an SD card was detected
-    if (!(SystemParams.ErrorFlags & UNDERVOLTGAGE) && CardPresent)
+    if (!(SystemParams.ErrorFlags & UNDERVOLTGAGE) && SDCardOK)
     {
         int start = millis();
         // Create date time stamp string
@@ -175,22 +179,28 @@ void LogData()
         logEntry.remove(length - 1);
 
         // Write the log entry to the current file
-        myfile = SD.open(fileName.c_str(), FILE_WRITE);
-        if (myfile)
+        if (myfile.open(fileName.c_str(), O_APPEND | O_WRITE))
         {
             BytesStored += myfile.println(logEntry);
             myfile.close();
         }
-        int finish = millis() - start;
-        if (finish > TASK_3_INTERVAL)
+        else
         {
-            Serial.println(finish);
+            SDCardOK = false;
+            Serial.println("Open file failed.");
         }
 
         // If we've gone over the max log file size, start a new file
         if (BytesStored > MAX_LOGFILE_SIZE)
         {
+            Serial.print(BytesStored);
             InitialiseSD();
+        }
+
+        int finish = millis() - start;
+        if (finish > TASK_3_INTERVAL)
+        {
+            Serial.println(finish);
         }
     }
     else

@@ -37,19 +37,13 @@
 #include <Watchdog_t4.h>
 #include <CANComms.h>
 
-WDT_T4<WDT1> wdt;
-
 void wdtCallback();
+
+String lastThingCalled;
 
 void setup()
 {
   Serial.begin(9600);
-
-  WDT_timings_t config;
-  config.trigger = 5; /* in seconds, 0->128 */
-  config.timeout = 10; /* in seconds, 0->128 */
-  config.callback = wdtCallback;
-  wdt.begin(config);
 
   InititalizeData();
 
@@ -80,6 +74,8 @@ void setup()
   InitialiseLEDs();
   HandleOutputs();
   CRCValid = LoadConfig();
+
+  Serial.println("Power up");
 }
 
 void loop()
@@ -90,8 +86,12 @@ void loop()
     // Update channel outputs
     UpdateOutputs();
 
+    lastThingCalled = "UpdateOutputs";
+
     // Read input channel status
     HandleInputs();
+
+    lastThingCalled = "HandleInputs";
 
     task1 = 0;
   }
@@ -101,6 +101,7 @@ void loop()
   {
     // Update system parameters
     UpdateSystem();
+    lastThingCalled = "UpdateSystem";
 
     // Broadcast CAN updates
     // SendCANMessages();
@@ -113,22 +114,13 @@ void loop()
   {
     // Log SD card data
     LogData();
+    lastThingCalled = "LogData";
     task3 = 0;
   }
 
   // Lowest priority tasks
   if (task4 >= TASK_4_INTERVAL)
   {
-    task4 = 0;
+    task4 = 0;    
   }
-
-  // Feed the dog.
-  wdt.feed();
-}
-
-void wdtCallback()
-{
-  // If we've landed here, the watchdog looks like it may timeout. Set the error flag which may or may not get logged to the SD card.
-  SystemParams.ErrorFlags |= WATCHDOG_TIMEOUT;
-  Serial.println("Hit the watchdog timer");
 }

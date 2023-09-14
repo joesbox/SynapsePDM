@@ -30,7 +30,7 @@
 #include <System.h>
 #include <CRC32.h>
 #include <EEPROM.h> 
-#include <SD.h>
+#include <SdFat.h>
 
 /// @brief Saves the config data to EEPROM along with a calculated CRC
 void SaveConfig();
@@ -69,16 +69,13 @@ extern ConfigUnion ConfigData;
 extern uint32_t EEPROMindex;
 
 /// @brief Log file object
-extern File myfile;
+extern FsFile myfile;
 
 /// @brief Current log file name in use
 extern String fileName;
 
-/// @brief SD card object
-extern Sd2Card card;
-
-/// @brief Flag to denote if the SD card was detected
-extern bool CardPresent;
+/// @brief SD file system
+extern SdFs SD;
 
 /// @brief Accumulative bytes stored in a given log file
 extern int BytesStored;

@@ -72,7 +72,7 @@
 #define TASK_1_INTERVAL 10
 #define TASK_2_INTERVAL 50
 #define TASK_3_INTERVAL 100
-#define TASK_4_INTERVAL 250
+#define TASK_4_INTERVAL 1000
 
 // Watchdog timer interval
 #define WATCHDOG_INTERVAL 2500
@@ -109,13 +109,14 @@
 #define OVERTEMP 0x02
 #define UNDERVOLTGAGE 0x04
 #define CRC_CHECK_FAILED 0x08
+#define SD_CARD_ERROR 0x10
 
 // Channel error bitmasks
 #define CHN_OVERCURRENT_RANGE 0x01
 #define CHN_OVERCURRENT_LIMIT 0x02
 #define CHN_UNDERCURRENT_RANGE 0x04
 #define OVERTEMP_GNDSHORT 0x08
-#define WATCHDOG_TIMEOUT 0x16
+#define WATCHDOG_TIMEOUT 0x10
 
 // ECU CAN address
 #define ECU_ADDR 0x800;

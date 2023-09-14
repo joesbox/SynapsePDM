@@ -43,6 +43,9 @@ extern SystemParameters SystemParams;
 /// @brief CRC check failed flag
 extern bool CRCValid;
 
+/// @brief SD card OK flag
+extern bool SDCardOK;
+
 /// @brief Updates the system parameters
 void UpdateSystem();
 
