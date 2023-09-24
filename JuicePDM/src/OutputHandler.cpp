@@ -38,7 +38,7 @@ CRGB leds[NUM_CHANNELS];
 uint8_t toggle[NUM_CHANNELS];
 
 /// @brief Handle output control
-void HandleOutputs()
+void InitialiseOutputs()
 {
   // Configure output pin interrupts on the rising edge for PWM outputs
   attachInterrupt(Channels[0].ControlPin, CH1_ISR, RISING);
@@ -121,7 +121,7 @@ void UpdateOutputs()
       break;
     }
   }
-  FastLED.show();
+  FastLED.show();  
 }
 
 /// @brief Take analog readings at the pre-defined interval for PWM-enabled channels

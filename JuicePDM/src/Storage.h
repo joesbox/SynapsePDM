@@ -31,6 +31,16 @@
 #include <CRC32.h>
 #include <EEPROM.h> 
 #include <SdFat.h>
+#include <RingBuf.h>
+
+// SD sector size
+#define SD_SECTOR_SIZE 512
+
+// Logging ring buffer capacity in bytes
+#define RING_BUF_CAPACITY 1000
+
+// SPI clock speed
+#define SPI_CLOCK SD_SCK_MHZ(50)
 
 /// @brief Saves the config data to EEPROM along with a calculated CRC
 void SaveConfig();
@@ -82,5 +92,11 @@ extern int BytesStored;
 
 /// @brief SD card was initialised at power on
 extern bool SDInit;
+
+/// @brief Ring buffer
+extern RingBuf<FsFile, RING_BUF_CAPACITY> rb;
+
+/// @brief Flag to latch undervoltage condition. Ensures clean-up and initialise is done only once upon re-establishing power.
+extern bool UndervoltageLatch;
 
 #endif

@@ -53,7 +53,7 @@ extern CRGB Scroll(int pos);
 extern uint8_t toggle[NUM_CHANNELS];
 
 // Setup interrupts and analog read timers
-void HandleOutputs();
+void InitialiseOutputs();
 
 // Set PWM or digital outputs
 void UpdateOutputs();

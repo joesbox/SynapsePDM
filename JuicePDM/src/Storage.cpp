@@ -29,10 +29,14 @@ FsFile myfile;
 String fileName;
 SdFs SD;
 int BytesStored;
+RingBuf<FsFile, RING_BUF_CAPACITY> rb;
+bool UndervoltageLatch;
 
 void SaveConfig()
 {
+    // Reset EEPROM index
     EEPROMindex = 0;
+
     // Copy current channel info to storage structure
     memcpy(&ConfigData.data.channelConfigStored, &Channels, sizeof(Channels));
 
@@ -84,8 +88,15 @@ void InitialiseSD()
     // If we can't see a card, don't proceed to initilisation
     if (!SDCardOK)
     {
-        // Teensy 4.1 DMA.
-        SDCardOK = SD.begin(SdioConfig(DMA_SDIO));
+        // Teensy 4.1 FIFO.
+        SDCardOK = SD.begin(SdioConfig(FIFO_SDIO));
+        if (!SDCardOK)
+        {
+            Serial.println("SD Begin error");
+            SD.initErrorPrint();
+        }
+        Serial.print("SD Card begin OK: ");
+        Serial.println(SDCardOK);
     }
 
     // Card present, continue
@@ -109,21 +120,41 @@ void InitialiseSD()
         fileHeader.remove(length - 1);
 
         // Create new file
-        SDCardOK = myfile.open(fileName.c_str(), O_CREAT | O_WRITE);
+        SDCardOK = myfile.open(fileName.c_str(), O_RDWR | O_CREAT | O_TRUNC);
+        if (!SDCardOK)
+        {
+            Serial.println("SD init open error");
+            SD.errorPrint(&Serial);
+        }
 
+        // Pre-allocate
+        SDCardOK = myfile.preAllocate(MAX_LOGFILE_SIZE);
+        if (!SDCardOK)
+        {
+            Serial.println("SD pre-allocate error");
+            SD.errorPrint(&Serial);
+        }
+
+        // Create file was succesful. Write the header.
         if (SDCardOK)
         {
-            myfile.println(fileHeader);
-            myfile.close();
+            // Start the ring buffer
+            rb.begin(&myfile);
+
+            // Print the file header to the buffer
+            rb.println(fileHeader);
         }
         BytesStored = 0;
-        Serial.println("SD Init called");
+        Serial.println("SD Card init complete.");
+
+        // Clear the undervoltage latch flag
+        UndervoltageLatch = false;
     }
 }
 
 void LogData()
 {
-    // Check undervoltage flag hasn't been set and that an SD card was detected
+    // Log if we're not in an undervoltage condition and the SD card is OK
     if (!(SystemParams.ErrorFlags & UNDERVOLTGAGE) && SDCardOK)
     {
         int start = millis();
@@ -174,26 +205,36 @@ void LogData()
             logEntry = logEntry + Channels[i].ErrorFlags + ",";
         }
 
-        // Trim the last comma from the entry
+        // Trim the last comma from the last channel entry.
         int length = logEntry.length();
         logEntry.remove(length - 1);
 
-        // Write the log entry to the current file
-        if (myfile.open(fileName.c_str(), O_APPEND | O_WRITE))
+        // Write this line to the ring buffer
+        rb.println(logEntry);
+
+        // Ring buffer contains enough data for one sector and the file isn't busy. Write the contents of the buffer out.
+        if ((rb.bytesUsed() >= SD_SECTOR_SIZE) && !myfile.isBusy())
         {
-            BytesStored += myfile.println(logEntry);
-            myfile.close();
-        }
-        else
-        {
-            SDCardOK = false;
-            Serial.println("Open file failed.");
+            BytesStored = rb.writeOut(SD_SECTOR_SIZE);
+
+            // Make sure that the entire sector was written successfully
+            if (SD_SECTOR_SIZE != BytesStored)
+            {
+                SDCardOK = false;
+                Serial.println("Sector size != bytes stored");
+            }
         }
 
-        // If we've gone over the max log file size, start a new file
-        if (BytesStored > MAX_LOGFILE_SIZE)
+        // Check whether the file is full (i.e. When there is not enough room to write 1 more sector) or there was an error writing out to the file, truncate this file, close it and start a new file
+        if ((myfile.dataLength() - myfile.curPosition()) < SD_SECTOR_SIZE || !SDCardOK)
         {
-            Serial.print(BytesStored);
+            // Write any RingBuf data to file. Initialise a new file.
+            rb.sync();
+            myfile.truncate();
+            myfile.rewind();
+            myfile.close();
+            myfile.sync();
+            Serial.println("File full.");
             InitialiseSD();
         }
 
@@ -205,7 +246,28 @@ void LogData()
     }
     else
     {
-        // Make sure the file is closed if we're in a low voltage state (probably powering off or cranking)
-        myfile.close();
+        // Whatever we do next, we should close the current file
+        if (!UndervoltageLatch)
+        {
+            rb.sync();
+            myfile.truncate();
+            myfile.rewind();
+            myfile.close();
+            myfile.sync();
+
+            // Latch this condition in case we find ourselves back here (probably cranking - sufficient voltage to run, insufficient voltage to log).
+            UndervoltageLatch = true;
+        }
+
+        // Undervoltage condition. Set SD card flag OK to false to ensure we come back here and initialise a new file when we have sufficient voltage
+        if (SystemParams.ErrorFlags & UNDERVOLTGAGE)
+        {            
+            SDCardOK = false;
+        }
+        else
+        {
+            // We're back to normal operating voltage. Start a new file
+            InitialiseSD();
+        }
     }
 }

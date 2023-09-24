@@ -66,13 +66,13 @@
 #define DEFAULT_DK_VALUE 38000
 
 // Maximum log file size in bytes
-#define MAX_LOGFILE_SIZE 1000000
+#define MAX_LOGFILE_SIZE 100000
 
 // Main task timer intervals (milliseconds)
 #define TASK_1_INTERVAL 10
 #define TASK_2_INTERVAL 50
 #define TASK_3_INTERVAL 100
-#define TASK_4_INTERVAL 1000
+#define TASK_4_INTERVAL 60000
 
 // Watchdog timer interval
 #define WATCHDOG_INTERVAL 2500
@@ -109,7 +109,7 @@
 #define OVERTEMP 0x02
 #define UNDERVOLTGAGE 0x04
 #define CRC_CHECK_FAILED 0x08
-#define SD_CARD_ERROR 0x10
+#define SDCARD_ERROR 0x10
 
 // Channel error bitmasks
 #define CHN_OVERCURRENT_RANGE 0x01

@@ -43,8 +43,10 @@ String lastThingCalled;
 
 void setup()
 {
-  Serial.begin(9600);
-
+  while (!Serial)
+  {
+    // wait for Arduino Serial Monitor to be ready
+  }
   InititalizeData();
 
   InitialiseSD();
@@ -72,7 +74,7 @@ void setup()
   */
 
   InitialiseLEDs();
-  HandleOutputs();
+  InitialiseOutputs();
   CRCValid = LoadConfig();
 
   Serial.println("Power up");
@@ -84,7 +86,7 @@ void loop()
   if (task1 >= TASK_1_INTERVAL)
   {
     // Update channel outputs
-    UpdateOutputs();
+    //UpdateOutputs();
 
     lastThingCalled = "UpdateOutputs";
 
@@ -121,6 +123,13 @@ void loop()
   // Lowest priority tasks
   if (task4 >= TASK_4_INTERVAL)
   {
-    task4 = 0;    
+    task4 = 0;
+    Serial.print(hour());
+    Serial.print(":");
+    Serial.print(minute());
+    Serial.print(":");
+    Serial.print(second());
+    Serial.print(" - ");
+    Serial.println("One minute has passed...");
   }
 }

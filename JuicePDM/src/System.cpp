@@ -83,12 +83,12 @@ void UpdateSystem()
     }
 
     // Check SD card status
-    if (SDCardOK)
+    if (!SDCardOK)
     {
-        SystemParams.ErrorFlags |= SD_CARD_ERROR;
+        SystemParams.ErrorFlags |= SDCARD_ERROR;
     }
     else
     {
-        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~SD_CARD_ERROR;
+        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~SDCARD_ERROR;
     }
 }
