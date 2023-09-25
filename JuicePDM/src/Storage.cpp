@@ -25,9 +25,10 @@
 ConfigUnion ConfigData;
 CRC32 crc;
 uint32_t EEPROMindex;
-FsFile myfile;
-String fileName;
 SdFs SD;
+FsFile myfile;
+char fileName[23];
+char fileHeader[65 + (132 * NUM_CHANNELS)];
 int BytesStored;
 RingBuf<FsFile, RING_BUF_CAPACITY> rb;
 bool UndervoltageLatch;
@@ -101,26 +102,30 @@ void InitialiseSD()
 
     // Card present, continue
     if (SDCardOK)
-    {
-        String yearStr = year();
-        String monthStr = month();
-        String dayStr = day();
-        String hourStr = hour();
-        String minuteStr = minute();
-        String secondStr = second();
-
-        fileName = yearStr + "_" + monthStr + "_" + dayStr + "_" + hourStr + "_" + minuteStr + "_" + secondStr + ".csv";
-        String fileHeader = "Date,Time,System Temp,System Voltage,System Current,Error Flags,";
-
-        for (int i = 0; i < NUM_CHANNELS; i++)
-        {
-            fileHeader = fileHeader + "Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,PWM,Multi-Channel,Group Number,Channel Error Flags,";
-        }
-        int length = fileHeader.length();
-        fileHeader.remove(length - 1);
+    {       
+        // Filename format is: YYYY-MM-DD_HH.MM.SS.csv
+        char intBuffer[4];
+        itoa(year(), intBuffer, 10);
+        strcpy(fileName, intBuffer);
+        strcat(fileName, "-");
+        itoa(month(), intBuffer, 10);
+        strcat(fileName, intBuffer);
+        strcat(fileName, "-");
+        itoa(day(), intBuffer, 10);
+        strcat(fileName, intBuffer);
+        strcat(fileName, "_");
+        itoa(hour(), intBuffer, 10);
+        strcat(fileName, intBuffer);
+        strcat(fileName, "-");
+        itoa(minute(), intBuffer, 10);
+        strcat(fileName, intBuffer);
+        strcat(fileName, "-");
+        itoa(second(), intBuffer, 10);
+        strcat(fileName, intBuffer);
+        strcat(fileName, ".csv");
 
         // Create new file
-        SDCardOK = myfile.open(fileName.c_str(), O_RDWR | O_CREAT | O_TRUNC);
+        SDCardOK = myfile.open(fileName, O_RDWR | O_CREAT | O_TRUNC);
         if (!SDCardOK)
         {
             Serial.println("SD init open error");
@@ -142,8 +147,22 @@ void InitialiseSD()
             rb.begin(&myfile);
 
             // Print the file header to the buffer
-            rb.println(fileHeader);
+            rb.print("Date,Time,System Temp,System Voltage,System Current,Error Flags,");
+
+            for (int i = 0; i < NUM_CHANNELS; i++)
+            {
+                rb.print("Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,PWM,Multi-Channel,Group Number,Channel Error Flags");
+
+                // Print a separating comma unless we're on the last channel
+                if (i != NUM_CHANNELS)
+                {
+                    rb.print(",");
+                }
+            }
+
+            rb.println();
         }
+
         BytesStored = 0;
         Serial.println("SD Card init complete.");
 
@@ -158,21 +177,32 @@ void LogData()
     if (!(SystemParams.ErrorFlags & UNDERVOLTGAGE) && SDCardOK)
     {
         int start = millis();
-        // Create date time stamp string
-        String yearStr = year();
-        String monthStr = month();
-        String dayStr = day();
-        String hourStr = hour();
-        String minuteStr = minute();
-        String secondStr = second();
-        String logEntry = yearStr + "-" + monthStr + "-" + dayStr + "," + hourStr + ":" + minuteStr + ":" + secondStr;
+        // Print date and time to the buffer
+        rb.print(year());
+        rb.print("-");
+        rb.print(month());
+        rb.print("-");
+        rb.print(day());
+        rb.print(",");
+        rb.print(hour());
+        rb.print(":");
+        rb.print(minute());
+        rb.print(":");
+        rb.print(second());
+        rb.print(",");
 
         // Add system parameters
-        logEntry = logEntry + "," + SystemParams.SystemTemperature;
-        logEntry = logEntry + "," + SystemParams.VBatt;
-        logEntry = logEntry + "," + SystemParams.SystemCurrent;
-        logEntry = logEntry + "," + SystemParams.ErrorFlags;
-        logEntry = logEntry + ",";
+        rb.print(SystemParams.SystemTemperature);
+        rb.print(",");
+
+        rb.print(SystemParams.VBatt);
+        rb.print(",");
+
+        rb.print(SystemParams.SystemCurrent);
+        rb.print(",");
+
+        rb.print(SystemParams.ErrorFlags);
+        rb.print(",");
 
         // Add info for each channel
         for (int i = 0; i < NUM_CHANNELS; i++)
@@ -180,37 +210,52 @@ void LogData()
             switch (Channels[i].ChanType)
             {
             case DIG:
-                logEntry = logEntry + "DAH";
+                rb.print("DIGI");
                 break;
             case DIG_PWM:
-                logEntry = logEntry + "DAHP";
+                rb.print("DIGP");
                 break;
             case CAN_DIGITAL:
-                logEntry = logEntry + "CAND";
+                rb.print("CAND");
                 break;
             case CAN_PWM:
-                logEntry = logEntry + "CANP";
+                rb.print("CANP");
                 break;
             default:
                 break;
             }
-            logEntry = logEntry + ",";
-            logEntry = logEntry + Channels[i].Enabled + ",";
-            logEntry = logEntry + Channels[i].CurrentValue + ",";
-            logEntry = logEntry + Channels[i].CurrentThresholdHigh + ",";
-            logEntry = logEntry + Channels[i].CurrentThresholdLow + ",";
-            logEntry = logEntry + Channels[i].PWMSetDuty + ",";
-            logEntry = logEntry + Channels[i].MultiChannel + ",";
-            logEntry = logEntry + Channels[i].GroupNumber + ",";
-            logEntry = logEntry + Channels[i].ErrorFlags + ",";
+            rb.print(",");
+            rb.print(Channels[i].Enabled);
+
+            rb.print(",");
+            rb.print(Channels[i].CurrentValue);
+
+            rb.print(",");
+            rb.print(Channels[i].CurrentThresholdHigh);
+
+            rb.print(",");
+            rb.print(Channels[i].CurrentThresholdLow);
+
+            rb.print(",");
+            rb.print(Channels[i].PWMSetDuty);
+
+            rb.print(",");
+            rb.print(Channels[i].MultiChannel);
+
+            rb.print(",");
+            rb.print(Channels[i].GroupNumber);
+
+            rb.print(",");
+            rb.print(Channels[i].ErrorFlags);
+
+            // Print a separating comma unless we're on the last channel
+            if (i != NUM_CHANNELS)
+            {
+                rb.print(",");
+            }
         }
 
-        // Trim the last comma from the last channel entry.
-        int length = logEntry.length();
-        logEntry.remove(length - 1);
-
-        // Write this line to the ring buffer
-        rb.println(logEntry);
+        rb.println();
 
         // Ring buffer contains enough data for one sector and the file isn't busy. Write the contents of the buffer out.
         if ((rb.bytesUsed() >= SD_SECTOR_SIZE) && !myfile.isBusy())
@@ -261,7 +306,7 @@ void LogData()
 
         // Undervoltage condition. Set SD card flag OK to false to ensure we come back here and initialise a new file when we have sufficient voltage
         if (SystemParams.ErrorFlags & UNDERVOLTGAGE)
-        {            
+        {
             SDCardOK = false;
         }
         else

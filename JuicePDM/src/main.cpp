@@ -43,10 +43,6 @@ String lastThingCalled;
 
 void setup()
 {
-  while (!Serial)
-  {
-    // wait for Arduino Serial Monitor to be ready
-  }
   InititalizeData();
 
   InitialiseSD();

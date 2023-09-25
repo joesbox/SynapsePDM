@@ -37,7 +37,7 @@
 #define SD_SECTOR_SIZE 512
 
 // Logging ring buffer capacity in bytes
-#define RING_BUF_CAPACITY 1000
+#define RING_BUF_CAPACITY 2000
 
 // SPI clock speed
 #define SPI_CLOCK SD_SCK_MHZ(50)
@@ -82,7 +82,10 @@ extern uint32_t EEPROMindex;
 extern FsFile myfile;
 
 /// @brief Current log file name in use
-extern String fileName;
+extern char fileName[];
+
+/// @brief Log file header
+extern char fileHeader[];
 
 /// @brief SD file system
 extern SdFs SD;
