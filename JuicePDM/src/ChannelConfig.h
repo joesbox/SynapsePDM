@@ -52,6 +52,7 @@ struct __attribute__((packed)) ChannelConfig
   uint8_t GroupNumber;        // Group membership number
   uint8_t ControlPin;         // Digital uC control pin
   uint8_t CurrentSensePin;    // Current sense input pin
+  uint8_t CurrentSensePWM;    // 8-Bit PWM perdiod value to reach before taking an analog reading (consideration for HSD turn on delay)
   uint8_t InputControlPin;    // Digital input control pin (digital channels only)
   uint32_t CurrentSenseCal1;  // Current sense calibration point 1 (IL1)
   uint32_t CurrentSenseCal2;  // Current sense calibration point 2 (IL2)

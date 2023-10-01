@@ -27,6 +27,7 @@
 #include <ChannelConfig.h>
 #include <System.h>
 #include <TimeLib.h>
+#include <elapsedMillis.h>
 
 // Number of hardware output channels
 #define NUM_CHANNELS 6
@@ -36,16 +37,19 @@
 #define ANALOG_DELAY 100 
 
 // Maximum PWM duty accounting for turn off delay. Above this value, a PWM channel will be set to 100% duty
-#define MAX_DUTY 90        
+// BTS50010-1LUA max turn off time is 220µs. Default PWM frequency is 200Hz (5000µs period). Therefore, max. PWM duty is limited to about 95%, 4750µs
+#define MAX_DUTY 95        
 
-// Min duty accounting for turn on delay. Above this value, a PWM channel will be set to 0% duty
-#define MIN_DUTY 10        
+// Min duty accounting for turn on delay. Above this value, a PWM channel will be set to 0% duty. 
+// BTS50010-1LUA max turn on delay is 190µs. Default PWM frequency is 200Hz (5000µs period). Therefore, min. PWM duty is limited to about 10% (500µs, 190µs turn-on delay + analog read)
+#define MIN_DUTY 10
 
 // Microsecond representation of a CPU tick
 #define CPU_TICK_MICROS (1E6/F_CPU)
 
-// Interval in microseconds for taking PWM analog readings
-#define ANALOG_PWM_READ_INTERVAL 20
+// 8-Bit PWM value for taking PWM analog readings. BTS50010-1LUA max turn on delay is 190µs. Assuming 200Hz PWM, we need at least 190µs while the channel is on before taking a reading.
+// An 8-bit value of 11 represents approx. 215µs
+#define ANALOG_PWM_READ_INTERVAL 11
 
 // Interval in microseconds for taking PWM analog readings. Must be frequent enough to capture over or under current events.
 #define ANALOG_DIGITAL_READ_INTERVAL 20000
@@ -69,8 +73,8 @@
 #define MAX_LOGFILE_SIZE 100000
 
 // Main task timer intervals (milliseconds)
-#define TASK_1_INTERVAL 10
-#define TASK_2_INTERVAL 50
+#define TASK_1_INTERVAL 50
+#define TASK_2_INTERVAL 80
 #define TASK_3_INTERVAL 100
 #define TASK_4_INTERVAL 60000
 

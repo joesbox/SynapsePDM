@@ -27,12 +27,6 @@ volatile bool channelOutputStatus[NUM_CHANNELS];
 
 volatile uint32_t analogReadIntervals[NUM_CHANNELS];
 
-PeriodicTimer analogPWMReadTImer;
-
-PeriodicTimer analogDigitalReadTImer;
-
-PeriodicTimer calculateAnalogsTimer;
-
 CRGB leds[NUM_CHANNELS];
 
 uint8_t toggle[NUM_CHANNELS];
@@ -40,20 +34,10 @@ uint8_t toggle[NUM_CHANNELS];
 /// @brief Handle output control
 void InitialiseOutputs()
 {
-  // Configure output pin interrupts on the rising edge for PWM outputs
-  attachInterrupt(Channels[0].ControlPin, CH1_ISR, RISING);
-  attachInterrupt(Channels[1].ControlPin, CH2_ISR, RISING);
-  attachInterrupt(Channels[2].ControlPin, CH3_ISR, RISING);
-  attachInterrupt(Channels[3].ControlPin, CH4_ISR, RISING);
-  attachInterrupt(Channels[4].ControlPin, CH5_ISR, RISING);
-  attachInterrupt(Channels[5].ControlPin, CH6_ISR, RISING);
-
-  // Analog PWM read interval timer start
-  analogPWMReadTImer.begin(ReadPWMAnalogs, ANALOG_PWM_READ_INTERVAL, true);
-
-  // Analog digital read interval timer start
-  analogDigitalReadTImer.begin(ReadDigitalAnalogs, ANALOG_DIGITAL_READ_INTERVAL, true);
-
+  for (int i = 0; i < NUM_CHANNELS; i++)
+  {
+    pinMode(Channels[i].CurrentSensePin, INPUT_DISABLE);
+  }
   // Start PWM
   SoftPWMBegin();
 }
@@ -71,8 +55,17 @@ void UpdateOutputs()
       if (Channels[i].Enabled)
       {
         float squared = (VBATT_NOMINAL / SystemParams.VBatt) * (VBATT_NOMINAL / SystemParams.VBatt);
-        uint8_t pwmActual = round(Channels[i].PWMSetDuty * squared);
-        SoftPWMSet(Channels[i].ControlPin, pwmActual);
+        int pwmActual = round(Channels[i].PWMSetDuty * squared);
+
+        if (pwmActual > 255)
+        {
+          pwmActual = 255;
+        }
+        else if (pwmActual < 0)
+        {
+          pwmActual = 0;
+        }
+        SoftPWMSet(Channels[i].ControlPin, Channels[i].CurrentSensePin, Channels[i].CurrentSensePWM, pwmActual);
         if (Channels[i].ErrorFlags == 0)
         {
           leds[i] = CRGB::DeepSkyBlue;
@@ -81,23 +74,26 @@ void UpdateOutputs()
         {
           if (toggle[i] >= 128)
           {
-              leds[i] = CRGB::DeepSkyBlue;
-              if (toggle[i] == 255)
-              {
-                toggle[i] = 0;
-              }
-              toggle[i]++;
+            leds[i] = CRGB::DeepSkyBlue;
+            if (toggle[i] == 255)
+            {
+              toggle[i] = 0;
+            }
+            toggle[i]++;
           }
           else
           {
-              leds[i] = CRGB::DarkRed;
-              toggle[i]++;
+            leds[i] = CRGB::DarkRed;
+            toggle[i]++;
           }
         }
+
+        // Read the analog raw back
+        Channels[i].AnalogRaw = SoftPWMGetAnalog(Channels[i].ControlPin);
       }
       else
       {
-        SoftPWMSet(Channels[i].ControlPin, 0);
+        SoftPWMSet(Channels[i].ControlPin, Channels[i].CurrentSensePin, Channels[i].CurrentSensePWM, 0);
         leds[i] = CRGB::Black;
       }
       break;
@@ -105,116 +101,32 @@ void UpdateOutputs()
     case CAN_DIGITAL:
       if (Channels[i].Enabled)
       {
-        digitalWrite(Channels[i].ControlPin, HIGH);
-        analogReadIntervals[i] = ARM_DWT_CYCCNT;
+        // Use SoftPWM library so we still get analog sampling
+        SoftPWMSet(Channels[i].ControlPin, Channels[i].CurrentSensePin, Channels[i].CurrentSensePWM, 255);
         leds[i] = CRGB::DarkGreen;
       }
       else
       {
-        digitalWrite(Channels[i].ControlPin, LOW);
+        SoftPWMSet(Channels[i].ControlPin, Channels[i].CurrentSensePin, Channels[i].CurrentSensePWM, 0);
         leds[i] = CRGB::Black;
       }
       break;
     default:
-      digitalWrite(Channels[i].ControlPin, LOW);
+      SoftPWMSet(Channels[i].ControlPin, Channels[i].CurrentSensePin, Channels[i].CurrentSensePWM, 0);
       leds[i] = CRGB::Black;
       break;
     }
   }
-  FastLED.show();  
-}
-
-/// @brief Take analog readings at the pre-defined interval for PWM-enabled channels
-void ReadPWMAnalogs()
-{
-#ifdef DEBUG
-  digitalWrite(ANALOG_READ_DEBUG_PIN, HIGH); // Useful for scoping outputs to validate timing of analog reads
-#endif
-
-  for (int i = 0; i < NUM_CHANNELS; i++)
-  {
-    if (channelOutputStatus[i])
-    {
-      // Ensure the maximum turn on time for the BTS50010 has passed before taking an analog reading. Reset the output status flag.
-      if (ARM_DWT_CYCCNT - analogReadIntervals[i] >= ANALOG_DELAY / CPU_TICK_MICROS)
-      {
-        Channels[i].AnalogRaw = analogRead(Channels[i].CurrentSensePin);
-        channelOutputStatus[i] = false;
-      }
-    }
-  }
-#ifdef DEBUG
-  digitalWrite(ANALOG_READ_DEBUG_PIN, LOW);
-#endif
-}
-
-/// @brief Take analog readings for digital-enabled channels
-void ReadDigitalAnalogs()
-{
-  for (int i = 0; i < NUM_CHANNELS; i++)
-  {
-    switch (Channels[i].ChanType)
-    {
-    case DIG:
-    case CAN_DIGITAL:
-      // Ensure the maximum turn on time for the BTS50010 has passed before taking an analog reading.
-      if (ARM_DWT_CYCCNT - analogReadIntervals[i] >= ANALOG_DELAY / CPU_TICK_MICROS)
-      {
-        Channels[i].AnalogRaw = analogRead(Channels[i].CurrentSensePin);
-      }
-      break;
-    default:
-      break;
-    }
-  }
+  FastLED.show();
 }
 
 /// @brief Calculate real current value in amps
 void CalculateAnalogs()
 {
-  // TODO: implement current reading formula. Will need to consider calibration points.
-}
-
-/// @brief Channel 1 ISR. Sets the channel output status to true and sets the clock cycle counter value
-void CH1_ISR()
-{
-  channelOutputStatus[0] = true;
-  analogReadIntervals[0] = ARM_DWT_CYCCNT;
-}
-
-/// @brief Channel 2 ISR. Sets the channel output status to true and sets the clock cycle counter value
-void CH2_ISR()
-{
-  channelOutputStatus[1] = true;
-  analogReadIntervals[1] = ARM_DWT_CYCCNT;
-}
-
-/// @brief Channel 3 ISR. Sets the channel output status to true and sets the clock cycle counter value
-void CH3_ISR()
-{
-  channelOutputStatus[2] = true;
-  analogReadIntervals[2] = ARM_DWT_CYCCNT;
-}
-
-/// @brief Channel 4 ISR. Sets the channel output status to true and sets the clock cycle counter value
-void CH4_ISR()
-{
-  channelOutputStatus[3] = true;
-  analogReadIntervals[3] = ARM_DWT_CYCCNT;
-}
-
-/// @brief Channel 5 ISR. Sets the channel output status to true and sets the clock cycle counter value
-void CH5_ISR()
-{
-  channelOutputStatus[4] = true;
-  analogReadIntervals[4] = ARM_DWT_CYCCNT;
-}
-
-/// @brief Channel 6 ISR. Sets the channel output status to true and sets the clock cycle counter value
-void CH6_ISR()
-{
-  channelOutputStatus[5] = true;
-  analogReadIntervals[5] = ARM_DWT_CYCCNT;
+  for (int i = 0; i < NUM_CHANNELS; i++)
+  {
+    
+  }
 }
 
 void InitialiseLEDs()

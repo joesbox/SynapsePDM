@@ -102,7 +102,7 @@ void InitialiseSD()
 
     // Card present, continue
     if (SDCardOK)
-    {       
+    {
         // Filename format is: YYYY-MM-DD_HH.MM.SS.csv
         char intBuffer[4];
         itoa(year(), intBuffer, 10);
@@ -261,7 +261,6 @@ void LogData()
         if ((rb.bytesUsed() >= SD_SECTOR_SIZE) && !myfile.isBusy())
         {
             BytesStored = rb.writeOut(SD_SECTOR_SIZE);
-
             // Make sure that the entire sector was written successfully
             if (SD_SECTOR_SIZE != BytesStored)
             {
@@ -296,7 +295,6 @@ void LogData()
         {
             rb.sync();
             myfile.truncate();
-            myfile.rewind();
             myfile.close();
             myfile.sync();
 

@@ -43,37 +43,47 @@ String lastThingCalled;
 
 void setup()
 {
+
+  while (!Serial)
+  {
+  }
   InititalizeData();
 
   InitialiseSD();
 
   // LED debugging
-  /*
-  Channels[0].ChanType = DIG_ACT_HIGH;
+
+  Channels[0].ChanType = DIG_PWM;
   Channels[0].Enabled = true;
+  Channels[0].PWMSetDuty = 25;
 
-  Channels[1].ChanType = CAN_PWM;
+  Channels[1].ChanType = DIG_PWM;
   Channels[1].Enabled = true;
-  Channels[1].PWMSetDuty = 10;
+  Channels[1].PWMSetDuty = 25;
 
-  Channels[2].ChanType = DIG_ACT_HIGH;
+  Channels[2].ChanType = DIG_PWM;
   Channels[2].Enabled = true;
+  Channels[2].PWMSetDuty = 25;
 
-  Channels[3].ChanType = DIG_ACT_HIGH;
+  Channels[3].ChanType = DIG_PWM;
   Channels[3].Enabled = true;
+  Channels[3].PWMSetDuty = 25;
 
-  Channels[4].ChanType = DIG_ACT_HIGH;
+  Channels[4].ChanType = DIG_PWM;
   Channels[4].Enabled = true;
+  Channels[4].PWMSetDuty = 25;
 
-  Channels[5].ChanType = DIG_ACT_HIGH;
+  Channels[5].ChanType = DIG_PWM;
   Channels[5].Enabled = true;
-  */
+  Channels[5].PWMSetDuty = 255;
 
   InitialiseLEDs();
   InitialiseOutputs();
   CRCValid = LoadConfig();
 
   Serial.println("Power up");
+
+  task1 = task2 = task3 = task4 = 0;
 }
 
 void loop()
@@ -82,7 +92,7 @@ void loop()
   if (task1 >= TASK_1_INTERVAL)
   {
     // Update channel outputs
-    //UpdateOutputs();
+    UpdateOutputs();
 
     lastThingCalled = "UpdateOutputs";
 
@@ -90,7 +100,6 @@ void loop()
     HandleInputs();
 
     lastThingCalled = "HandleInputs";
-
     task1 = 0;
   }
 
@@ -113,6 +122,14 @@ void loop()
     // Log SD card data
     LogData();
     lastThingCalled = "LogData";
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+      Serial.print("Channel ");
+      Serial.print(i + 1);
+      Serial.print(" : ");
+      Serial.println(Channels[i].AnalogRaw);
+    }
+
     task3 = 0;
   }
 
