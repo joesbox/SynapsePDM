@@ -24,7 +24,6 @@
 #define OutputHandler_H
 
 #include <Arduino.h>
-#include <SoftPWM.h>
 #include <ADC.h>
 #include <Globals.h>
 #include <TeensyTimerTool.h>
@@ -33,15 +32,18 @@
 
 using namespace TeensyTimerTool;
 
-// Checks output status flags set by each channel ISR. If the appropriate time has passed since turning on 
-// the output (250µs for the BTS50010. See the datasheet), the analog reading from the current sense pin can be read
-extern PeriodicTimer analogPWMReadTImer;
+// Max frequency specified by the BTS50010A is 200Hz. Assuming 180Hz as a safe limit, an 8-bit PWM value represents aaprox. 22µs per count
+#define PWM_COUNT_INTERVAL 22
 
-// Digital read timer reads the current sense pin associated with the channel after the maximum turn on delay for the HSD
-extern PeriodicTimer analogDigitalReadTImer;
+// How many current sense samples to collect to calculate a mean
+#define ANALOG_READ_SAMPLES 8
 
-// Calculates real (ampere) current values for each channel, taking into account configured calibrations
-extern PeriodicTimer calculateAnalogsTimer;
+// 8-Bit PWM value for taking PWM analog readings. BTS50010-1LUA max turn on delay is 190µs. Assuming 180Hz as defined above, we need at least 190µs while the channel is on before taking a reading.
+// An 8-bit value of 10 represents approx. 220µs
+#define ANALOG_PWM_READ_INTERVAL 10
+
+// Interval timer used to control PWM outputs and analog read back
+extern IntervalTimer myTimer;
 
 // RGB LEDs
 extern CRGB leds[NUM_CHANNELS];
@@ -78,7 +80,10 @@ void CalculateAnalogs();
 // Initialise the RGB LEDs
 void InitialiseLEDs();
 
-// Update the RGB LEDs
+/// @brief  Update the RGB LEDs
 void UpdateLEDs();
+
+/// @brief Interval timer callback to control PWM outputs
+void OutputTimer();
 
 #endif

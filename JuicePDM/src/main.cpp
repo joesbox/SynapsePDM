@@ -54,28 +54,28 @@ void setup()
   // LED debugging
 
   Channels[0].ChanType = DIG_PWM;
-  Channels[0].Enabled = true;
+  Channels[0].Enabled = false;
   Channels[0].PWMSetDuty = 25;
 
   Channels[1].ChanType = DIG_PWM;
-  Channels[1].Enabled = true;
+  Channels[1].Enabled = false;
   Channels[1].PWMSetDuty = 25;
 
   Channels[2].ChanType = DIG_PWM;
-  Channels[2].Enabled = true;
+  Channels[2].Enabled = false;
   Channels[2].PWMSetDuty = 25;
 
   Channels[3].ChanType = DIG_PWM;
-  Channels[3].Enabled = true;
+  Channels[3].Enabled = false;
   Channels[3].PWMSetDuty = 25;
 
   Channels[4].ChanType = DIG_PWM;
-  Channels[4].Enabled = true;
+  Channels[4].Enabled = false;
   Channels[4].PWMSetDuty = 25;
 
   Channels[5].ChanType = DIG_PWM;
   Channels[5].Enabled = true;
-  Channels[5].PWMSetDuty = 255;
+  Channels[5].PWMSetDuty = 128;
 
   InitialiseLEDs();
   InitialiseOutputs();
@@ -122,13 +122,7 @@ void loop()
     // Log SD card data
     LogData();
     lastThingCalled = "LogData";
-    for (int i = 0; i < NUM_CHANNELS; i++)
-    {
-      Serial.print("Channel ");
-      Serial.print(i + 1);
-      Serial.print(" : ");
-      Serial.println(Channels[i].AnalogRaw);
-    }
+    
 
     task3 = 0;
   }

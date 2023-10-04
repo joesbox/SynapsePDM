@@ -47,10 +47,6 @@
 // Microsecond representation of a CPU tick
 #define CPU_TICK_MICROS (1E6/F_CPU)
 
-// 8-Bit PWM value for taking PWM analog readings. BTS50010-1LUA max turn on delay is 190µs. Assuming 200Hz PWM, we need at least 190µs while the channel is on before taking a reading.
-// An 8-bit value of 11 represents approx. 215µs
-#define ANALOG_PWM_READ_INTERVAL 11
-
 // Interval in microseconds for taking PWM analog readings. Must be frequent enough to capture over or under current events.
 #define ANALOG_DIGITAL_READ_INTERVAL 20000
 
@@ -132,7 +128,7 @@ const uint8_t channelInputPins[NUM_CHANNELS] = {24, 25, 26, 29, 28, 27};
 const uint8_t channelOutputPins[NUM_CHANNELS] = {5, 4, 3, 2, 1, 0};
 
 // Channel analog current sense pins
-const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {A1, A10, A17, A16, A15, A14};  
+const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {A1, A0, A17, A16, A15, A14};  
 
 // Timers for main tasks
 extern elapsedMillis task1;

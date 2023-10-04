@@ -38,7 +38,6 @@ void InititalizeData()
         Channels[i].ControlPin = channelOutputPins[i];
         Channels[i].CurrentSensePin = channelCurrentSensePins[i];
         Channels[i].CurrentSenseValue = DEFAULT_DK_VALUE;
-        Channels[i].CurrentSensePWM = ANALOG_PWM_READ_INTERVAL;
         Channels[i].InputControlPin = channelInputPins[i];
         pinMode(Channels[i].InputControlPin, INPUT);
         pinMode(Channels[i].ControlPin, OUTPUT);
