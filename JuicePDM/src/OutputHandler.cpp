@@ -56,6 +56,13 @@ void InitialiseOutputs()
   // Reset the counters
   pwmCounter = analogCounter = 0;
 
+  adc->adc0->setConversionSpeed(ADC_settings::ADC_CONVERSION_SPEED::LOW_SPEED);
+  adc->adc1->setConversionSpeed(ADC_settings::ADC_CONVERSION_SPEED::LOW_SPEED);
+
+  adc->adc0->setSamplingSpeed(ADC_settings::ADC_SAMPLING_SPEED::LOW_SPEED);
+  adc->adc1->setSamplingSpeed(ADC_settings::ADC_SAMPLING_SPEED::LOW_SPEED);
+
+  pinMode(20, OUTPUT);
   // Start PWM interval timer
   myTimer.begin(OutputTimer, PWM_COUNT_INTERVAL);
 }
@@ -109,7 +116,6 @@ void UpdateOutputs()
         }
 
         // Read the analog raw back
-        // Channels[i].AnalogRaw = SoftPWMGetAnalog(Channels[i].ControlPin);
         uint analogs[ANALOG_READ_SAMPLES];
         noInterrupts();
         memcpy(analogs, analogValues[i], sizeof(analogValues[i]));
@@ -196,6 +202,9 @@ void OutputTimer()
         // We've reached the point at which we can take an analog reading. Store it in the FIFO analog values array
         analogValues[i][analogCounter] = adc->analogRead(Channels[i].CurrentSensePin);
         analogCounter++;
+        
+
+        digitalToggle(20);
 
         if (analogCounter == ANALOG_READ_SAMPLES)
         {

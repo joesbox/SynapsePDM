@@ -51,6 +51,12 @@ void setup()
 
   InitialiseSD();
 
+  InitialiseLEDs();
+  InitialiseOutputs();
+  CRCValid = LoadConfig();
+
+  Serial.println("Power up");
+
   // LED debugging
 
   Channels[0].ChanType = DIG_PWM;
@@ -75,14 +81,7 @@ void setup()
 
   Channels[5].ChanType = DIG_PWM;
   Channels[5].Enabled = true;
-  Channels[5].PWMSetDuty = 128;
-
-  InitialiseLEDs();
-  InitialiseOutputs();
-  CRCValid = LoadConfig();
-
-  Serial.println("Power up");
-
+  Channels[5].PWMSetDuty = 25;
   task1 = task2 = task3 = task4 = 0;
 }
 
@@ -122,7 +121,6 @@ void loop()
     // Log SD card data
     LogData();
     lastThingCalled = "LogData";
-    
 
     task3 = 0;
   }
