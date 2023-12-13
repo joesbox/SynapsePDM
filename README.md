@@ -1,3 +1,4 @@
+[![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
 # JuicePDM
 ### CAN Enabled Automotive Power Distribution Module
 
@@ -14,4 +15,11 @@
 + Expansion via SPI or I<sup>2</sup>C.
 
 ## License
-This project is licensed under GNU GPL 3.0. http://www.gnu.org/licenses/gpl-3.0.en.html
+This work is licensed under a
+[Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License][cc-by-nc-sa].
+
+[![CC BY-NC-SA 4.0][cc-by-nc-sa-image]][cc-by-nc-sa]
+
+[cc-by-nc-sa]: http://creativecommons.org/licenses/by-nc-sa/4.0/
+[cc-by-nc-sa-image]: https://licensebuttons.net/l/by-nc-sa/4.0/88x31.png
+[cc-by-nc-sa-shield]: https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg
