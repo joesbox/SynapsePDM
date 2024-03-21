@@ -32,16 +32,22 @@
 
 using namespace TeensyTimerTool;
 
-// Max frequency specified by the BTS50010A is 200Hz.
-// This 8-bit PWM value represents aaprox. 39µs per count which translates to a PWM frequency of approximately 100Hz
-#define PWM_COUNT_INTERVAL 39
+// Max frequency specified by the BTS50010A is 200Hz. This 8-bit PWM period represents aaprox. 20µs per count which translates to a PWM frequency of approximately 195Hz
+#define PWM_COUNT_INTERVAL 20
 
 // How many current sense samples to collect to calculate a mean
 #define ANALOG_READ_SAMPLES 10
 
-// 8-Bit PWM value for taking PWM analog readings. BTS50010-1LUA max turn on delay is 190µs. There is capacitance to factor in. On HW v1.2, the current sense rise time is approx. 700µs.
-// An 8-bit value of 9 represents approx. 702µs. 
-#define ANALOG_PWM_READ_INTERVAL 9
+// BTS50010-1LUA max turn on delay is 190µs (80%), max turn off delay is 200µs (20%). The effective usable 8-bit PWM range is 21 to 235
+#define MIN_PWM 21
+#define MAX_PWM 235
+
+// Polynomial terms used to calculate current
+#define PTERM1 9.0829
+#define PTERM2 -24.874
+#define PTERM3 26.468
+#define PTERM4 -9.5747
+#define PCONST 1.2549
 
 // Interval timer used to control PWM outputs and analog read back
 extern IntervalTimer myTimer;

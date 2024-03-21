@@ -81,7 +81,7 @@ void setup()
 
   Channels[5].ChanType = DIG_PWM;
   Channels[5].Enabled = true;
-  Channels[5].PWMSetDuty = 20;
+  Channels[5].PWMSetDuty = 5;
   task1 = task2 = task3 = task4 = 0;
 }
 

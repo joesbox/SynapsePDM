@@ -85,8 +85,8 @@ void UpdateOutputs()
       if (Channels[i].Enabled)
       {
         // Calculate the adjusted PWM for volage/average power
-        //float squared = (VBATT_NOMINAL / SystemParams.VBatt) * (VBATT_NOMINAL / SystemParams.VBatt);
-        //int pwmActual = round(Channels[i].PWMSetDuty * squared);
+        // float squared = (VBATT_NOMINAL / SystemParams.VBatt) * (VBATT_NOMINAL / SystemParams.VBatt);
+        // int pwmActual = round(Channels[i].PWMSetDuty * squared);
 
         int pwmActual = Channels[i].PWMSetDuty;
 
@@ -132,8 +132,8 @@ void UpdateOutputs()
         uint8_t total = 0;
         for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
         {
-            sum += adc->analogRead(Channels[i].CurrentSensePin);
-            total++;          
+          sum += adc->analogRead(Channels[i].CurrentSensePin);
+          total++;
         }
         float analogMean = 0.0f;
         if (total)
@@ -142,12 +142,19 @@ void UpdateOutputs()
           Channels[i].AnalogRaw = analogMean;
         }
 
-        //Channels[i].AnalogRaw = adc->analogRead(Channels[i].CurrentSensePin);
+        // Channels[i].AnalogRaw = adc->analogRead(Channels[i].CurrentSensePin);
+        float const1 = 0.0978;
+        float const2 = 0.0096;
+        float exponent = 0.0;
 
         Serial.print("Channel: ");
         Serial.print(i + 1);
         Serial.print(": ");
-        Serial.println(Channels[i].AnalogRaw);
+        // Serial.println(Channels[i].AnalogRaw);
+
+        float isVoltage = (Channels[i].AnalogRaw / 1024.0) * 3.3;
+        float amps = PTERM1 * pow(isVoltage, 4) + PTERM2 * pow(isVoltage, 3) + PTERM3 * pow(isVoltage, 2) + PTERM4 * isVoltage + PCONST;
+        Serial.println(amps);
       }
       else
       {
@@ -160,8 +167,22 @@ void UpdateOutputs()
       if (Channels[i].Enabled)
       {
         // Digital channels get 100% duty
-        realPWMValues[i] = 254;
+        realPWMValues[i] = 255;
         leds[i] = CRGB::DarkGreen;
+
+        int sum = 0;
+        uint8_t total = 0;
+        for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
+        {
+          sum += adc->analogRead(Channels[i].CurrentSensePin);
+          total++;
+        }
+        float analogMean = 0.0f;
+        if (total)
+        {
+          analogMean = sum / total;
+          Channels[i].AnalogRaw = analogMean;
+        }
       }
       else
       {
@@ -208,7 +229,7 @@ void OutputTimer()
         // We've reached the point at which we can take an analog reading. Store it in the FIFO analog values array
         analogValues[i][analogCounter] = adc->analogRead(Channels[i].CurrentSensePin);
         analogCounter++;
-        
+
 
         digitalToggle(20);
 
