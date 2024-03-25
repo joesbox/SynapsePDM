@@ -43,10 +43,6 @@ String lastThingCalled;
 
 void setup()
 {
-
-  while (!Serial)
-  {
-  }
   InititalizeData();
 
   InitialiseSD();
@@ -54,11 +50,10 @@ void setup()
   InitialiseLEDs();
   InitialiseOutputs();
   CRCValid = LoadConfig();
-
+#ifdef DEBUG
   Serial.println("Power up");
 
   // LED debugging
-
   Channels[0].ChanType = DIG_PWM;
   Channels[0].Enabled = false;
   Channels[0].PWMSetDuty = 25;
@@ -82,6 +77,7 @@ void setup()
   Channels[5].ChanType = DIG_PWM;
   Channels[5].Enabled = true;
   Channels[5].PWMSetDuty = 5;
+#endif
   task1 = task2 = task3 = task4 = 0;
 }
 
@@ -120,6 +116,7 @@ void loop()
   {
     // Log SD card data
     LogData();
+
     lastThingCalled = "LogData";
 
     task3 = 0;

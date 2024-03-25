@@ -44,17 +44,11 @@
 // BTS50010-1LUA max turn on delay is 190µs. Default PWM frequency is 200Hz (5000µs period). Therefore, min. PWM duty is limited to about 10% (500µs, 190µs turn-on delay + analog read)
 #define MIN_DUTY 10
 
+// IS current fault threshold voltage. Aobve this threshold, the channel is either open circuit, short circuit or over temperature
+#define FAULT_THRESHOLD 2.00
+
 // Microsecond representation of a CPU tick
 #define CPU_TICK_MICROS (1E6/F_CPU)
-
-// Interval in microseconds for taking PWM analog readings. Must be frequent enough to capture over or under current events.
-#define ANALOG_DIGITAL_READ_INTERVAL 20000
-
-// Interval in microseconds for taking PWM analog readings. Should be the same as the read interval or greater.
-#define ANALOG_CALCULATION_INTERVAL 20000
-
-// Maximum raw current sense value whereby a fault has been detected by the HSD (short to Vs, short to GND or overtemperature)
-#define CURRENT_SENSE_FAULT 1024
 
 // Maximum per-channel current supported by hardware. No channel can exceed this limit.
 #define CURRENT_MAX 13.0
@@ -117,6 +111,8 @@
 #define CHN_UNDERCURRENT_RANGE 0x04
 #define OVERTEMP_GNDSHORT 0x08
 #define WATCHDOG_TIMEOUT 0x10
+#define IS_FAULT 0x20
+
 
 // ECU CAN address
 #define ECU_ADDR 0x800;

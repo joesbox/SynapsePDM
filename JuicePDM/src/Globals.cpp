@@ -39,6 +39,9 @@ void InititalizeData()
         Channels[i].CurrentSensePin = channelCurrentSensePins[i];
         Channels[i].CurrentSenseValue = DEFAULT_DK_VALUE;
         Channels[i].InputControlPin = channelInputPins[i];
+        Channels[i].CurrentLimitHigh = CURRENT_MAX;
+        Channels[i].CurrentThresholdHigh = CURRENT_MAX;
+        Channels[i].CurrentThresholdLow = 0.0;
         pinMode(Channels[i].InputControlPin, INPUT);
         pinMode(Channels[i].ControlPin, OUTPUT);
         digitalWrite(Channels[i].ControlPin, LOW);
@@ -54,5 +57,5 @@ void InititalizeData()
 // Get current time
 time_t getTeensy3Time()
 {
-  return Teensy3Clock.get();
+    return Teensy3Clock.get();
 }

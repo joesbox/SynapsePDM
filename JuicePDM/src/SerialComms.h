@@ -1,0 +1,60 @@
+/*  SerialComms.h Serial comms variables, functions and data handling.
+    Copyright (c) 2023 Joe Mann.  All right reserved.
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    THE SOFTWARE.
+*/
+
+#ifndef SerialComms_H
+#define SerialComms_H
+
+#include <Arduino.h>
+#include <Globals.h>
+#include <SimpleSerialProtocol.h>
+
+/// @brief Call back for begin command
+void onSerialBegin();
+
+/// @brief Call back for receiving data
+void onReceivedValues();
+
+/// @brief Initialise serial comms
+void InitialiseSerialComms();
+
+/// @brief CHeck for incoming data
+void CheckSerial();
+
+/// @brief Error callback
+/// @param errorNum Error number
+void onError(uint8_t errorNum);
+
+// Inintialize hardware constants
+const long BAUDRATE = 115200;       // Speed of serial connection
+const long CHARACTER_TIMEOUT = 500; // Wait max 500 ms between single chars to be received
+
+// Initialize command constants
+const byte COMMAND_ID_BEGIN = 'b';
+const byte COMMAND_ID_CONFIM = 'c';
+const byte COMMAND_ID_RECEIVE = 'r';
+const byte COMMAND_ID_SEND = 's';
+
+// Create instance. Pass Serial instance. Define command-id-range within Simple Serial Protocol is listening (here: a - z)
+SimpleSerialProtocol ssp(Serial, BAUDRATE, CHARACTER_TIMEOUT, onError, 'a', 'z'); // ASCII: 'a' - 'z' (26 byes of RAM is reserved)
+
+#endif
+

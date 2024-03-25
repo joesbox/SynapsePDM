@@ -67,9 +67,6 @@ void InitialiseOutputs();
 // Set PWM or digital outputs
 void UpdateOutputs();
 
-// Calculate channel current in amps
-void CalculateAnalogs();
-
 // Initialise the RGB LEDs
 void InitialiseLEDs();
 

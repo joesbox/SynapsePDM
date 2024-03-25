@@ -106,10 +106,10 @@ void UpdateOutputs()
         }
         else
         {
-          if (toggle[i] >= 128)
+          if (toggle[i] >= 10)
           {
             leds[i] = CRGB::DeepSkyBlue;
-            if (toggle[i] == 255)
+            if (toggle[i] == 20)
             {
               toggle[i] = 0;
             }
@@ -121,12 +121,6 @@ void UpdateOutputs()
             toggle[i]++;
           }
         }
-
-        // Read the analog raw back
-        /*uint analogs[ANALOG_READ_SAMPLES];
-        noInterrupts();
-        memcpy(analogs, analogValues[i], sizeof(analogValues[i]));
-        interrupts();*/
 
         int sum = 0;
         uint8_t total = 0;
@@ -142,19 +136,40 @@ void UpdateOutputs()
           Channels[i].AnalogRaw = analogMean;
         }
 
-        // Channels[i].AnalogRaw = adc->analogRead(Channels[i].CurrentSensePin);
-        float const1 = 0.0978;
-        float const2 = 0.0096;
-        float exponent = 0.0;
-
+        float isVoltage = (Channels[i].AnalogRaw / 1024.0) * 3.3;
+        float amps = PTERM1 * pow(isVoltage, 4) + PTERM2 * pow(isVoltage, 3) + PTERM3 * pow(isVoltage, 2) + PTERM4 * isVoltage + PCONST;
+#ifdef DEBUG
         Serial.print("Channel: ");
         Serial.print(i + 1);
         Serial.print(": ");
-        // Serial.println(Channels[i].AnalogRaw);
-
-        float isVoltage = (Channels[i].AnalogRaw / 1024.0) * 3.3;
-        float amps = PTERM1 * pow(isVoltage, 4) + PTERM2 * pow(isVoltage, 3) + PTERM3 * pow(isVoltage, 2) + PTERM4 * isVoltage + PCONST;
         Serial.println(amps);
+#endif
+        // Check for fault condition and current thresholds
+        if (isVoltage > FAULT_THRESHOLD)
+        {
+          Channels[i].ErrorFlags |= IS_FAULT;
+        }
+        else if (amps > Channels[i].CurrentThresholdHigh)
+        {
+          Channels[i].ErrorFlags |= CHN_OVERCURRENT_RANGE;
+        }
+        else if (amps < Channels[i].CurrentThresholdLow)
+        {
+          Channels[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
+        }
+        else if (amps > Channels[i].CurrentLimitHigh)
+        {
+          Channels[i].ErrorFlags |= CHN_OVERCURRENT_LIMIT;
+        }
+        else
+        {
+          // No conditions found. Clear flag
+          Channels[i].ErrorFlags = 0;
+        }
+
+        Channels[i].CurrentValue = amps;
+
+        Serial.println(Channels[i].ErrorFlags, BIN);
       }
       else
       {
@@ -223,21 +238,6 @@ void OutputTimer()
         // No need to keep writing the pin low either
         channelLatch[i] = 0;
       }
-
-      /*if (ANALOG_PWM_READ_INTERVAL == pwmCounter)
-      {
-        // We've reached the point at which we can take an analog reading. Store it in the FIFO analog values array
-        analogValues[i][analogCounter] = adc->analogRead(Channels[i].CurrentSensePin);
-        analogCounter++;
-
-
-        digitalToggle(20);
-
-        if (analogCounter == ANALOG_READ_SAMPLES)
-        {
-          analogCounter = 0;
-        }
-      }*/
     }
     else
     {
@@ -247,14 +247,6 @@ void OutputTimer()
 
   // Increment the PWM counter at every interval
   pwmCounter++;
-}
-
-/// @brief Calculate real current value in amps
-void CalculateAnalogs()
-{
-  for (int i = 0; i < NUM_CHANNELS; i++)
-  {
-  }
 }
 
 void InitialiseLEDs()
