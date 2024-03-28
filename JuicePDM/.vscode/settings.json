@@ -11,7 +11,12 @@
         "initializer_list": "cpp",
         "*.tcc": "cpp",
         "typeinfo": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "ratio": "cpp",
+        "system_error": "cpp",
+        "tuple": "cpp",
+        "type_traits": "cpp",
+        "utility": "cpp"
     },
     "cmake.configureOnOpen": false
 }

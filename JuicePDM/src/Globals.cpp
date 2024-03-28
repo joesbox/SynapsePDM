@@ -37,7 +37,6 @@ void InititalizeData()
         Channels[i].Enabled = false;
         Channels[i].ControlPin = channelOutputPins[i];
         Channels[i].CurrentSensePin = channelCurrentSensePins[i];
-        Channels[i].CurrentSenseValue = DEFAULT_DK_VALUE;
         Channels[i].InputControlPin = channelInputPins[i];
         Channels[i].CurrentLimitHigh = CURRENT_MAX;
         Channels[i].CurrentThresholdHigh = CURRENT_MAX;

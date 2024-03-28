@@ -21,65 +21,79 @@
 */
 #include "SerialComms.h"
 
-/// @brief Fired when begin command is recieved. Sends confirm command back.
-void onSerialBegin()
-{
-    ssp.writeCommand(COMMAND_ID_CONFIM);
-}
+ConfigUnion SerialConfigData;
 
-/// @brief Reads and stores the set of channel config data
-void onReceivedValues()
-{
-    for (int i = 0; i < NUM_CHANNELS; i++)
-    {
-        byte channelType = ssp.readByte();
-        switch (channelType)
-        {
-            case 0:
-                Channels[i].ChanType = DIG;
-            break;
-            case 1:
-                Channels[i].ChanType = DIG_PWM;
-            break;
-            case 2:
-                Channels[i].ChanType = CAN_DIGITAL;
-            break;
-            case 3:
-                Channels[i].ChanType = CAN_PWM;
-            break;
-        }
-
-        Channels[i].CurrentLimitHigh = ssp.readFloat();
-        Channels[i].CurrentThresholdHigh = ssp.readFloat();
-        Channels[i].CurrentThresholdLow = ssp.readFloat();
-        Channels[i].Enabled = ssp.readByte();
-        Channels[i].MultiChannel = ssp.readByte();
-        Channels[i].GroupNumber = ssp.readByte();
-        Channels[i].PWMSetDuty = ssp.readByte();
-        Channels[i].Retry = ssp.readByte();
-        Channels[i].RetryCount = ssp.readByte();
-        Channels[i].RetryDelay = ssp.readFloat();        
-    }
-
-    // Read end of transmission
-     ssp.readEot(); 
-}
-
-/// @brief Initialise serial comms
-void InitialiseSerialComms()
-{
-    ssp.init();
-    ssp.registerCommand(COMMAND_ID_BEGIN, onSerialBegin);
-    ssp.registerCommand(COMMAND_ID_RECEIVE, onReceivedValues);
-}
-
-/// @brief Check for incoming data
+/// @brief Check for incoming data. Respond to a command byte or read all of the incoming config data and checksum.
 void CheckSerial()
 {
-    ssp.loop();
-}
+    byte nextByte = Serial.read();
+    switch (nextByte)
+    {
+    case COMMAND_ID_BEGIN:
+        Serial.write(COMMAND_ID_CONFIM);
+        break;
 
-void onError(uint8_t errorNum)
-{
+    case COMMAND_ID_REQUEST:
+        Serial.write(COMMAND_ID_CONFIM);
+        break;
 
+    case COMMAND_ID_NEWCONFIG:
+    {
+        unsigned int i = 0;
+        uint32_t recvChecksum = 0;
+        while (!Serial.available())
+        {
+            if (i <= sizeof(ConfigStruct))
+            {
+                SerialConfigData.dataBytes[i] = Serial.read();
+                i++;
+            }
+            else
+            {
+                recvChecksum <<= 8;
+                recvChecksum |= Serial.read();
+            }
+        }
+
+        // Calculate stored config bytes CRC
+        uint32_t checksum = CRC32::calculate(SerialConfigData.dataBytes, sizeof(ConfigStruct));
+
+        // Respond with pass or fail. Copy the new config over if the checksum has passed.
+        if (checksum == recvChecksum)
+        {
+            // Copy relevant channel data
+            for (int j = 0; j < NUM_CHANNELS; j++)
+            {
+                Channels[j].ChanType = SerialConfigData.data.channelConfigStored[j].ChanType;
+                Channels[j].ControlPin = SerialConfigData.data.channelConfigStored[j].ControlPin;
+                Channels[j].CurrentLimitHigh = SerialConfigData.data.channelConfigStored[j].CurrentLimitHigh;
+                Channels[j].CurrentSensePin = SerialConfigData.data.channelConfigStored[j].CurrentSensePin;
+                Channels[j].CurrentThresholdHigh = SerialConfigData.data.channelConfigStored[j].CurrentThresholdHigh;
+                Channels[j].CurrentThresholdLow = SerialConfigData.data.channelConfigStored[j].CurrentThresholdLow;
+                Channels[j].Enabled = SerialConfigData.data.channelConfigStored[j].Enabled;
+                Channels[j].GroupNumber = SerialConfigData.data.channelConfigStored[j].GroupNumber;
+                Channels[j].InputControlPin = SerialConfigData.data.channelConfigStored[j].InputControlPin;
+                Channels[j].PWMSetDuty = SerialConfigData.data.channelConfigStored[j].PWMSetDuty;
+                Channels[j].Retry = SerialConfigData.data.channelConfigStored[j].Retry;
+                Channels[j].RetryCount = SerialConfigData.data.channelConfigStored[j].RetryCount;
+                Channels[j].RetryDelay = SerialConfigData.data.channelConfigStored[j].RetryDelay;
+            }
+
+            // Set the system parameters
+            SystemParams.LEDBrightness = SerialConfigData.data.sysParams.LEDBrightness;
+            SystemParams.CANResEnabled = SerialConfigData.data.sysParams.CANResEnabled;
+
+            Serial.write(COMMAND_ID_CONFIM);
+        }
+        else
+        {
+            Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+        }
+    }
+    break;
+
+    case COMMAND_ID_SAVECHANGES:
+        SaveConfig();
+        break;
+    }
 }

@@ -81,7 +81,7 @@
 #define ANALOG_READ_DEBUG_PIN 20
 
 // Debug flag
-#define DEBUG
+//#define DEBUG
 
 // Battery measurement analog input pin
 #define VBATT_ANALOG_PIN A7

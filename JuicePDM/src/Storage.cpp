@@ -93,11 +93,15 @@ void InitialiseSD()
         SDCardOK = SD.begin(SdioConfig(FIFO_SDIO));
         if (!SDCardOK)
         {
+#ifdef DEBUG
             Serial.println("SD Begin error");
+#endif
             SD.initErrorPrint();
         }
+#ifdef DEBUG
         Serial.print("SD Card begin OK: ");
         Serial.println(SDCardOK);
+#endif
     }
 
     // Card present, continue
@@ -128,7 +132,9 @@ void InitialiseSD()
         SDCardOK = myfile.open(fileName, O_RDWR | O_CREAT | O_TRUNC);
         if (!SDCardOK)
         {
+#ifdef DEBUG
             Serial.println("SD init open error");
+#endif
             SD.errorPrint(&Serial);
         }
 
@@ -136,7 +142,9 @@ void InitialiseSD()
         SDCardOK = myfile.preAllocate(MAX_LOGFILE_SIZE);
         if (!SDCardOK)
         {
+#ifdef DEBUG
             Serial.println("SD pre-allocate error");
+#endif
             SD.errorPrint(&Serial);
         }
 
@@ -164,7 +172,9 @@ void InitialiseSD()
         }
 
         BytesStored = 0;
+#ifdef DEBUG
         Serial.println("SD Card init complete.");
+#endif
 
         // Clear the undervoltage latch flag
         UndervoltageLatch = false;
@@ -265,7 +275,9 @@ void LogData()
             if (SD_SECTOR_SIZE != BytesStored)
             {
                 SDCardOK = false;
+#ifdef DEBUG
                 Serial.println("Sector size != bytes stored");
+#endif
             }
         }
 
@@ -278,14 +290,18 @@ void LogData()
             myfile.rewind();
             myfile.close();
             myfile.sync();
+#ifdef DEBUG
             Serial.println("File full.");
+#endif
             InitialiseSD();
         }
 
         int finish = millis() - start;
         if (finish > TASK_3_INTERVAL)
         {
+#ifdef DEBUG
             Serial.println(finish);
+#endif
         }
     }
     else

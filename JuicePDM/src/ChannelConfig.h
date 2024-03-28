@@ -53,9 +53,6 @@ struct __attribute__((packed)) ChannelConfig
   uint8_t ControlPin;         // Digital uC control pin
   uint8_t CurrentSensePin;    // Current sense input pin
   uint8_t InputControlPin;    // Digital input control pin (digital channels only)
-  uint32_t CurrentSenseCal1;  // Current sense calibration point 1 (IL1)
-  uint32_t CurrentSenseCal2;  // Current sense calibration point 2 (IL2)
-  uint32_t CurrentSenseValue; // Calculated current sense value (dkILIS)
   uint8_t ErrorFlags;         // Bitmask for channel error flags
 };
 

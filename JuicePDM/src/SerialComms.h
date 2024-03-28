@@ -25,36 +25,25 @@
 
 #include <Arduino.h>
 #include <Globals.h>
-#include <SimpleSerialProtocol.h>
+#include <Storage.h>
 
-/// @brief Call back for begin command
-void onSerialBegin();
-
-/// @brief Call back for receiving data
-void onReceivedValues();
-
-/// @brief Initialise serial comms
-void InitialiseSerialComms();
-
-/// @brief CHeck for incoming data
+/// @brief Check for incoming data
 void CheckSerial();
-
-/// @brief Error callback
-/// @param errorNum Error number
-void onError(uint8_t errorNum);
 
 // Inintialize hardware constants
 const long BAUDRATE = 115200;       // Speed of serial connection
-const long CHARACTER_TIMEOUT = 500; // Wait max 500 ms between single chars to be received
 
 // Initialize command constants
 const byte COMMAND_ID_BEGIN = 'b';
 const byte COMMAND_ID_CONFIM = 'c';
-const byte COMMAND_ID_RECEIVE = 'r';
+const byte COMMAND_ID_REQUEST = 'r';
+const byte COMMAND_ID_NEWCONFIG = 'n';
 const byte COMMAND_ID_SEND = 's';
+const byte COMMAND_ID_CHECKSUM_FAIL = 'f';
+const byte COMMAND_ID_SAVECHANGES = 'S';
 
-// Create instance. Pass Serial instance. Define command-id-range within Simple Serial Protocol is listening (here: a - z)
-SimpleSerialProtocol ssp(Serial, BAUDRATE, CHARACTER_TIMEOUT, onError, 'a', 'z'); // ASCII: 'a' - 'z' (26 byes of RAM is reserved)
+/// @brief Config storage union
+extern ConfigUnion SerialConfigData;
 
 #endif
 

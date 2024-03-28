@@ -36,6 +36,7 @@
 #include <Storage.h>
 #include <Watchdog_t4.h>
 #include <CANComms.h>
+#include <SerialComms.h>
 
 void wdtCallback();
 
@@ -117,6 +118,9 @@ void loop()
     // Log SD card data
     LogData();
 
+    // Check for serial comms
+    CheckSerial();
+
     lastThingCalled = "LogData";
 
     task3 = 0;
@@ -126,6 +130,7 @@ void loop()
   if (task4 >= TASK_4_INTERVAL)
   {
     task4 = 0;
+#ifdef DEBUG
     Serial.print(hour());
     Serial.print(":");
     Serial.print(minute());
@@ -133,5 +138,6 @@ void loop()
     Serial.print(second());
     Serial.print(" - ");
     Serial.println("One minute has passed...");
+#endif
   }
 }
