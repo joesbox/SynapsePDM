@@ -95,5 +95,13 @@ void CheckSerial()
     case COMMAND_ID_SAVECHANGES:
         SaveConfig();
         break;
+
+    case COMMAND_ID_FW_VER:
+        Serial.write(FW_VER);
+        break;
+
+    case COMMAND_ID_BUILD_DATE:
+        Serial.write(BUILD_DATE);
+        break;
     }
 }

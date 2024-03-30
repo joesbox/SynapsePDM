@@ -41,6 +41,8 @@ const byte COMMAND_ID_NEWCONFIG = 'n';
 const byte COMMAND_ID_SEND = 's';
 const byte COMMAND_ID_CHECKSUM_FAIL = 'f';
 const byte COMMAND_ID_SAVECHANGES = 'S';
+const byte COMMAND_ID_FW_VER = 'v';
+const byte COMMAND_ID_BUILD_DATE = 'd';
 
 /// @brief Config storage union
 extern ConfigUnion SerialConfigData;

@@ -48,6 +48,8 @@ void InititalizeData()
 
     // Initialise default system data
     SystemParams.LEDBrightness = DEFAULT_RGB_BRIGHTNESS;
+    SystemParams.CANResEnabled = true;
+    SystemParams.CANAddress = ECU_ADDR;
 
     // Set time sync provider
     setSyncProvider(getTeensy3Time);

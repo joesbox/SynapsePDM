@@ -29,6 +29,12 @@
 #include <TimeLib.h>
 #include <elapsedMillis.h>
 
+// Firmware version
+#define FW_VER "1.0.0"
+
+// Build date
+#define BUILD_DATE __DATE__" " __TIME__
+
 // Number of hardware output channels
 #define NUM_CHANNELS 6
 
@@ -112,7 +118,6 @@
 #define OVERTEMP_GNDSHORT 0x08
 #define WATCHDOG_TIMEOUT 0x10
 #define IS_FAULT 0x20
-
 
 // ECU CAN address
 #define ECU_ADDR 0x800;
