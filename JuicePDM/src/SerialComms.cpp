@@ -23,9 +23,14 @@
 
 ConfigUnion SerialConfigData;
 
+void InitialiseSerial()
+{
+    
+}
+
 /// @brief Check for incoming data. Respond to a command byte or read all of the incoming config data and checksum.
 void CheckSerial()
-{
+{    
     byte nextByte = Serial.read();
     switch (nextByte)
     {
@@ -34,9 +39,19 @@ void CheckSerial()
         break;
 
     case COMMAND_ID_REQUEST:
-        Serial.write(COMMAND_ID_CONFIM);
-        break;
+    {
+        LoadConfig();
+        Serial.write(COMMAND_ID_REQUEST);
+        uint16_t dataSize = sizeof(ConfigData.dataBytes)/sizeof(byte);
+        byte dta[2];
+        dta[0] = dataSize;
+        dta[1] = dataSize >> 8;
+        Serial.write(dta, 2);
+        Serial.print(ConfigData.data.channelConfigStored->AnalogRaw);
+        Serial.send_now();
 
+        break;
+    }
     case COMMAND_ID_NEWCONFIG:
     {
         unsigned int i = 0;

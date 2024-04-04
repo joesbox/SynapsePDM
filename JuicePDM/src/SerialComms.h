@@ -27,11 +27,11 @@
 #include <Globals.h>
 #include <Storage.h>
 
+/// @brief Setup serial port
+void InitialiseSerial();
+
 /// @brief Check for incoming data
 void CheckSerial();
-
-// Inintialize hardware constants
-const long BAUDRATE = 115200;       // Speed of serial connection
 
 // Initialize command constants
 const byte COMMAND_ID_BEGIN = 'b';

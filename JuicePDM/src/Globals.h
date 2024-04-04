@@ -33,7 +33,7 @@
 #define FW_VER "1.0.0"
 
 // Build date
-#define BUILD_DATE __DATE__" " __TIME__
+#define BUILD_DATE __DATE__" "__TIME__
 
 // Number of hardware output channels
 #define NUM_CHANNELS 6
