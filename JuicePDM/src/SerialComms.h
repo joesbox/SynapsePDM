@@ -33,7 +33,10 @@ void InitialiseSerial();
 /// @brief Check for incoming data
 void CheckSerial();
 
-// Initialize command constants
+// Juice PDM serial comms header
+const uint16_t SERIAL_HEADER = 0x1984;
+
+// Command constants
 const byte COMMAND_ID_BEGIN = 'b';
 const byte COMMAND_ID_CONFIM = 'c';
 const byte COMMAND_ID_REQUEST = 'r';
@@ -46,6 +49,9 @@ const byte COMMAND_ID_BUILD_DATE = 'd';
 
 /// @brief Config storage union
 extern ConfigUnion SerialConfigData;
+
+/// @brief CRC32 calculation for serial comms
+extern CRC32 crcSerial;
 
 #endif
 

@@ -95,8 +95,9 @@ void InitialiseSD()
         {
 #ifdef DEBUG
             Serial.println("SD Begin error");
-#endif
             SD.initErrorPrint();
+#endif
+            
         }
 #ifdef DEBUG
         Serial.print("SD Card begin OK: ");
@@ -134,8 +135,9 @@ void InitialiseSD()
         {
 #ifdef DEBUG
             Serial.println("SD init open error");
-#endif
             SD.errorPrint(&Serial);
+#endif
+            
         }
 
         // Pre-allocate
@@ -144,8 +146,9 @@ void InitialiseSD()
         {
 #ifdef DEBUG
             Serial.println("SD pre-allocate error");
-#endif
             SD.errorPrint(&Serial);
+#endif
+            
         }
 
         // Create file was succesful. Write the header.

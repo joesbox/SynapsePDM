@@ -22,15 +22,15 @@
 #include "SerialComms.h"
 
 ConfigUnion SerialConfigData;
+CRC32 crcSerial;
 
 void InitialiseSerial()
 {
-    
 }
 
 /// @brief Check for incoming data. Respond to a command byte or read all of the incoming config data and checksum.
 void CheckSerial()
-{    
+{
     byte nextByte = Serial.read();
     switch (nextByte)
     {
@@ -40,14 +40,98 @@ void CheckSerial()
 
     case COMMAND_ID_REQUEST:
     {
-        LoadConfig();
+        // Send serial data packet and update CRC as we go
+        crcSerial.reset();
+        byte float2Byte[4];
+        Serial.clear();
+        Serial.write(SERIAL_HEADER & 255);
+        crcSerial.update(SERIAL_HEADER & 255);
+
+        Serial.write(SERIAL_HEADER >> 8);
+        crcSerial.update(SERIAL_HEADER >> 8);
+
         Serial.write(COMMAND_ID_REQUEST);
-        uint16_t dataSize = sizeof(ConfigData.dataBytes)/sizeof(byte);
-        byte dta[2];
-        dta[0] = dataSize;
-        dta[1] = dataSize >> 8;
-        Serial.write(dta, 2);
-        Serial.print(ConfigData.data.channelConfigStored->AnalogRaw);
+        crcSerial.update(COMMAND_ID_REQUEST);
+
+        Serial.write(NUM_CHANNELS);
+        crcSerial.update(NUM_CHANNELS);
+
+        for (int i = 0; i < NUM_CHANNELS; i++)
+        {
+            Serial.write((byte)Channels[i].ChanType);
+            crcSerial.update((byte)Channels[i].ChanType);
+
+            memcpy(&float2Byte, &Channels[i].CurrentLimitHigh, sizeof(Channels[i].CurrentLimitHigh));
+            for (uint j = 0; j < sizeof(float2Byte); j++)
+            {
+                Serial.write(float2Byte[j]);
+                crcSerial.update(float2Byte[j]);
+            }
+
+            Serial.write(Channels[i].CurrentSensePin);
+            crcSerial.update(Channels[i].CurrentSensePin);
+
+            memcpy(&float2Byte, &Channels[i].CurrentThresholdHigh, sizeof(Channels[i].CurrentThresholdHigh));
+            for (uint j = 0; j < sizeof(float2Byte); j++)
+            {
+                Serial.write(float2Byte[j]);
+                crcSerial.update(float2Byte[j]);
+            }
+
+            memcpy(&float2Byte, &Channels[i].CurrentThresholdLow, sizeof(Channels[i].CurrentThresholdLow));
+            for (uint j = 0; j < sizeof(float2Byte); j++)
+            {
+                Serial.write(float2Byte[j]);
+                crcSerial.update(float2Byte[j]);
+            }
+
+            memcpy(&float2Byte, &Channels[i].CurrentValue, sizeof(Channels[i].CurrentValue));
+            for (uint j = 0; j < sizeof(float2Byte); j++)
+            {
+                Serial.write(float2Byte[j]);
+                crcSerial.update(float2Byte[j]);
+            }
+
+            Serial.write(Channels[i].Enabled);
+            crcSerial.update(Channels[i].Enabled);
+
+            Serial.write(Channels[i].ErrorFlags);
+            crcSerial.update(Channels[i].ErrorFlags);
+
+            Serial.write(Channels[i].GroupNumber);
+            crcSerial.update(Channels[i].GroupNumber);
+
+            Serial.write(Channels[i].InputControlPin);
+            crcSerial.update(Channels[i].InputControlPin);
+
+            Serial.write(Channels[i].MultiChannel);
+            crcSerial.update(Channels[i].MultiChannel);
+
+            Serial.write(Channels[i].PWMSetDuty);
+            crcSerial.update(Channels[i].PWMSetDuty);
+
+            Serial.write(Channels[i].Retry);
+            crcSerial.update(Channels[i].Retry);
+
+            Serial.write(Channels[i].RetryCount);
+            crcSerial.update(Channels[i].RetryCount);
+
+            memcpy(&float2Byte, &Channels[i].RetryDelay, sizeof(Channels[i].RetryDelay));
+            for (uint j = 0; j < sizeof(float2Byte); j++)
+            {
+                Serial.write(float2Byte[j]);
+                crcSerial.update(float2Byte[j]);
+            }
+        }
+
+        uint32_t crcVal = crcSerial.finalize();
+        
+        memcpy(&float2Byte, &crcVal, sizeof(crcVal));
+        for (uint j = 0; j < sizeof(float2Byte); j++)
+        {
+            Serial.write(float2Byte[j]);
+        }
+
         Serial.send_now();
 
         break;
