@@ -1,0 +1,29 @@
+JuicePDM/src/OutputHandler.cpp:195:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
+        float analogMean = 0.0f;
+              ^
+JuicePDM/src/Storage.cpp:259:30: warning: Either the condition 'i!=6' is redundant or the array 'Channels[6]' is accessed at index 6, which is out of bounds. [arrayIndexOutOfBoundsCond]
+            rb.print(Channels[i].ErrorFlags);
+                             ^
+JuicePDM/src/Storage.cpp:262:19: note: Assuming that condition 'i!=6' is not redundant
+            if (i != NUM_CHANNELS)
+                  ^
+JuicePDM/src/Storage.cpp:259:30: note: Array index out of bounds
+            rb.print(Channels[i].ErrorFlags);
+                             ^
+JuicePDM/src/CANComms.cpp:27:0: style: The function 'InitialiseCAN' is never used. [unusedFunction]
+
+^
+JuicePDM/src/SerialComms.cpp:26:0: style: The function 'InitialiseSerial' is never used. [unusedFunction]
+
+^
+JuicePDM/src/CANComms.cpp:47:0: style: The function 'SendCANMessages' is never used. [unusedFunction]
+
+^
+JuicePDM/src/main.cpp:85:0: style: The function 'loop' is never used. [unusedFunction]
+
+^
+JuicePDM/src/main.cpp:45:0: style: The function 'setup' is never used. [unusedFunction]
+
+^
+nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingIncludeSystem]
+
