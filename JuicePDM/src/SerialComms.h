@@ -33,8 +33,11 @@ void InitialiseSerial();
 /// @brief Check for incoming data
 void CheckSerial();
 
-// Juice PDM serial comms header
+// Serial comms header
 const uint16_t SERIAL_HEADER = 0x1984;
+
+// Serial comms header
+const uint16_t SERIAL_TRAILER = 0x2024;
 
 // Command constants
 const byte COMMAND_ID_BEGIN = 'b';
