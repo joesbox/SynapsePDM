@@ -1,6 +1,9 @@
 JuicePDM/src/OutputHandler.cpp:195:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
         float analogMean = 0.0f;
               ^
+JuicePDM/src/SerialComms.cpp:65:18: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
+        chanSize = sizeof(Channels) / NUM_CHANNELS;
+                 ^
 JuicePDM/src/Storage.cpp:262:30: warning: Either the condition 'i!=6' is redundant or the array 'Channels[6]' is accessed at index 6, which is out of bounds. [arrayIndexOutOfBoundsCond]
             rb.print(Channels[i].ErrorFlags);
                              ^
