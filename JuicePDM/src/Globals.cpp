@@ -21,11 +21,12 @@
 */
 
 #include "Globals.h"
-elapsedMillis task1;
-elapsedMillis task2;
-elapsedMillis task3;
-elapsedMillis task4;
+
 ChannelConfig Channels[NUM_CHANNELS];
+uint32_t task1Timer;
+uint32_t task2Timer;
+uint32_t task3Timer;
+uint32_t task4Timer;
 
 /// @brief Inititlise global data
 void InititalizeData()
@@ -37,11 +38,10 @@ void InititalizeData()
         Channels[i].Enabled = false;
         Channels[i].ControlPin = channelOutputPins[i];
         Channels[i].CurrentSensePin = channelCurrentSensePins[i];
-        Channels[i].InputControlPin = channelInputPins[i];
+        Channels[i].InputControlPin = DIchannelInputPins[0];
         Channels[i].CurrentLimitHigh = CURRENT_MAX;
         Channels[i].CurrentThresholdHigh = CURRENT_MAX;
         Channels[i].CurrentThresholdLow = 0.0;
-        pinMode(Channels[i].InputControlPin, INPUT);
         pinMode(Channels[i].ControlPin, OUTPUT);
         digitalWrite(Channels[i].ControlPin, LOW);
     }
@@ -50,13 +50,4 @@ void InititalizeData()
     SystemParams.LEDBrightness = DEFAULT_RGB_BRIGHTNESS;
     SystemParams.CANResEnabled = true;
     SystemParams.CANAddress = ECU_ADDR;
-
-    // Set time sync provider
-    setSyncProvider(getTeensy3Time);
-}
-
-// Get current time
-time_t getTeensy3Time()
-{
-    return Teensy3Clock.get();
 }

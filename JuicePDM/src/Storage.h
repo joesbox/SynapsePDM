@@ -25,13 +25,11 @@
 
 #include <Arduino.h>
 #include <Globals.h>
-#include <CRC32.h>
 #include <ChannelConfig.h>
 #include <System.h>
 #include <CRC32.h>
 #include <EEPROM.h> 
-#include <SdFat.h>
-#include <RingBuf.h>
+#include <STM32SD.h>
 
 // SD sector size
 #define SD_SECTOR_SIZE 512
@@ -79,7 +77,7 @@ extern ConfigUnion ConfigData;
 extern uint32_t EEPROMindex;
 
 /// @brief Log file object
-extern FsFile myfile;
+extern File myfile;
 
 /// @brief Current log file name in use
 extern char fileName[];
@@ -87,17 +85,11 @@ extern char fileName[];
 /// @brief Log file header
 extern char fileHeader[];
 
-/// @brief SD file system
-extern SdFs SD;
-
 /// @brief Accumulative bytes stored in a given log file
 extern int BytesStored;
 
 /// @brief SD card was initialised at power on
 extern bool SDInit;
-
-/// @brief Ring buffer
-extern RingBuf<FsFile, RING_BUF_CAPACITY> rb;
 
 /// @brief Flag to latch undervoltage condition. Ensures clean-up and initialise is done only once upon re-establishing power.
 extern bool UndervoltageLatch;

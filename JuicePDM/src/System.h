@@ -47,6 +47,15 @@ extern bool CRCValid;
 /// @brief SD card OK flag
 extern bool SDCardOK;
 
+/// @brief Sleep flag for igniton state
+extern bool goToSleep;
+
+/// @brief Wake up call back for the ignition input pin
+void WakeUpCallBack();
+
+/// @brief Initialise system I/O and sleep functions
+void InitialiseSystem();
+
 /// @brief Updates the system parameters
 void UpdateSystem();
 

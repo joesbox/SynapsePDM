@@ -24,17 +24,16 @@
     THE SOFTWARE.
 
     Version history:
+    2024-12-09        v0.1.1        New hardware. Moving to the STM32 for increased I/O. Now 14 output channels.
     2023-08-14        v0.1.0        Initial beta
 */
 
 #include <Arduino.h>
-#include <FlexCAN_T4.h>
 #include <Bounce2.h>
 #include <Globals.h>
 #include <OutputHandler.h>
 #include <InputHandler.h>
 #include <Storage.h>
-#include <Watchdog_t4.h>
 #include <CANComms.h>
 #include <SerialComms.h>
 
@@ -42,15 +41,19 @@ void wdtCallback();
 
 String lastThingCalled;
 
+STM32RTC &rtc1 = STM32RTC::getInstance();
+
 void setup()
 {
   InititalizeData();
 
   InitialiseSD();
 
-  InitialiseLEDs();
   InitialiseOutputs();
+  InitialiseInputs();
   CRCValid = LoadConfig();
+  InitialiseSystem();
+
 #ifdef DEBUG
   Serial.println("Power up");
 
@@ -79,65 +82,69 @@ void setup()
   Channels[5].Enabled = true;
   Channels[5].PWMSetDuty = 5;
 #endif
-  task1 = task2 = task3 = task4 = 0;
+  task1Timer = task2Timer = task3Timer = task4Timer = 0;
 }
 
 void loop()
 {
-  // High priority tasks
-  if (task1 >= TASK_1_INTERVAL)
+  if (!goToSleep)
   {
-    // Update channel outputs
-    UpdateOutputs();
 
-    lastThingCalled = "UpdateOutputs";
+    // High priority tasks
+    if (millis() >= task1Timer)
+    {
+      task1Timer = millis() + TASK_1_INTERVAL;
+      // Update channel outputs
+      UpdateOutputs();
 
-    // Read input channel status
-    HandleInputs();
+      lastThingCalled = "UpdateOutputs";
 
-    lastThingCalled = "HandleInputs";
-    task1 = 0;
+      // Read input channel status
+      HandleInputs();
+
+      lastThingCalled = "HandleInputs";
+    }
+
+    // Lower priority tasks
+    if (millis() >= task2Timer)
+    {
+      task2Timer = millis() + TASK_2_INTERVAL;
+      // Update system parameters
+      UpdateSystem();
+      lastThingCalled = "UpdateSystem";
+
+      // Broadcast CAN updates
+      // SendCANMessages();
+    }
+
+    // Lower priority tasks
+    if (millis() >= task3Timer)
+    {
+      task3Timer = millis() + TASK_3_INTERVAL;
+      // Log SD card data
+      LogData();
+
+      // Check for serial comms
+      CheckSerial();
+
+      lastThingCalled = "LogData";
+    }
+
+    // Lowest priority tasks
+    if (millis() >= task4Timer)
+    {
+      task1Timer = millis() + TASK_4_INTERVAL;
+      Serial.print(rtc1.getHours());
+      Serial.print(":");
+      Serial.print(rtc1.getMinutes());
+      Serial.print(":");
+      Serial.print(rtc1.getSeconds());
+      Serial.print(" - ");
+      Serial.println("One minute has passed...");
+    }
   }
-
-  // Lower priority tasks
-  if (task2 >= TASK_2_INTERVAL)
+  else
   {
-    // Update system parameters
-    UpdateSystem();
-    lastThingCalled = "UpdateSystem";
-
-    // Broadcast CAN updates
-    // SendCANMessages();
-
-    task2 = 0;
-  }
-
-  // Lower priority tasks
-  if (task3 >= TASK_3_INTERVAL)
-  {
-    // Log SD card data
-    LogData();
-
-    // Check for serial comms
-    CheckSerial();
-
-    lastThingCalled = "LogData";
-
-    task3 = 0;
-  }
-
-  // Lowest priority tasks
-  if (task4 >= TASK_4_INTERVAL)
-  {
-    task4 = 0;
-#ifdef DEBUG
-    Serial.print(hour());
-    Serial.print(":");
-    Serial.print(minute());
-    Serial.print(":");
-    Serial.print(second());
-    Serial.print(" - ");
-    Serial.println("One minute has passed...");
-#endif
+    LowPower.deepSleep();
   }
 }

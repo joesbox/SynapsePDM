@@ -26,6 +26,9 @@
 #include <Arduino.h>
 #include <Globals.h>
 
+// Initialise inputs
+void InitialiseInputs();
+
 // Handles reading of inputs
 void HandleInputs();
 

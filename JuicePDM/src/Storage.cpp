@@ -25,13 +25,13 @@
 ConfigUnion ConfigData;
 CRC32 crc;
 uint32_t EEPROMindex;
-SdFs SD;
-FsFile myfile;
+File myfile;
 char fileName[23];
 char fileHeader[65 + (132 * NUM_CHANNELS)];
 int BytesStored;
-RingBuf<FsFile, RING_BUF_CAPACITY> rb;
 bool UndervoltageLatch;
+
+STM32RTC &rtc2 = STM32RTC::getInstance();
 
 void SaveConfig()
 {
@@ -88,9 +88,8 @@ void InitialiseSD()
 {
     // If we can't see a card, don't proceed to initilisation
     if (!SDCardOK)
-    {
-        // Teensy 4.1 FIFO.
-        SDCardOK = SD.begin(SdioConfig(FIFO_SDIO));
+    {        
+        SDCardOK = SD.begin();
         if (!SDCardOK)
         {
 #ifdef DEBUG
@@ -110,27 +109,27 @@ void InitialiseSD()
     {
         // Filename format is: YYYY-MM-DD_HH.MM.SS.csv
         char intBuffer[4];
-        itoa(year(), intBuffer, 10);
+        itoa(rtc2.getYear(), intBuffer, 10);
         strcpy(fileName, intBuffer);
         strcat(fileName, "-");
-        itoa(month(), intBuffer, 10);
+        itoa(rtc2.getMonth(), intBuffer, 10);
         strcat(fileName, intBuffer);
         strcat(fileName, "-");
-        itoa(day(), intBuffer, 10);
+        itoa(rtc2.getDay(), intBuffer, 10);
         strcat(fileName, intBuffer);
         strcat(fileName, "_");
-        itoa(hour(), intBuffer, 10);
+        itoa(rtc2.getHours(), intBuffer, 10);
         strcat(fileName, intBuffer);
         strcat(fileName, "-");
-        itoa(minute(), intBuffer, 10);
+        itoa(rtc2.getMinutes(), intBuffer, 10);
         strcat(fileName, intBuffer);
         strcat(fileName, "-");
-        itoa(second(), intBuffer, 10);
+        itoa(rtc2.getSeconds(), intBuffer, 10);
         strcat(fileName, intBuffer);
         strcat(fileName, ".csv");
 
         // Create new file
-        SDCardOK = myfile.open(fileName, O_RDWR | O_CREAT | O_TRUNC);
+        myfile = SD.open(fileName, FILE_WRITE);
         if (!SDCardOK)
         {
 #ifdef DEBUG
@@ -141,7 +140,8 @@ void InitialiseSD()
         }
 
         // Pre-allocate
-        SDCardOK = myfile.preAllocate(MAX_LOGFILE_SIZE);
+        //SDCardOK = myfile.preAllocate(MAX_LOGFILE_SIZE);
+        
         if (!SDCardOK)
         {
 #ifdef DEBUG
@@ -155,23 +155,23 @@ void InitialiseSD()
         if (SDCardOK)
         {
             // Start the ring buffer
-            rb.begin(&myfile);
+            //myfile.begin(&myfile);
 
             // Print the file header to the buffer
-            rb.print("Date,Time,System Temp,System Voltage,System Current,Error Flags,");
+            myfile.print("Date,Time,System Temp,System Voltage,System Current,Error Flags,");
 
             for (int i = 0; i < NUM_CHANNELS; i++)
             {
-                rb.print("Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,PWM,Multi-Channel,Group Number,Channel Error Flags");
+                myfile.print("Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,PWM,Multi-Channel,Group Number,Channel Error Flags");
 
                 // Print a separating comma unless we're on the last channel
                 if (i != NUM_CHANNELS)
                 {
-                    rb.print(",");
+                    myfile.print(",");
                 }
             }
 
-            rb.println();
+            myfile.println();
         }
 
         BytesStored = 0;
@@ -191,31 +191,31 @@ void LogData()
     {
         int start = millis();
         // Print date and time to the buffer
-        rb.print(year());
-        rb.print("-");
-        rb.print(month());
-        rb.print("-");
-        rb.print(day());
-        rb.print(",");
-        rb.print(hour());
-        rb.print(":");
-        rb.print(minute());
-        rb.print(":");
-        rb.print(second());
-        rb.print(",");
+        myfile.print(rtc2.getYear());
+        myfile.print("-");
+        myfile.print(rtc2.getMonth());
+        myfile.print("-");
+        myfile.print(rtc2.getDay());
+        myfile.print(",");
+        myfile.print(rtc2.getHours());
+        myfile.print(":");
+        myfile.print(rtc2.getMinutes());
+        myfile.print(":");
+        myfile.print(rtc2.getSeconds());
+        myfile.print(",");
 
         // Add system parameters
-        rb.print(SystemParams.SystemTemperature);
-        rb.print(",");
+        myfile.print(SystemParams.SystemTemperature);
+        myfile.print(",");
 
-        rb.print(SystemParams.VBatt);
-        rb.print(",");
+        myfile.print(SystemParams.VBatt);
+        myfile.print(",");
 
-        rb.print(SystemParams.SystemCurrent);
-        rb.print(",");
+        myfile.print(SystemParams.SystemCurrent);
+        myfile.print(",");
 
-        rb.print(SystemParams.ErrorFlags);
-        rb.print(",");
+        myfile.print(SystemParams.ErrorFlags);
+        myfile.print(",");
 
         // Add info for each channel
         for (int i = 0; i < NUM_CHANNELS; i++)
@@ -223,57 +223,57 @@ void LogData()
             switch (Channels[i].ChanType)
             {
             case DIG:
-                rb.print("DIGI");
+                myfile.print("DIGI");
                 break;
             case DIG_PWM:
-                rb.print("DIGP");
+                myfile.print("DIGP");
                 break;
             case CAN_DIGITAL:
-                rb.print("CAND");
+                myfile.print("CAND");
                 break;
             case CAN_PWM:
-                rb.print("CANP");
+                myfile.print("CANP");
                 break;
             default:
                 break;
             }
-            rb.print(",");
-            rb.print(Channels[i].Enabled);
+            myfile.print(",");
+            myfile.print(Channels[i].Enabled);
 
-            rb.print(",");
-            rb.print(Channels[i].CurrentValue);
+            myfile.print(",");
+            myfile.print(Channels[i].CurrentValue);
 
-            rb.print(",");
-            rb.print(Channels[i].CurrentThresholdHigh);
+            myfile.print(",");
+            myfile.print(Channels[i].CurrentThresholdHigh);
 
-            rb.print(",");
-            rb.print(Channels[i].CurrentThresholdLow);
+            myfile.print(",");
+            myfile.print(Channels[i].CurrentThresholdLow);
 
-            rb.print(",");
-            rb.print(Channels[i].PWMSetDuty);
+            myfile.print(",");
+            myfile.print(Channels[i].PWMSetDuty);
 
-            rb.print(",");
-            rb.print(Channels[i].MultiChannel);
+            myfile.print(",");
+            myfile.print(Channels[i].MultiChannel);
 
-            rb.print(",");
-            rb.print(Channels[i].GroupNumber);
+            myfile.print(",");
+            myfile.print(Channels[i].GroupNumber);
 
-            rb.print(",");
-            rb.print(Channels[i].ErrorFlags);
+            myfile.print(",");
+            myfile.print(Channels[i].ErrorFlags);
 
             // Print a separating comma unless we're on the last channel
             if (i != NUM_CHANNELS)
             {
-                rb.print(",");
+                myfile.print(",");
             }
         }
 
-        rb.println();
+        myfile.println();
 
-        // Ring buffer contains enough data for one sector and the file isn't busy. Write the contents of the buffer out.
-        if ((rb.bytesUsed() >= SD_SECTOR_SIZE) && !myfile.isBusy())
+        /*// Ring buffer contains enough data for one sector and the file isn't busy. Write the contents of the buffer out.
+        if ((myfile.bytesUsed() >= SD_SECTOR_SIZE) && !myfile.isBusy())
         {
-            BytesStored = rb.writeOut(SD_SECTOR_SIZE);
+            BytesStored = myfile.writeOut(SD_SECTOR_SIZE);
             // Make sure that the entire sector was written successfully
             if (SD_SECTOR_SIZE != BytesStored)
             {
@@ -288,7 +288,7 @@ void LogData()
         if ((myfile.dataLength() - myfile.curPosition()) < SD_SECTOR_SIZE || !SDCardOK)
         {
             // Write any RingBuf data to file. Initialise a new file.
-            rb.sync();
+            myfile.sync();
             myfile.truncate();
             myfile.rewind();
             myfile.close();
@@ -297,7 +297,7 @@ void LogData()
             Serial.println("File full.");
 #endif
             InitialiseSD();
-        }
+        }*/
 
         int finish = millis() - start;
         if (finish > TASK_3_INTERVAL)
@@ -312,10 +312,7 @@ void LogData()
         // Whatever we do next, we should close the current file
         if (!UndervoltageLatch)
         {
-            rb.sync();
-            myfile.truncate();
             myfile.close();
-            myfile.sync();
 
             // Latch this condition in case we find ourselves back here (probably cranking - sufficient voltage to run, insufficient voltage to log).
             UndervoltageLatch = true;

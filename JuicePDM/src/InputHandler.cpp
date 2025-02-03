@@ -22,6 +22,19 @@
 
 #include "InputHandler.h"
 
+/// @brief Initialise inputs on boot
+void InitialiseInputs()
+{
+    // Ignition inout is used for wake/sleep
+    pinMode(IGN_INPUT, INPUT_PULLDOWN);
+
+    // Digital inputs. Default to active-high
+    for (int i = 0; i < NUM_DI_CHANNELS; i++)
+    {
+        pinMode(DIchannelInputPins[i], INPUT_PULLDOWN);
+    }
+}
+
 /// @brief Handle input status
 void HandleInputs()
 {
@@ -32,7 +45,7 @@ void HandleInputs()
         {
         case DIG_PWM:
         case DIG:
-        //Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
+            // Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
             break;
         default:
             break;

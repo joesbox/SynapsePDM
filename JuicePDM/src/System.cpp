@@ -26,11 +26,27 @@ SystemParameters SystemParams;
 
 bool CRCValid;
 bool SDCardOK;
+bool goToSleep;
+
+void WakeUpCallBack()
+{
+    goToSleep = !digitalRead(IGN_INPUT);
+}
+
+void InitialiseSystem()
+{
+    // Start the low power features
+    LowPower.begin();    
+    LowPower.attachInterruptWakeup(IGN_INPUT, WakeUpCallBack, CHANGE, DEEP_SLEEP_MODE);
+
+    // Check the state of the ignition input
+    goToSleep = !digitalRead(IGN_INPUT);
+}
 
 void UpdateSystem()
 {
     // Get system temperature
-    SystemParams.SystemTemperature = tempmonGetTemp();
+    // SystemParams.SystemTemperature = tempmonGetTemp();
 
     // Calculate battery voltage
     SystemParams.VBatt = analogRead(VBATT_ANALOG_PIN) * 0.0154f;

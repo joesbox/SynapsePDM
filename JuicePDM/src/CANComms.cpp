@@ -22,16 +22,13 @@
 
 #include "CANComms.h"
 
-FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> Can0;
+STM32_CAN Can(CAN1, DEF);
 
 void InitialiseCAN()
 {
-    Can0.begin();
-    Can0.setBaudRate(500000);
-    Can0.setMaxMB(16);
-    Can0.enableFIFO();
-    Can0.enableFIFOInterrupt();
-    Can0.onReceive(canSniff);
+    Can.begin();
+    Can.setBaudRate(500000);
+    Can.enableFIFO();
 }
 
 void canSniff(const CAN_message_t &msg)

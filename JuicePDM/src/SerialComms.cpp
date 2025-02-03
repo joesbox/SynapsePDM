@@ -45,8 +45,7 @@ void CheckSerial()
         uint32_t checkSum = 0;
         byte float2Byte[4];
         byte chanSize = 0;
-        byte send = 0;
-        Serial.clear();
+        byte send = 0;        
 
         send = SERIAL_HEADER & 255;
         Serial.write(send);
@@ -143,8 +142,6 @@ void CheckSerial()
         send = checkSum & 0xFF;
         send = 0xFF - send;
         Serial.write(send);
-
-        Serial.send_now();
 
         break;
     }

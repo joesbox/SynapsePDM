@@ -23,7 +23,7 @@
 
 #include "OutputHandler.h"
 
-IntervalTimer myTimer;
+//IntervalTimer myTimer;
 
 volatile bool channelOutputStatus[NUM_CHANNELS];
 
@@ -35,11 +35,9 @@ uint analogValues[NUM_CHANNELS][ANALOG_READ_SAMPLES];
 volatile uint8_t realPWMValues[NUM_CHANNELS];
 volatile uint8_t channelLatch[NUM_CHANNELS];
 
-CRGB leds[NUM_CHANNELS];
 
 uint8_t toggle[NUM_CHANNELS];
 
-ADC *adc = new ADC();
 
 /// @brief Handle output control
 void InitialiseOutputs()
@@ -47,7 +45,7 @@ void InitialiseOutputs()
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
     // Disable anything related to digital input on the analogue inputs
-    pinMode(Channels[i].CurrentSensePin, INPUT_DISABLE);
+    //pinMode(Channels[i].CurrentSensePin, INPUT_DISABLE);
 
     // Make sure all channels are off when we initialise
     digitalWrite(Channels[i].ControlPin, LOW);
@@ -58,18 +56,18 @@ void InitialiseOutputs()
   // Reset the counters
   pwmCounter = analogCounter = 0;
 
-  adc->adc0->setConversionSpeed(ADC_settings::ADC_CONVERSION_SPEED::LOW_SPEED);
+  /*adc->adc0->setConversionSpeed(ADC_settings::ADC_CONVERSION_SPEED::LOW_SPEED);
   adc->adc1->setConversionSpeed(ADC_settings::ADC_CONVERSION_SPEED::LOW_SPEED);
 
   adc->adc0->setSamplingSpeed(ADC_settings::ADC_SAMPLING_SPEED::LOW_SPEED);
   adc->adc1->setSamplingSpeed(ADC_settings::ADC_SAMPLING_SPEED::LOW_SPEED);
 
   adc->adc0->setAveraging(32);
-  adc->adc1->setAveraging(32);
+  adc->adc1->setAveraging(32);*/
 
   pinMode(20, OUTPUT);
   // Start PWM interval timer
-  myTimer.begin(OutputTimer, PWM_COUNT_INTERVAL);
+ // myTimer.begin(OutputTimer, PWM_COUNT_INTERVAL);
 }
 
 /// @brief Update PWM or digital outputs
@@ -100,7 +98,7 @@ void UpdateOutputs()
         }
         realPWMValues[i] = pwmActual;
 
-        if (Channels[i].ErrorFlags == 0)
+        /*if (Channels[i].ErrorFlags == 0)
         {
           leds[i] = CRGB::DeepSkyBlue;
         }
@@ -120,13 +118,13 @@ void UpdateOutputs()
             leds[i] = CRGB::DarkRed;
             toggle[i]++;
           }
-        }
+        }*/
 
         int sum = 0;
         uint8_t total = 0;
         for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
         {
-          sum += adc->analogRead(Channels[i].CurrentSensePin);
+          sum += analogRead(Channels[i].CurrentSensePin);
           total++;
         }
         float analogMean = 0.0f;
@@ -174,7 +172,7 @@ void UpdateOutputs()
       else
       {
         realPWMValues[i] = 0;
-        leds[i] = CRGB::Black;
+        //leds[i] = CRGB::Black;
       }
       break;
     case DIG:
@@ -183,13 +181,13 @@ void UpdateOutputs()
       {
         // Digital channels get 100% duty
         realPWMValues[i] = 255;
-        leds[i] = CRGB::DarkGreen;
+        //leds[i] = CRGB::DarkGreen;
 
         int sum = 0;
         uint8_t total = 0;
         for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
         {
-          sum += adc->analogRead(Channels[i].CurrentSensePin);
+          sum += analogRead(Channels[i].CurrentSensePin);
           total++;
         }
         float analogMean = 0.0f;
@@ -202,16 +200,13 @@ void UpdateOutputs()
       else
       {
         realPWMValues[i] = 0;
-        leds[i] = CRGB::Black;
       }
       break;
     default:
       realPWMValues[i] = 0;
-      leds[i] = CRGB::Black;
       break;
     }
   }
-  FastLED.show();
 }
 
 /// @brief This is called at an interval of every PWM_COUNT_INTERVAL. All channels use the same timing but will be enabled or disabled based on their duty
@@ -225,7 +220,7 @@ void OutputTimer()
       if (realPWMValues[i] >= pwmCounter && !channelLatch[i])
       {
         // We are within the Ton perdiod of the duty cycle, keep the channel on
-        digitalWriteFast(Channels[i].ControlPin, HIGH);
+        digitalWrite(Channels[i].ControlPin, HIGH);
 
         // We've written the channel high once, no need to keep writing the channel high until we've reached the end of the Ton period
         channelLatch[i] = 1;
@@ -233,7 +228,7 @@ void OutputTimer()
       else if (realPWMValues[i] < pwmCounter && channelLatch[i])
       {
         // We are within th Toff period of the duty cycle, keep the channel off
-        digitalWriteFast(Channels[i].ControlPin, LOW);
+        digitalWrite(Channels[i].ControlPin, LOW);
 
         // No need to keep writing the pin low either
         channelLatch[i] = 0;
@@ -241,63 +236,10 @@ void OutputTimer()
     }
     else
     {
-      digitalWriteFast(Channels[i].ControlPin, LOW);
+      digitalWrite(Channels[i].ControlPin, LOW);
     }
   }
 
   // Increment the PWM counter at every interval
   pwmCounter++;
-}
-
-void InitialiseLEDs()
-{
-  FastLED.addLeds<WS2812B, RGB_PIN, GRB>(leds, NUM_CHANNELS);
-  uint8_t brightness = 0;
-  bool latch = false;
-
-  for (int j = 0; j < 256; j++)
-  {
-    if (brightness < 128 && !latch)
-    {
-      FastLED.setBrightness(brightness++);
-    }
-    else
-    {
-      FastLED.setBrightness(brightness--);
-      latch = true;
-    }
-    for (int i = 0; i < NUM_CHANNELS; i++)
-    {
-      leds[i] = Scroll((i * 256 / NUM_CHANNELS + j) % 256);
-    }
-
-    FastLED.show();
-    delay(5);
-  }
-  FastLED.showColor(CRGB::Black);
-  FastLED.setBrightness(SystemParams.LEDBrightness);
-}
-
-CRGB Scroll(int pos)
-{
-  CRGB color(0, 0, 0);
-  if (pos < 85)
-  {
-    color.g = 0;
-    color.r = ((float)pos / 85.0f) * 255.0f;
-    color.b = 255 - color.r;
-  }
-  else if (pos < 170)
-  {
-    color.g = ((float)(pos - 85) / 85.0f) * 255.0f;
-    color.r = 255 - color.g;
-    color.b = 0;
-  }
-  else if (pos < 256)
-  {
-    color.b = ((float)(pos - 170) / 85.0f) * 255.0f;
-    color.g = 255 - color.b;
-    color.r = 1;
-  }
-  return color;
 }

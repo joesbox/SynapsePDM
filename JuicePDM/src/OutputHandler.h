@@ -24,13 +24,8 @@
 #define OutputHandler_H
 
 #include <Arduino.h>
-#include <ADC.h>
 #include <Globals.h>
-#include <TeensyTimerTool.h>
 #include <System.h>
-#include <FastLED.h>
-
-using namespace TeensyTimerTool;
 
 // Max frequency specified by the BTS50010A is 200Hz. This 8-bit PWM period represents aaprox. 20µs per count which translates to a PWM frequency of approximately 195Hz
 #define PWM_COUNT_INTERVAL 20
@@ -50,13 +45,8 @@ using namespace TeensyTimerTool;
 #define PCONST 1.2549
 
 // Interval timer used to control PWM outputs and analog read back
-extern IntervalTimer myTimer;
+//extern IntervalTimer myTimer;
 
-// RGB LEDs
-extern CRGB leds[NUM_CHANNELS];
-
-// Rainbow scroll
-extern CRGB Scroll(int pos);
 
 // Toggle error LED
 extern uint8_t toggle[NUM_CHANNELS];

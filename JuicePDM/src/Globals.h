@@ -24,29 +24,35 @@
 #define Globals_H
 
 #include <Arduino.h>
+#include <STM32LowPower.h>
+#include <STM32RTC.h>
 #include <ChannelConfig.h>
 #include <System.h>
-#include <TimeLib.h>
-#include <elapsedMillis.h>
 
 // Firmware version
 #define FW_VER "1.0.0"
 
 // Build date
-#define BUILD_DATE __DATE__" "__TIME__
+#define BUILD_DATE __DATE__  " " __TIME__
 
 // Number of hardware output channels
-#define NUM_CHANNELS 6
+#define NUM_CHANNELS 14
+
+// Number of digital input channels
+#define NUM_DI_CHANNELS 8
+
+// Number of analogue input channels
+#define NUM_ANA_CHANNELS 8
 
 // Delay (microseconds) before making an analog reading
 // TODO: measure actual turn on delay and adjust this value
-#define ANALOG_DELAY 100 
+#define ANALOG_DELAY 100
 
 // Maximum PWM duty accounting for turn off delay. Above this value, a PWM channel will be set to 100% duty
 // BTS50010-1LUA max turn off time is 220µs. Default PWM frequency is 200Hz (5000µs period). Therefore, max. PWM duty is limited to about 95%, 4750µs
-#define MAX_DUTY 95        
+#define MAX_DUTY 95
 
-// Min duty accounting for turn on delay. Above this value, a PWM channel will be set to 0% duty. 
+// Min duty accounting for turn on delay. Above this value, a PWM channel will be set to 0% duty.
 // BTS50010-1LUA max turn on delay is 190µs. Default PWM frequency is 200Hz (5000µs period). Therefore, min. PWM duty is limited to about 10% (500µs, 190µs turn-on delay + analog read)
 #define MIN_DUTY 10
 
@@ -54,7 +60,7 @@
 #define FAULT_THRESHOLD 2.00
 
 // Microsecond representation of a CPU tick
-#define CPU_TICK_MICROS (1E6/F_CPU)
+#define CPU_TICK_MICROS (1E6 / F_CPU)
 
 // Maximum per-channel current supported by hardware. No channel can exceed this limit.
 #define CURRENT_MAX 13.0
@@ -87,7 +93,7 @@
 #define ANALOG_READ_DEBUG_PIN 20
 
 // Debug flag
-//#define DEBUG
+// #define DEBUG
 
 // Battery measurement analog input pin
 #define VBATT_ANALOG_PIN A7
@@ -122,20 +128,26 @@
 // ECU CAN address
 #define ECU_ADDR 0x800;
 
+// Ignition input (KL15)
+#define IGN_INPUT PE2
+
 // Channel digital input pins (defaults)
-const uint8_t channelInputPins[NUM_CHANNELS] = {24, 25, 26, 29, 28, 27};
+const uint8_t DIchannelInputPins[NUM_DI_CHANNELS] = {PE15, PE14, PE13, PE12, PE11, PE10, PE9, PE8};
+
+// Channel analogue input pins (defaults)
+const uint8_t ANAchannelInputPins[NUM_ANA_CHANNELS] = {PF3, PF4, PF5, PF6, PF7, PF8, PF9, PF10};
 
 // Channel digital output pins
-const uint8_t channelOutputPins[NUM_CHANNELS] = {5, 4, 3, 2, 1, 0};
+const uint8_t channelOutputPins[NUM_CHANNELS] = {PG10, PG9, PG6, PG5, PG4, PG3, PG2, PF15, PF14, PF13, PF12, PF2, PF1, PF0};
 
 // Channel analog current sense pins
-const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {A1, A0, A17, A16, A15, A14};  
+const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {PA0, PA1, PA2, PA3, PA4, PA5, PA6, PB1, PB0, PA7, PC3, PC2, PC1, PC0};
 
 // Timers for main tasks
-extern elapsedMillis task1;
-extern elapsedMillis task2;
-extern elapsedMillis task3;
-extern elapsedMillis task4;
+extern uint32_t task1Timer;
+extern uint32_t task2Timer;
+extern uint32_t task3Timer;
+extern uint32_t task4Timer;
 
 // Channel configurations
 extern ChannelConfig Channels[NUM_CHANNELS];
