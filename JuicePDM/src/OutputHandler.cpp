@@ -48,7 +48,7 @@ void InitialiseOutputs()
     //pinMode(Channels[i].CurrentSensePin, INPUT_DISABLE);
 
     // Make sure all channels are off when we initialise
-    digitalWrite(Channels[i].ControlPin, LOW);
+    digitalWrite(Channels[i].OutputControlPin, LOW);
 
     channelLatch[i] = 0;
   }
@@ -56,18 +56,9 @@ void InitialiseOutputs()
   // Reset the counters
   pwmCounter = analogCounter = 0;
 
-  /*adc->adc0->setConversionSpeed(ADC_settings::ADC_CONVERSION_SPEED::LOW_SPEED);
-  adc->adc1->setConversionSpeed(ADC_settings::ADC_CONVERSION_SPEED::LOW_SPEED);
-
-  adc->adc0->setSamplingSpeed(ADC_settings::ADC_SAMPLING_SPEED::LOW_SPEED);
-  adc->adc1->setSamplingSpeed(ADC_settings::ADC_SAMPLING_SPEED::LOW_SPEED);
-
-  adc->adc0->setAveraging(32);
-  adc->adc1->setAveraging(32);*/
-
-  pinMode(20, OUTPUT);
-  // Start PWM interval timer
- // myTimer.begin(OutputTimer, PWM_COUNT_INTERVAL);
+  // Power rail enable outputs
+  pinMode(PWR_EN_5V, OUTPUT);
+  pinMode(PWR_EN_3V3, OUTPUT);
 }
 
 /// @brief Update PWM or digital outputs
@@ -97,28 +88,6 @@ void UpdateOutputs()
           pwmActual = 0;
         }
         realPWMValues[i] = pwmActual;
-
-        /*if (Channels[i].ErrorFlags == 0)
-        {
-          leds[i] = CRGB::DeepSkyBlue;
-        }
-        else
-        {
-          if (toggle[i] >= 10)
-          {
-            leds[i] = CRGB::DeepSkyBlue;
-            if (toggle[i] == 20)
-            {
-              toggle[i] = 0;
-            }
-            toggle[i]++;
-          }
-          else
-          {
-            leds[i] = CRGB::DarkRed;
-            toggle[i]++;
-          }
-        }*/
 
         int sum = 0;
         uint8_t total = 0;
@@ -220,7 +189,7 @@ void OutputTimer()
       if (realPWMValues[i] >= pwmCounter && !channelLatch[i])
       {
         // We are within the Ton perdiod of the duty cycle, keep the channel on
-        digitalWrite(Channels[i].ControlPin, HIGH);
+        digitalWrite(Channels[i].OutputControlPin, HIGH);
 
         // We've written the channel high once, no need to keep writing the channel high until we've reached the end of the Ton period
         channelLatch[i] = 1;
@@ -228,7 +197,7 @@ void OutputTimer()
       else if (realPWMValues[i] < pwmCounter && channelLatch[i])
       {
         // We are within th Toff period of the duty cycle, keep the channel off
-        digitalWrite(Channels[i].ControlPin, LOW);
+        digitalWrite(Channels[i].OutputControlPin, LOW);
 
         // No need to keep writing the pin low either
         channelLatch[i] = 0;
@@ -236,7 +205,7 @@ void OutputTimer()
     }
     else
     {
-      digitalWrite(Channels[i].ControlPin, LOW);
+      digitalWrite(Channels[i].OutputControlPin, LOW);
     }
   }
 

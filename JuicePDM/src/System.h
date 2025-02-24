@@ -26,16 +26,23 @@
 #include <Arduino.h>
 #include <Globals.h>
 
+#define VTEMP 760
+#define AVG_SLOPE 2500
+#define VREFINT 1210
+
+/* Analog read resolution */
+#define LL_ADC_RESOLUTION LL_ADC_RESOLUTION_12B
+#define ADC_RANGE 4096
+
 /// @brief System parameters structure
 struct __attribute__((packed)) SystemParameters
 {
-    float SystemTemperature; // Internal system (Teensy processor) temperature
-    uint8_t CANResEnabled;   // CAN bus termination resistor enabled
-    float VBatt;             // Battery supply voltage
-    float SystemCurrent;     // Total current draw for all enabled channels
-    uint8_t ErrorFlags;      // Bitmask for system error flags
-    uint8_t LEDBrightness;   // RGB LED brightness
-    int CANAddress;          // CAN Bus address
+    int32_t SystemTemperature; // Internal system (STM32 processor) temperature
+    uint8_t CANResEnabled;     // CAN bus termination resistor enabled
+    float VBatt;               // Battery supply voltage
+    float SystemCurrent;       // Total current draw for all enabled channels
+    uint8_t ErrorFlags;        // Bitmask for system error flags
+    int CANAddress;            // CAN Bus address
 };
 
 /// @brief System parameters
@@ -47,16 +54,31 @@ extern bool CRCValid;
 /// @brief SD card OK flag
 extern bool SDCardOK;
 
-/// @brief Sleep flag for igniton state
-extern bool goToSleep;
+/// @brief Power state. 0 = Run, 1 = prepare for sleep, 2 = sleeping, 3 = Ignition wake, 4 = IMU wake
+extern uint8_t PowerState;
 
 /// @brief Wake up call back for the ignition input pin
-void WakeUpCallBack();
+void IgnitionWake();
+
+/// @brief Wake up call back for the IMU int 1 pin
+void IMUWake1();
+
+/// @brief Wake up call back for the IMU int 2 pin
+void IMUWake2();
 
 /// @brief Initialise system I/O and sleep functions
 void InitialiseSystem();
 
 /// @brief Updates the system parameters
 void UpdateSystem();
+
+/// @brief Reads the internal STM32 temp sensor
+/// @param VRef Voltage reference
+/// @return Temperature in celcius
+static int32_t readTempSensor(int32_t VRef);
+
+/// @brief Reads the internal voltage reference
+/// @return Internal voltage reference valiue
+static int32_t readVref();
 
 #endif

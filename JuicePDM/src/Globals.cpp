@@ -23,10 +23,12 @@
 #include "Globals.h"
 
 ChannelConfig Channels[NUM_CHANNELS];
+AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 uint32_t task1Timer;
 uint32_t task2Timer;
 uint32_t task3Timer;
 uint32_t task4Timer;
+uint32_t debugTimer;
 
 /// @brief Inititlise global data
 void InititalizeData()
@@ -36,18 +38,27 @@ void InititalizeData()
     {
         Channels[i].ChanType = DIG;
         Channels[i].Enabled = false;
-        Channels[i].ControlPin = channelOutputPins[i];
+        Channels[i].OutputControlPin = channelOutputPins[i];
         Channels[i].CurrentSensePin = channelCurrentSensePins[i];
         Channels[i].InputControlPin = DIchannelInputPins[0];
         Channels[i].CurrentLimitHigh = CURRENT_MAX;
         Channels[i].CurrentThresholdHigh = CURRENT_MAX;
         Channels[i].CurrentThresholdLow = 0.0;
-        pinMode(Channels[i].ControlPin, OUTPUT);
-        digitalWrite(Channels[i].ControlPin, LOW);
+        pinMode(Channels[i].OutputControlPin, OUTPUT);
+        digitalWrite(Channels[i].OutputControlPin, LOW);        
+    }
+
+    // Initialise analogue inputs to default values
+    for (int i = 0; i < NUM_ANA_CHANNELS; i++)
+    {
+        AnalogueIns[i].InputPin = ANAchannelInputPins[i];
+        AnalogueIns[i].PullDownPin = ANAchannelInputPullDowns[i];
+        AnalogueIns[i].PullUpPin = ANAchannelInputPullUps[i];
+        AnalogueIns[i].PullDownEnable = false;
+        AnalogueIns[i].PullUpEnable = false;
     }
 
     // Initialise default system data
-    SystemParams.LEDBrightness = DEFAULT_RGB_BRIGHTNESS;
     SystemParams.CANResEnabled = true;
     SystemParams.CANAddress = ECU_ADDR;
 }

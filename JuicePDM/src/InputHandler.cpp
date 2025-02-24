@@ -33,6 +33,16 @@ void InitialiseInputs()
     {
         pinMode(DIchannelInputPins[i], INPUT_PULLDOWN);
     }
+
+    for (int i = 0; i < NUM_ANA_CHANNELS; i++)
+    {
+        AnalogueIns[i].InputPin = ANAchannelInputPins[i];
+        AnalogueIns[i].PullDownPin = ANAchannelInputPullDowns[i];
+        AnalogueIns[i].PullUpPin = ANAchannelInputPullUps[i];
+
+        pinMode(AnalogueIns[i].PullDownPin, OUTPUT);
+        pinMode(AnalogueIns[i].PullUpPin, OUTPUT);
+    }
 }
 
 /// @brief Handle input status
@@ -50,5 +60,12 @@ void HandleInputs()
         default:
             break;
         }
+    }
+
+    // Check analogue inputs. Set pull-ups/pull-downs
+    for (int i = 0; i < NUM_ANA_CHANNELS; i++)
+    {
+        digitalWrite(AnalogueIns[i].PullDownPin, AnalogueIns[i].PullDownEnable);
+        digitalWrite(AnalogueIns[i].PullUpPin, AnalogueIns[i].PullUpEnable);
     }
 }

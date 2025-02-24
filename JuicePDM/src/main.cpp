@@ -28,6 +28,7 @@
     2023-08-14        v0.1.0        Initial beta
 */
 
+// #include <SystemClock.h>
 #include <Arduino.h>
 #include <Bounce2.h>
 #include <Globals.h>
@@ -45,6 +46,8 @@ STM32RTC &rtc1 = STM32RTC::getInstance();
 
 void setup()
 {
+
+  InitialiseSerial();
   InititalizeData();
 
   InitialiseSD();
@@ -53,42 +56,27 @@ void setup()
   InitialiseInputs();
   CRCValid = LoadConfig();
   InitialiseSystem();
+  rtc1.begin();
 
 #ifdef DEBUG
   Serial.println("Power up");
-
-  // LED debugging
-  Channels[0].ChanType = DIG_PWM;
-  Channels[0].Enabled = false;
-  Channels[0].PWMSetDuty = 25;
-
-  Channels[1].ChanType = DIG_PWM;
-  Channels[1].Enabled = false;
-  Channels[1].PWMSetDuty = 25;
-
-  Channels[2].ChanType = DIG_PWM;
-  Channels[2].Enabled = false;
-  Channels[2].PWMSetDuty = 25;
-
-  Channels[3].ChanType = DIG_PWM;
-  Channels[3].Enabled = false;
-  Channels[3].PWMSetDuty = 25;
-
-  Channels[4].ChanType = DIG_PWM;
-  Channels[4].Enabled = false;
-  Channels[4].PWMSetDuty = 25;
-
-  Channels[5].ChanType = DIG_PWM;
-  Channels[5].Enabled = true;
-  Channels[5].PWMSetDuty = 5;
+  AnalogueIns[0].PullUpEnable = true;
+  digitalWrite(PWR_EN_5V, HIGH);
+  digitalWrite(PWR_EN_3V3, HIGH);
 #endif
   task1Timer = task2Timer = task3Timer = task4Timer = 0;
 }
 
 void loop()
 {
-  if (!goToSleep)
+  switch (PowerState)
   {
+  case RUN:
+    // Check ignition input
+    if (!digitalRead(IGN_INPUT))
+    {
+      // PowerState = PREPARE_SLEEP;
+    }
 
     // High priority tasks
     if (millis() >= task1Timer)
@@ -133,18 +121,51 @@ void loop()
     // Lowest priority tasks
     if (millis() >= task4Timer)
     {
-      task1Timer = millis() + TASK_4_INTERVAL;
-      Serial.print(rtc1.getHours());
+      task4Timer = millis() + TASK_4_INTERVAL;
+      char temp[6];
+      sprintf(temp, "%02d", rtc1.getHours());
+      Serial.print(temp);
       Serial.print(":");
-      Serial.print(rtc1.getMinutes());
+      sprintf(temp, "%02d", rtc1.getMinutes());
+      Serial.print(temp);
       Serial.print(":");
-      Serial.print(rtc1.getSeconds());
+      sprintf(temp, "%02d", rtc1.getSeconds());
+      Serial.print(temp);
       Serial.print(" - ");
       Serial.println("One minute has passed...");
     }
-  }
-  else
-  {
+
+    // Debug
+    if (millis() >= debugTimer)
+    {
+      debugTimer = millis() + DEBUG_INTERVAL;
+#ifdef DEBUG
+      Serial.print("System temperature: ");
+      Serial.println(SystemParams.SystemTemperature);
+      Serial.print("CRC Valid: ");
+      Serial.println(CRCValid);
+      Serial.print("System error flags: ");
+      Serial.println(SystemParams.ErrorFlags, HEX);
+#endif
+    }
+    break;
+  case PREPARE_SLEEP:
+
+    // TODO: Implement channel run-on timers
+    break;
+
+  case SLEEPING:
     LowPower.deepSleep();
+    break;
+
+  case IGNITION_WAKE:
+
+    break;
+
+  case IMU_WAKE:
+    break;
+
+  default:
+    break;
   }
 }

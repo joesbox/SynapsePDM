@@ -94,7 +94,7 @@ void InitialiseSD()
         {
 #ifdef DEBUG
             Serial.println("SD Begin error");
-            SD.initErrorPrint();
+            //SD.initErrorPrint();
 #endif
             
         }
@@ -134,7 +134,7 @@ void InitialiseSD()
         {
 #ifdef DEBUG
             Serial.println("SD init open error");
-            SD.errorPrint(&Serial);
+            //SD.errorPrint(&Serial);
 #endif
             
         }
@@ -146,7 +146,7 @@ void InitialiseSD()
         {
 #ifdef DEBUG
             Serial.println("SD pre-allocate error");
-            SD.errorPrint(&Serial);
+            //SD.errorPrint(&Serial);
 #endif
             
         }

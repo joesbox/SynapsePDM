@@ -30,10 +30,10 @@
 #include <System.h>
 
 // Firmware version
-#define FW_VER "1.0.0"
+#define FW_VER "0.1.1"
 
 // Build date
-#define BUILD_DATE __DATE__  " " __TIME__
+#define BUILD_DATE __DATE__ " " __TIME__
 
 // Number of hardware output channels
 #define NUM_CHANNELS 14
@@ -80,20 +80,19 @@
 #define TASK_3_INTERVAL 100
 #define TASK_4_INTERVAL 60000
 
+#define DEBUG_INTERVAL 1000
+
 // Watchdog timer interval
 #define WATCHDOG_INTERVAL 2500
 
 // RGB LED serial data pin
 #define RGB_PIN 9
 
-// Default RGB LED brightness
-#define DEFAULT_RGB_BRIGHTNESS 64
-
 // Unused pin that can be used to debug analog read timings which are critical to obtaining correct current measurements on PWM channels
 #define ANALOG_READ_DEBUG_PIN 20
 
 // Debug flag
-// #define DEBUG
+#define DEBUG
 
 // Battery measurement analog input pin
 #define VBATT_ANALOG_PIN A7
@@ -126,16 +125,47 @@
 #define IS_FAULT 0x20
 
 // ECU CAN address
-#define ECU_ADDR 0x800;
+#define ECU_ADDR 0x800
 
 // Ignition input (KL15)
 #define IGN_INPUT PE2
+
+// IMU Pins
+#define IMU_INT1 PE4
+#define IMU_INT2 PE5
+
+// Power enable pins
+#define PWR_EN_5V PE7
+#define PWR_EN_3V3 PF11
+
+// Power states
+#define RUN 0
+#define PREPARE_SLEEP 1
+#define SLEEPING 2
+#define IGNITION_WAKE 3
+#define IMU_WAKE 4
+
+/// @brief Analogue input config structure
+struct __attribute__((packed)) AnalogueInputs
+{
+    uint8_t InputPin;    // Input pin
+    uint8_t PullUpPin;   // Pull-up enable pin
+    uint8_t PullDownPin; // Pull-down enable pin
+    bool PullUpEnable;   // Pull-up enable flag
+    bool PullDownEnable; // Pull-down enable flag
+};
 
 // Channel digital input pins (defaults)
 const uint8_t DIchannelInputPins[NUM_DI_CHANNELS] = {PE15, PE14, PE13, PE12, PE11, PE10, PE9, PE8};
 
 // Channel analogue input pins (defaults)
 const uint8_t ANAchannelInputPins[NUM_ANA_CHANNELS] = {PF3, PF4, PF5, PF6, PF7, PF8, PF9, PF10};
+
+// Channel analogue input pull-up pins (defaults)
+const uint8_t ANAchannelInputPullUps[NUM_ANA_CHANNELS] = {PD3, PD5, PD7, PG12, PG15, PB4, PB9, PE1};
+
+// Channel analogue input pull-down pins (defaults)
+const uint8_t ANAchannelInputPullDowns[NUM_ANA_CHANNELS] = {PD4, PD6, PG11, PG13, PG14, PB3, PB5, PE0};
 
 // Channel digital output pins
 const uint8_t channelOutputPins[NUM_CHANNELS] = {PG10, PG9, PG6, PG5, PG4, PG3, PG2, PF15, PF14, PF13, PF12, PF2, PF1, PF0};
@@ -148,14 +178,14 @@ extern uint32_t task1Timer;
 extern uint32_t task2Timer;
 extern uint32_t task3Timer;
 extern uint32_t task4Timer;
+extern uint32_t debugTimer;
+
+// Analogue channels
+extern ChannelConfig Channels[NUM_CHANNELS];
 
 // Channel configurations
-extern ChannelConfig Channels[NUM_CHANNELS];
+extern AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 
 // Initialise global data to known defaults
 void InititalizeData();
-
-// Sync time function
-time_t getTeensy3Time();
-
 #endif

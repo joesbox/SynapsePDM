@@ -30,6 +30,8 @@ enum ChannelType
 {
   DIG,         // Digital input
   DIG_PWM,     // Digital input, PWM output
+  ANA,         // Analogue input (threshold based)
+  ANA_PWM,     // Analogue input, PWM output (scaled)
   CAN_DIGITAL, // CAN bus controlled digital output
   CAN_PWM      // CAN bus controlled PWM output
 };
@@ -50,9 +52,11 @@ struct __attribute__((packed)) ChannelConfig
   float RetryDelay;           // Retry delay in seconds
   uint8_t MultiChannel;       // Grouped with other channels. Allows higher current loads
   uint8_t GroupNumber;        // Group membership number
-  int ControlPin;             // Digital uC control pin
+  int OutputControlPin;       // Digital uC control pin
   uint8_t CurrentSensePin;    // Current sense input pin
-  uint8_t InputControlPin;    // Digital input control pin (digital channels only)
+  uint8_t InputControlPin;    // Input control pin
+  bool RunOn;                 // Run-on after ignition off flag
+  int RunOnTime;              // Run on time (in milliseconds)
   uint8_t ErrorFlags;         // Bitmask for channel error flags
 };
 

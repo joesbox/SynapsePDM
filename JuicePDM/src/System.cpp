@@ -26,27 +26,44 @@ SystemParameters SystemParams;
 
 bool CRCValid;
 bool SDCardOK;
-bool goToSleep;
+uint8_t PowerState;
 
-void WakeUpCallBack()
+void IgnitionWake()
 {
-    goToSleep = !digitalRead(IGN_INPUT);
+    PowerState = IGNITION_WAKE;
 }
+
+void IMUWake1()
+{
+
+}
+
+void IMUWake2()
+{
+    
+}
+
 
 void InitialiseSystem()
 {
     // Start the low power features
-    LowPower.begin();    
-    LowPower.attachInterruptWakeup(IGN_INPUT, WakeUpCallBack, CHANGE, DEEP_SLEEP_MODE);
+    LowPower.begin();
+    LowPower.attachInterruptWakeup(IGN_INPUT, IgnitionWake, CHANGE, DEEP_SLEEP_MODE);
+    LowPower.attachInterruptWakeup(IMU_INT1, IMUWake1, CHANGE, DEEP_SLEEP_MODE);
+    LowPower.attachInterruptWakeup(IMU_INT2, IMUWake2, CHANGE, DEEP_SLEEP_MODE);
 
-    // Check the state of the ignition input
-    goToSleep = !digitalRead(IGN_INPUT);
+    // Set power state to run
+    PowerState = RUN;
+
+    // Set the analogue read resolution
+    analogReadResolution(12);
 }
 
 void UpdateSystem()
 {
     // Get system temperature
-    // SystemParams.SystemTemperature = tempmonGetTemp();
+    int32_t VRef = readVref();
+    SystemParams.SystemTemperature = readTempSensor(VRef);
 
     // Calculate battery voltage
     SystemParams.VBatt = analogRead(VBATT_ANALOG_PIN) * 0.0154f;
@@ -107,4 +124,14 @@ void UpdateSystem()
     {
         SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~SDCARD_ERROR;
     }
+}
+
+static int32_t readTempSensor(int32_t VRef)
+{
+    return (__LL_ADC_CALC_TEMPERATURE(VRef, analogRead(ATEMP), LL_ADC_RESOLUTION));
+}
+
+static int32_t readVref()
+{
+    return (__LL_ADC_CALC_VREFANALOG_VOLTAGE(analogRead(AVREF), LL_ADC_RESOLUTION));
 }

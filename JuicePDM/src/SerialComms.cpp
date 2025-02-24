@@ -26,6 +26,7 @@ CRC32 crcSerial;
 
 void InitialiseSerial()
 {
+    Serial.begin(115200);
 }
 
 /// @brief Check for incoming data. Respond to a command byte or read all of the incoming config data and checksum.
@@ -45,7 +46,7 @@ void CheckSerial()
         uint32_t checkSum = 0;
         byte float2Byte[4];
         byte chanSize = 0;
-        byte send = 0;        
+        byte send = 0;
 
         send = SERIAL_HEADER & 255;
         Serial.write(send);
@@ -173,7 +174,7 @@ void CheckSerial()
             for (int j = 0; j < NUM_CHANNELS; j++)
             {
                 Channels[j].ChanType = SerialConfigData.data.channelConfigStored[j].ChanType;
-                Channels[j].ControlPin = SerialConfigData.data.channelConfigStored[j].ControlPin;
+                Channels[j].OutputControlPin = SerialConfigData.data.channelConfigStored[j].OutputControlPin;
                 Channels[j].CurrentLimitHigh = SerialConfigData.data.channelConfigStored[j].CurrentLimitHigh;
                 Channels[j].CurrentSensePin = SerialConfigData.data.channelConfigStored[j].CurrentSensePin;
                 Channels[j].CurrentThresholdHigh = SerialConfigData.data.channelConfigStored[j].CurrentThresholdHigh;
@@ -188,7 +189,6 @@ void CheckSerial()
             }
 
             // Set the system parameters
-            SystemParams.LEDBrightness = SerialConfigData.data.sysParams.LEDBrightness;
             SystemParams.CANResEnabled = SerialConfigData.data.sysParams.CANResEnabled;
 
             Serial.write(COMMAND_ID_CONFIM);
