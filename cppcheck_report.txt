@@ -1,7 +1,7 @@
-JuicePDM/src/OutputHandler.cpp:193:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
+JuicePDM/src/OutputHandler.cpp:162:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
         float analogMean = 0.0f;
               ^
-JuicePDM/src/SerialComms.cpp:64:18: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
+JuicePDM/src/SerialComms.cpp:65:18: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
         chanSize = sizeof(Channels) / NUM_CHANNELS;
                  ^
 JuicePDM/src/Storage.cpp:262:34: warning: Either the condition 'i!=14' is redundant or the array 'Channels[14]' is accessed at index 14, which is out of bounds. [arrayIndexOutOfBoundsCond]
@@ -16,10 +16,7 @@ JuicePDM/src/Storage.cpp:262:34: note: Array index out of bounds
 JuicePDM/src/CANComms.cpp:27:0: style: The function 'InitialiseCAN' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/SerialComms.cpp:27:0: style: The function 'InitialiseSerial' is never used. [unusedFunction]
-
-^
-JuicePDM/src/OutputHandler.cpp:213:0: style: The function 'OutputTimer' is never used. [unusedFunction]
+JuicePDM/src/OutputHandler.cpp:182:0: style: The function 'OutputTimer' is never used. [unusedFunction]
 
 ^
 JuicePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never used. [unusedFunction]
@@ -28,10 +25,10 @@ JuicePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never u
 JuicePDM/src/CANComms.cpp:34:0: style: The function 'canSniff' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:88:0: style: The function 'loop' is never used. [unusedFunction]
+JuicePDM/src/main.cpp:70:0: style: The function 'loop' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:46:0: style: The function 'setup' is never used. [unusedFunction]
+JuicePDM/src/main.cpp:47:0: style: The function 'setup' is never used. [unusedFunction]
 
 ^
 nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingInclude]
