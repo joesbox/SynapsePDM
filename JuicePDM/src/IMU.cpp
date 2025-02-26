@@ -64,8 +64,3 @@ void ReadIMU()
   gyroY = imu.data.gyroY;
   gyroZ = imu.data.gyroZ;
 }
-
-void SleepIMU()
-{
-  
-}

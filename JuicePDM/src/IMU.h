@@ -39,9 +39,6 @@ void InitialiseIMU();
 /// @brief Read the IMU
 void ReadIMU();
 
-/// @brief Put the IMU in to low power mode
-void SleepIMU();
-
 /// @brief IMU initialisation status
 extern bool IMUOK;
 

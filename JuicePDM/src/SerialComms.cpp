@@ -37,7 +37,11 @@ void InitialiseSerial()
     Serial.begin(115200);
 }
 
-/// @brief Check for incoming data. Respond to a command byte or read all of the incoming config data and checksum.
+void SleepComms()
+{
+    Serial.end();
+}
+
 void CheckSerial()
 {
     byte nextByte = Serial.read();

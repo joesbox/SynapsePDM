@@ -338,3 +338,8 @@ void LogData()
         }
     }
 }
+
+void SleepSD()
+{
+    SD.end();
+}

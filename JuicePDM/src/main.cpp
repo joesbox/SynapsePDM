@@ -1,7 +1,7 @@
-/*  JuicePDM - CAN enabled Power Distribution Module with 14 channels.
+/*  SynapsePDM - CAN enabled Power Distribution Module with 14 channels.
 
     Code herein specifically applies to the application of Infineon BTS50025 High-Side Drivers
-    on the JuicePDM hardware. See https://wiki.joeblogs.uk for more info.
+    on the SynapsePDM hardware. See https://wiki.joeblogs.uk for more info.
 
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
@@ -54,7 +54,6 @@ STM32RTC &rtc1 = STM32RTC::getInstance();
 
 void setup()
 {
-
   InitialiseSerial();
   InititalizeData();
 
@@ -68,17 +67,8 @@ void setup()
 
   InitialiseIMU();
 
-  pinMode(PF14, OUTPUT);
-
-  while(1)
-  {
-    digitalWrite(PG10, HIGH);
-  }
-
 #ifdef DEBUG
   Serial.println("Power up");
-  AnalogueIns[0].PullUpEnable = true;
-
 #endif
   task0Timer = task1Timer = task2Timer = task3Timer = task4Timer = 0;
 }
@@ -91,7 +81,7 @@ void loop()
     // Check ignition input
     if (!digitalRead(IGN_INPUT))
     {
-      // PowerState = PREPARE_SLEEP;
+      PowerState = PREPARE_SLEEP;
     }
 
     if (millis() >= task0Timer)
@@ -169,7 +159,7 @@ void loop()
       Serial.print("System error flags: ");
       Serial.println(SystemParams.ErrorFlags, HEX);
       Serial.print("IMU OK: ");
-      Serial.println(IMUOK);      
+      Serial.println(IMUOK);
       Serial.print("IMU data (Accel X, Y Z, Rotation X, Y Z): ");
       Serial.print(accelX, 3);
       Serial.print(", ");
@@ -186,19 +176,30 @@ void loop()
     }
     break;
   case PREPARE_SLEEP:
-
     // TODO: Implement channel run-on timers
+    PullResistorSleep();
+    SleepSD();
+    OutputsOff();
+    SleepComms();
+    SleepSystem();
+    PowerState = SLEEPING;
     break;
 
   case SLEEPING:
+
     LowPower.deepSleep();
     break;
 
   case IGNITION_WAKE:
-
+    InitialiseSD();
+    InitialiseSerial();
+    WakeSystem();
+    PowerState = RUN;
     break;
 
   case IMU_WAKE:
+    WakeSystem();  
+    PowerState = RUN;
     break;
 
   default:

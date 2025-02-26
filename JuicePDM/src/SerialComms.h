@@ -38,6 +38,9 @@
 /// @brief Setup serial port
 void InitialiseSerial();
 
+/// @brief End serial comms
+void SleepComms();
+
 /// @brief Check for incoming data
 void CheckSerial();
 

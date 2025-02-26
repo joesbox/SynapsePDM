@@ -65,13 +65,10 @@ void InitialiseOutputs();
 // Set PWM or digital outputs
 void UpdateOutputs();
 
-// Initialise the RGB LEDs
-void InitialiseLEDs();
-
-/// @brief  Update the RGB LEDs
-void UpdateLEDs();
-
 /// @brief Interval timer callback to control PWM outputs
 void OutputTimer();
+
+/// @brief Turn all outputs off
+void OutputsOff();
 
 #endif

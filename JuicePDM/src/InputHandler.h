@@ -34,10 +34,13 @@
 #include <Arduino.h>
 #include <Globals.h>
 
-// Initialise inputs
+/// @brief Initialise inputs
 void InitialiseInputs();
 
-// Handles reading of inputs
+/// @brief Handles reading of inputs
 void HandleInputs();
+
+/// @brief Disables all pull-up and pull-down resistor outputs
+void PullResistorSleep();
 
 #endif

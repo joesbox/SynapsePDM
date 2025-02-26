@@ -77,6 +77,12 @@ void InitialiseSystem();
 /// @brief Updates the system parameters
 void UpdateSystem();
 
+/// @brief Power down the peripheral supply rails
+void SleepSystem();
+
+/// @brief Power up the peripheral supply rails
+void WakeSystem();
+
 /// @brief Reads the internal STM32 temp sensor
 /// @param VRef Voltage reference
 /// @return Temperature in celcius

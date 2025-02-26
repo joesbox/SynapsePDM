@@ -30,7 +30,6 @@
 
 #include "InputHandler.h"
 
-/// @brief Initialise inputs on boot
 void InitialiseInputs()
 {
     // Ignition inout is used for wake/sleep
@@ -53,7 +52,6 @@ void InitialiseInputs()
     }
 }
 
-/// @brief Handle input status
 void HandleInputs()
 {
     // Check channel type and enable for active level
@@ -75,5 +73,14 @@ void HandleInputs()
     {
         digitalWrite(AnalogueIns[i].PullDownPin, AnalogueIns[i].PullDownEnable);
         digitalWrite(AnalogueIns[i].PullUpPin, AnalogueIns[i].PullUpEnable);
+    }
+}
+
+void PullResistorSleep()
+{
+    for (int i = 0; i < NUM_ANA_CHANNELS; i++)
+    {
+        digitalWrite(AnalogueIns[i].PullDownPin, LOW);
+        digitalWrite(AnalogueIns[i].PullUpPin, LOW);
     }
 }

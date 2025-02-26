@@ -61,6 +61,9 @@ void InitialiseSD();
 /// @brief Logs current system and channel data to the SD card
 void LogData();
 
+/// @brief End the SD logging
+void SleepSD();
+
 /// @brief Configuration structure
 struct __attribute__((packed)) ConfigStruct
 {
