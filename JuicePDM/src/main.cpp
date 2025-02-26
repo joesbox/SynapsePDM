@@ -1,27 +1,35 @@
-/*  JuicePDM - CAN enabled Power Distribution Module with 6 channels.
+/*  JuicePDM - CAN enabled Power Distribution Module with 14 channels.
 
-    Code herein specifically applies to the application of Infineon BTS50010 High-Side Drivers
+    Code herein specifically applies to the application of Infineon BTS50025 High-Side Drivers
     on the JuicePDM hardware. See https://wiki.joeblogs.uk for more info.
 
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+    This work is licensed under the Creative Commons
+    Attribution-NonCommercial-ShareAlike 4.0 International License.
+    To view a copy of this license, visit
+    https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a
+    letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
 
-    The above copyright notice and this permission notice shall be included in
-    all copies or substantial portions of the Software.
+    You are free to:
+    - Share: Copy and redistribute the material in any medium or format.
+    - Adapt: Remix, transform, and build upon the material.
 
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE,
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-    THE SOFTWARE.
+    Under the following terms:
+    - Attribution: You must give appropriate credit, provide a link to the license,
+      and indicate if changes were made. You may do so in any reasonable manner,
+      but not in any way that suggests the licensor endorses you or your use.
+    - NonCommercial: You may not use the material for commercial purposes.
+    - ShareAlike: If you remix, transform, or build upon the material,
+      you must distribute your contributions under the same license as the original.
+
+    DISCLAIMER: This software is provided "as is," without warranty of any kind,
+    express or implied, including but not limited to the warranties of
+    merchantability, fitness for a particular purpose, and noninfringement.
+    In no event shall the authors or copyright holders be liable for any claim,
+    damages, or other liability, whether in an action of contract, tort, or otherwise,
+    arising from, out of, or in connection with the software or the use or
+    other dealings in the software.
 
     Version history:
     2024-12-09        v0.1.1        New hardware. Moving to the STM32 for increased I/O. Now 14 output channels.
@@ -58,13 +66,21 @@ void setup()
   InitialiseSystem();
   rtc1.begin();
 
+  InitialiseIMU();
+
+  pinMode(PF14, OUTPUT);
+
+  while(1)
+  {
+    digitalWrite(PG10, HIGH);
+  }
+
 #ifdef DEBUG
   Serial.println("Power up");
   AnalogueIns[0].PullUpEnable = true;
-  digitalWrite(PWR_EN_5V, HIGH);
-  digitalWrite(PWR_EN_3V3, HIGH);
+
 #endif
-  task1Timer = task2Timer = task3Timer = task4Timer = 0;
+  task0Timer = task1Timer = task2Timer = task3Timer = task4Timer = 0;
 }
 
 void loop()
@@ -76,6 +92,12 @@ void loop()
     if (!digitalRead(IGN_INPUT))
     {
       // PowerState = PREPARE_SLEEP;
+    }
+
+    if (millis() >= task0Timer)
+    {
+      task0Timer = millis() + TASK_0_INTERVAL;
+      ReadIMU();
     }
 
     // High priority tasks
@@ -146,6 +168,20 @@ void loop()
       Serial.println(CRCValid);
       Serial.print("System error flags: ");
       Serial.println(SystemParams.ErrorFlags, HEX);
+      Serial.print("IMU OK: ");
+      Serial.println(IMUOK);      
+      Serial.print("IMU data (Accel X, Y Z, Rotation X, Y Z): ");
+      Serial.print(accelX, 3);
+      Serial.print(", ");
+      Serial.print(accelY, 3);
+      Serial.print(", ");
+      Serial.print(accelZ, 3);
+      Serial.print(", ");
+      Serial.print(gyroX, 3);
+      Serial.print(", ");
+      Serial.print(gyroY, 3);
+      Serial.print(", ");
+      Serial.println(gyroZ, 3);
 #endif
     }
     break;

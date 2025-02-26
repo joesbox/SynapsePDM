@@ -1,5 +1,5 @@
-/*  OutputHandler.h Output handler deals with channel output control.
-    Copyright (c) 2023 Joe Mann.  All right reserved.
+/*  IMU.h IMU functions.
+    Copyright (c) 2025 Joe Mann.  All right reserved.
 
     This work is licensed under the Creative Commons 
     Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -28,50 +28,39 @@
     other dealings in the software.
 */
 
-#ifndef OutputHandler_H
-#define OutputHandler_H
+#ifndef IMU_H
+#define IMU_H
 
-#include <Arduino.h>
-#include <Globals.h>
-#include <System.h>
+#define DEBUG
 
-// Max frequency specified by the BTS50010A is 200Hz. This 8-bit PWM period represents aaprox. 20µs per count which translates to a PWM frequency of approximately 195Hz
-#define PWM_COUNT_INTERVAL 20
+/// @brief Initialise the IMU
+void InitialiseIMU();
 
-// How many current sense samples to collect to calculate a mean
-#define ANALOG_READ_SAMPLES 10
+/// @brief Read the IMU
+void ReadIMU();
 
-// BTS50010-1LUA max turn on delay is 190µs (80%), max turn off delay is 200µs (20%). The effective usable 8-bit PWM range is 21 to 235
-#define MIN_PWM 21
-#define MAX_PWM 235
+/// @brief Put the IMU in to low power mode
+void SleepIMU();
 
-// Polynomial terms used to calculate current
-#define PTERM1 9.0829
-#define PTERM2 -24.874
-#define PTERM3 26.468
-#define PTERM4 -9.5747
-#define PCONST 1.2549
+/// @brief IMU initialisation status
+extern bool IMUOK;
 
-// Interval timer used to control PWM outputs and analog read back
-//extern IntervalTimer myTimer;
+/// @brief X-axis acceleration in Gs
+extern float accelX;
 
+/// @brief Y-axis acceleration in Gs
+extern float accelY;
 
-// Toggle error LED
-extern uint8_t toggle[NUM_CHANNELS];
+/// @brief Z-axis acceleration in Gs
+extern float accelZ;
 
-// Setup interrupts and analog read timers
-void InitialiseOutputs();
+/// @brief X-axis rotation in deg/sec
+extern float gyroX;
 
-// Set PWM or digital outputs
-void UpdateOutputs();
+/// @brief Y-axis rotation in deg/sec
+extern float gyroY;
 
-// Initialise the RGB LEDs
-void InitialiseLEDs();
-
-/// @brief  Update the RGB LEDs
-void UpdateLEDs();
-
-/// @brief Interval timer callback to control PWM outputs
-void OutputTimer();
+/// @brief Z-axis rotation in deg/sec
+extern float gyroZ;
 
 #endif
