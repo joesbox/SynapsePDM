@@ -1,5 +1,5 @@
 [![CC BY-NC-SA 4.0][cc-by-nc-sa-shield]][cc-by-nc-sa]
-# JuicePDM
+# SynapsePDM
 ### CAN Enabled Automotive Power Distribution Module
 
 #### Features (WIP):
