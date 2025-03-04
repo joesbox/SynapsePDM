@@ -1,30 +1,30 @@
 /*  ConfigStorage.cpp Functions and variables for EEPROM storage and SD data logging.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
-    This work is licensed under the Creative Commons 
+    This work is licensed under the Creative Commons
     Attribution-NonCommercial-ShareAlike 4.0 International License.
-    To view a copy of this license, visit 
-    https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a 
+    To view a copy of this license, visit
+    https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a
     letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
-  
+
     You are free to:
     - Share: Copy and redistribute the material in any medium or format.
     - Adapt: Remix, transform, and build upon the material.
-  
+
     Under the following terms:
-    - Attribution: You must give appropriate credit, provide a link to the license, 
-      and indicate if changes were made. You may do so in any reasonable manner, 
+    - Attribution: You must give appropriate credit, provide a link to the license,
+      and indicate if changes were made. You may do so in any reasonable manner,
       but not in any way that suggests the licensor endorses you or your use.
     - NonCommercial: You may not use the material for commercial purposes.
-    - ShareAlike: If you remix, transform, or build upon the material, 
+    - ShareAlike: If you remix, transform, or build upon the material,
       you must distribute your contributions under the same license as the original.
-  
-    DISCLAIMER: This software is provided "as is," without warranty of any kind, 
-    express or implied, including but not limited to the warranties of 
-    merchantability, fitness for a particular purpose, and noninfringement. 
-    In no event shall the authors or copyright holders be liable for any claim, 
-    damages, or other liability, whether in an action of contract, tort, or otherwise, 
-    arising from, out of, or in connection with the software or the use or 
+
+    DISCLAIMER: This software is provided "as is," without warranty of any kind,
+    express or implied, including but not limited to the warranties of
+    merchantability, fitness for a particular purpose, and noninfringement.
+    In no event shall the authors or copyright holders be liable for any claim,
+    damages, or other liability, whether in an action of contract, tort, or otherwise,
+    arising from, out of, or in connection with the software or the use or
     other dealings in the software.
 */
 
@@ -32,7 +32,7 @@
 
 ConfigUnion ConfigData;
 CRC32 crc;
-uint32_t EEPROMindex;
+uint16_t EEPROMindex;
 File myfile;
 char fileName[23];
 char fileHeader[65 + (132 * NUM_CHANNELS)];
@@ -41,28 +41,55 @@ bool UndervoltageLatch;
 
 STM32RTC &rtc2 = STM32RTC::getInstance();
 
+M95640R EEPROMext(&SPI_2, CS1);
+
 void SaveConfig()
 {
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+
     // Reset EEPROM index
     EEPROMindex = 0;
 
-    // Copy current channel info to storage structure
+    // Copy current channel and system info to storage structure
     memcpy(&ConfigData.data.channelConfigStored, &Channels, sizeof(Channels));
+    memcpy(&ConfigData.data.sysParams, &SystemParams, sizeof(SystemParams));
 
     // Calculate stored config bytes CRC
     uint32_t checksum = CRC32::calculate(ConfigData.dataBytes, sizeof(ConfigStruct));
 
     // Store data and CRC value
-    EEPROM.put(EEPROMindex, ConfigData.dataBytes);
-    EEPROMindex += sizeof(ConfigStruct);
-    EEPROM.put(EEPROMindex, checksum);
+    uint8_t int32Buf[4];
+    int32Buf[0] = (checksum >> 24) & 0xFF;
+    int32Buf[1] = (checksum >> 16) & 0xFF;
+    int32Buf[2] = (checksum >> 8) & 0xFF;
+    int32Buf[3] = checksum & 0xFF;
+
+    // Bear in mind that the struct has the packed attribute and will report a different size in PlatformIO/VSCode
+    for (unsigned int i = 0; i < sizeof(ConfigData.dataBytes); i++)
+    {
+        EEPROMext.EepromWrite(EEPROMindex, 1, &ConfigData.dataBytes[i]);
+        EEPROMindex++;
+    }
+
+#ifdef DEBUG
+    Serial.print("Checksum written: ");
+    Serial.print(checksum, HEX);
+    Serial.print(", at index: ");
+    Serial.println(EEPROMindex);
+    Serial.print("EEPROM status register: ");
+    Serial.println(EEPROMext.EepromStatus());
+#endif
+    EEPROMext.EepromWrite(EEPROMindex, sizeof(checksum), int32Buf);
+    EEPROMext.EepromWaitEndWriteOperation();
 
     // Reset EEPROM index
     EEPROMindex = 0;
+    EEPROMext.end();
 }
 
 bool LoadConfig()
 {
+    EEPROMext.begin(EEPROM_SPI_SPEED);
     // Set valid CRC flag to false
     bool validCRC = false;
 
@@ -72,11 +99,28 @@ bool LoadConfig()
     // Reset CRC result
     uint32_t result = 0;
 
-    // Read data and CRC value
-    EEPROM.get(EEPROMindex, ConfigData.dataBytes);
-    EEPROMindex += sizeof(ConfigStruct);
-    EEPROM.get(EEPROMindex, result);
+    uint8_t int32Buf[4];
 
+    for (unsigned int i = 0; i < sizeof(ConfigData.dataBytes); i++)
+    {
+        EEPROMext.EepromRead(EEPROMindex, 1, &ConfigData.dataBytes[i]);
+        EEPROMindex++;
+    }
+    EEPROMext.EepromRead(EEPROMindex, sizeof(result), int32Buf);
+
+    result = (int32_t(int32Buf[0]) << 24) |
+             (int32_t(int32Buf[1]) << 16) |
+             (int32_t(int32Buf[2]) << 8) |
+             int32_t(int32Buf[3]);
+
+#ifdef DEBUG
+    Serial.print("Checksum read: ");
+    Serial.print(result, HEX);
+    Serial.print(", at index: ");
+    Serial.println(EEPROMindex);
+    Serial.print("EEPROM status register: ");
+    Serial.println(EEPROMext.EepromStatus());
+#endif
     // Calculate read config bytes CRC
     uint32_t checksum = CRC32::calculate(ConfigData.dataBytes, sizeof(ConfigStruct));
 
@@ -84,10 +128,14 @@ bool LoadConfig()
     if (result == checksum)
     {
         validCRC = true;
+        // Copy channel and system info
+        memcpy(&Channels, &ConfigData.data.channelConfigStored, sizeof(Channels));
+        memcpy(&SystemParams, &ConfigData.data.sysParams, sizeof(SystemParams));
     }
 
     // Reset EEPROM index
     EEPROMindex = 0;
+    EEPROMext.end();
 
     return validCRC;
 }
@@ -96,15 +144,13 @@ void InitialiseSD()
 {
     // If we can't see a card, don't proceed to initilisation
     if (!SDCardOK)
-    {        
+    {
         SDCardOK = SD.begin();
         if (!SDCardOK)
         {
 #ifdef DEBUG
             Serial.println("SD Begin error");
-            //SD.initErrorPrint();
 #endif
-            
         }
 #ifdef DEBUG
         Serial.print("SD Card begin OK: ");
@@ -115,26 +161,8 @@ void InitialiseSD()
     // Card present, continue
     if (SDCardOK)
     {
-        // Filename format is: YYYY-MM-DD_HH.MM.SS.csv
-        char intBuffer[4];
-        itoa(rtc2.getYear(), intBuffer, 10);
-        strcpy(fileName, intBuffer);
-        strcat(fileName, "-");
-        itoa(rtc2.getMonth(), intBuffer, 10);
-        strcat(fileName, intBuffer);
-        strcat(fileName, "-");
-        itoa(rtc2.getDay(), intBuffer, 10);
-        strcat(fileName, intBuffer);
-        strcat(fileName, "_");
-        itoa(rtc2.getHours(), intBuffer, 10);
-        strcat(fileName, intBuffer);
-        strcat(fileName, "-");
-        itoa(rtc2.getMinutes(), intBuffer, 10);
-        strcat(fileName, intBuffer);
-        strcat(fileName, "-");
-        itoa(rtc2.getSeconds(), intBuffer, 10);
-        strcat(fileName, intBuffer);
-        strcat(fileName, ".csv");
+        // Filename format is: YY-MM-DD_HH-MM-SS.csv
+        sprintf(fileName, "%02d-%02d-%02d_%02d-%02d-%02d.csv", rtc2.getYear(), rtc2.getMonth(), rtc2.getDay(), rtc2.getHours(), rtc2.getMinutes(), rtc2.getSeconds());
 
         // Create new file
         myfile = SD.open(fileName, FILE_WRITE);
@@ -142,28 +170,15 @@ void InitialiseSD()
         {
 #ifdef DEBUG
             Serial.println("SD init open error");
-            //SD.errorPrint(&Serial);
+            // SD.errorPrint(&Serial);
 #endif
-            
-        }
-
-        // Pre-allocate
-        //SDCardOK = myfile.preAllocate(MAX_LOGFILE_SIZE);
-        
-        if (!SDCardOK)
-        {
-#ifdef DEBUG
-            Serial.println("SD pre-allocate error");
-            //SD.errorPrint(&Serial);
-#endif
-            
         }
 
         // Create file was succesful. Write the header.
-        if (SDCardOK)
+        if (myfile)
         {
             // Start the ring buffer
-            //myfile.begin(&myfile);
+            // myfile.begin(&myfile);
 
             // Print the file header to the buffer
             myfile.print("Date,Time,System Temp,System Voltage,System Current,Error Flags,");
@@ -180,6 +195,10 @@ void InitialiseSD()
             }
 
             myfile.println();
+        }
+        else
+        {
+            SDCardOK = false;
         }
 
         BytesStored = 0;
@@ -199,7 +218,9 @@ void LogData()
     {
         int start = millis();
         // Print date and time to the buffer
-        myfile.print(rtc2.getYear());
+
+        // TODO: Sort the date format out with sprintf
+        myfile.print(2000 + rtc2.getYear());
         myfile.print("-");
         myfile.print(rtc2.getMonth());
         myfile.print("-");
@@ -277,6 +298,7 @@ void LogData()
         }
 
         myfile.println();
+        myfile.flush();
 
         /*// Ring buffer contains enough data for one sector and the file isn't busy. Write the contents of the buffer out.
         if ((myfile.bytesUsed() >= SD_SECTOR_SIZE) && !myfile.isBusy())

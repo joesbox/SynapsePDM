@@ -44,13 +44,19 @@ bool IMUOK;
 void InitialiseIMU()
 {
   IMUOK = false;
+  int8_t err = BMI2_OK;
   Wire.setSCL(PB6);
   Wire.setSDA(PB7);
   Wire.begin();
 
   IMUOK = !imu.beginI2C(BMI2_I2C_PRIM_ADDR);
-  imu.enableFeature(BMI2_ACCEL);
-  imu.enableFeature(BMI2_GYRO);
+
+  // Enable IMU features
+  err |= imu.enableFeature(BMI2_ACCEL);
+  err |= imu.enableFeature(BMI2_GYRO);
+  err |= imu.enableFeature(BMI2_ANY_MOTION);
+
+  IMUOK = !err;
 }
 
 void ReadIMU()
@@ -63,4 +69,47 @@ void ReadIMU()
   gyroX = imu.data.gyroX;
   gyroY = imu.data.gyroY;
   gyroZ = imu.data.gyroZ;
+}
+
+void EnableMotionDetect()
+{
+  int8_t err = BMI2_OK;
+
+  // .duration  - 5 = 20ms
+  // .threshold - 170 = 83mg
+  // .select_x  - Enabled
+  // .select_y  - Enabled
+  // .select_z  - Enabled
+  bmi2_sens_config anyMotionConfig;
+  anyMotionConfig.type = BMI2_ANY_MOTION;
+  anyMotionConfig.cfg.any_motion.duration = 1;
+  anyMotionConfig.cfg.any_motion.threshold = 170;
+  anyMotionConfig.cfg.any_motion.select_x = BMI2_ENABLE;
+  anyMotionConfig.cfg.any_motion.select_y = BMI2_ENABLE;
+  anyMotionConfig.cfg.any_motion.select_z = BMI2_ENABLE;
+  err |= imu.setConfig(anyMotionConfig);
+
+  bmi2_int_pin_config intPinConfig;
+  intPinConfig.pin_type = BMI2_INT1;
+  intPinConfig.int_latch = BMI2_INT_NON_LATCH;
+  intPinConfig.pin_cfg[0].lvl = BMI2_INT_ACTIVE_HIGH;
+  intPinConfig.pin_cfg[0].od = BMI2_INT_PUSH_PULL;
+  intPinConfig.pin_cfg[0].output_en = BMI2_INT_OUTPUT_ENABLE;
+  intPinConfig.pin_cfg[0].input_en = BMI2_INT_INPUT_DISABLE;
+  err |= imu.setInterruptPinConfig(intPinConfig);
+  err |= imu.mapInterruptToPin(BMI2_ANY_MOTION_INT, BMI2_INT1);
+  IMUOK = !err;
+
+#ifdef DEBUG
+  Serial.print("Set IMU config: ");
+  Serial.println(err);
+  delay(100);
+#endif
+}
+
+void DisableMotionDetect()
+{
+  int8_t err = BMI2_OK;
+  imu.disableFeature(BMI2_ANY_MOTION);
+  IMUOK = !err;
 }

@@ -60,11 +60,7 @@ void InitialiseOutputs()
   }
 
   // Reset the counters
-  pwmCounter = analogCounter = 0;
-
-  // Power rail enable outputs
-  pinMode(PWR_EN_5V, OUTPUT);
-  pinMode(PWR_EN_3V3, OUTPUT);
+  pwmCounter = analogCounter = 0;  
 }
 
 /// @brief Update PWM or digital outputs

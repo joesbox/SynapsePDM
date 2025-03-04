@@ -45,6 +45,8 @@
 #include <Storage.h>
 #include <CANComms.h>
 #include <SerialComms.h>
+#include <GSM.h>
+#include <Display.h>
 
 void wdtCallback();
 
@@ -54,23 +56,38 @@ STM32RTC &rtc1 = STM32RTC::getInstance();
 
 void setup()
 {
+  rtc1.setClockSource(STM32RTC::LSE_CLOCK);
+  rtc1.begin();
+
   InitialiseSerial();
+  InitialiseSystem();
   InititalizeData();
 
-  InitialiseSD();
+  // Only initialise the SD card if we've got an accurate RTC
+  if (rtc1.isTimeSet() && rtc1.getYear() > 24)
+  {
+    InitialiseSD();
+  }
 
   InitialiseOutputs();
   InitialiseInputs();
   CRCValid = LoadConfig();
-  InitialiseSystem();
-  rtc1.begin();
+  // CRC wasn't valid on the EEPROM read. Save the default vales to EEPROM now.
+  if (!CRCValid)
+  {
+    InititalizeData();
+    SaveConfig();
+  }
 
   InitialiseIMU();
+  InitialiseGSM(false);
+  // InitialiseDisplay();
+  PowerState = RUN;
 
 #ifdef DEBUG
   Serial.println("Power up");
 #endif
-  task0Timer = task1Timer = task2Timer = task3Timer = task4Timer = 0;
+  task0Timer = task1Timer = task2Timer = task3Timer = task4Timer = debugTimer = imuWWtimer = 0;
 }
 
 void loop()
@@ -121,8 +138,21 @@ void loop()
     if (millis() >= task3Timer)
     {
       task3Timer = millis() + TASK_3_INTERVAL;
-      // Log SD card data
-      LogData();
+      if (!rtc1.isTimeSet() || rtc1.getYear() < 24)
+      {
+        if (year > 2024)
+        {
+          // GPS time must be updated, use that
+          rtc1.setDate(day, month, (year % 100));
+          rtc1.setTime(hour, minute, second);
+          InitialiseSD();
+        }
+      }
+      else
+      {
+        // RTC is set. Log SD card data
+        LogData();
+      }
 
       // Check for serial comms
       CheckSerial();
@@ -147,6 +177,13 @@ void loop()
       Serial.println("One minute has passed...");
     }
 
+    // Lowest priority tasks
+    if (millis() >= GPStimer)
+    {
+      GPStimer = millis() + GPS_INTERVAL;
+      UpdateGPS();
+    }
+
     // Debug
     if (millis() >= debugTimer)
     {
@@ -154,8 +191,24 @@ void loop()
 #ifdef DEBUG
       Serial.print("System temperature: ");
       Serial.println(SystemParams.SystemTemperature);
+      Serial.print("System error flags: ");
+      Serial.println(SystemParams.ErrorFlags);
+      Serial.print("System date: ");
+      Serial.print(rtc1.getYear());
+      Serial.print("-");
+      Serial.print(rtc1.getMonth());
+      Serial.print("-");
+      Serial.println(rtc1.getDay());
+      Serial.print("System time: ");
+      Serial.print(rtc1.getHours());
+      Serial.print(":");
+      Serial.print(rtc1.getMinutes());
+      Serial.print(":");
+      Serial.println(rtc1.getSeconds());
       Serial.print("CRC Valid: ");
       Serial.println(CRCValid);
+      Serial.print("Power state: ");
+      Serial.println(PowerState);
       Serial.print("System error flags: ");
       Serial.println(SystemParams.ErrorFlags, HEX);
       Serial.print("IMU OK: ");
@@ -172,11 +225,42 @@ void loop()
       Serial.print(gyroY, 3);
       Serial.print(", ");
       Serial.println(gyroZ, 3);
+      Serial.print("GPS status: ");
+      Serial.print("Latitude: ");
+      Serial.println(lat, 6);
+      Serial.print("Lognitude: ");
+      Serial.println(lon, 6);
+      Serial.print("Speed: ");
+      Serial.println(speed);
+      Serial.print("Altitude: ");
+      Serial.println(alt);
+      Serial.print("Visible satellites: ");
+      Serial.println(vsat);
+      Serial.print("Used satellites: ");
+      Serial.println(usat);
+      Serial.print("Accuracy: ");
+      Serial.println(accuracy);
+      Serial.print("Year: ");
+      Serial.println(year);
+      Serial.print("Month: ");
+      Serial.println(month);
+      Serial.print("Day: ");
+      Serial.println(day);
+      Serial.print("Hour: ");
+      Serial.println(hour);
+      Serial.print("Minute: ");
+      Serial.println(minute);
+      Serial.print("Second: ");
+      Serial.println(second);
 #endif
     }
     break;
   case PREPARE_SLEEP:
+#ifdef DEBUG
+    Serial.println("Prepare sleep");
+#endif
     // TODO: Implement channel run-on timers
+    EnableMotionDetect();
     PullResistorSleep();
     SleepSD();
     OutputsOff();
@@ -186,23 +270,34 @@ void loop()
     break;
 
   case SLEEPING:
-
     LowPower.deepSleep();
     break;
 
   case IGNITION_WAKE:
-    InitialiseSD();
+    // InitialiseSD();
+    DisableMotionDetect();
     InitialiseSerial();
     WakeSystem();
     PowerState = RUN;
     break;
 
   case IMU_WAKE:
-    WakeSystem();  
-    PowerState = RUN;
+    DisableMotionDetect();
+    WakeSystem();
+    imuWWtimer = millis() + SystemParams.IMUwakeWindow;
+    PowerState = IMU_WAKE_WINDOW;
     break;
-
-  default:
+  case IMU_WAKE_WINDOW:
+    // While we're in the wake window
+    if (millis() < imuWWtimer)
+    {
+      // TODO: work out what to do if the IMU has woken the controller
+    }
+    else
+    {
+      // Nothing happening, go back to sleep
+      PowerState = PREPARE_SLEEP;
+    }
     break;
   }
 }

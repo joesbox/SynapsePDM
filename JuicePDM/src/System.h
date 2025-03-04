@@ -1,30 +1,30 @@
 /*  System.h System variables, functions and system wide data handling.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
-    This work is licensed under the Creative Commons 
+    This work is licensed under the Creative Commons
     Attribution-NonCommercial-ShareAlike 4.0 International License.
-    To view a copy of this license, visit 
-    https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a 
+    To view a copy of this license, visit
+    https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a
     letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
-  
+
     You are free to:
     - Share: Copy and redistribute the material in any medium or format.
     - Adapt: Remix, transform, and build upon the material.
-  
+
     Under the following terms:
-    - Attribution: You must give appropriate credit, provide a link to the license, 
-      and indicate if changes were made. You may do so in any reasonable manner, 
+    - Attribution: You must give appropriate credit, provide a link to the license,
+      and indicate if changes were made. You may do so in any reasonable manner,
       but not in any way that suggests the licensor endorses you or your use.
     - NonCommercial: You may not use the material for commercial purposes.
-    - ShareAlike: If you remix, transform, or build upon the material, 
+    - ShareAlike: If you remix, transform, or build upon the material,
       you must distribute your contributions under the same license as the original.
-  
-    DISCLAIMER: This software is provided "as is," without warranty of any kind, 
-    express or implied, including but not limited to the warranties of 
-    merchantability, fitness for a particular purpose, and noninfringement. 
-    In no event shall the authors or copyright holders be liable for any claim, 
-    damages, or other liability, whether in an action of contract, tort, or otherwise, 
-    arising from, out of, or in connection with the software or the use or 
+
+    DISCLAIMER: This software is provided "as is," without warranty of any kind,
+    express or implied, including but not limited to the warranties of
+    merchantability, fitness for a particular purpose, and noninfringement.
+    In no event shall the authors or copyright holders be liable for any claim,
+    damages, or other liability, whether in an action of contract, tort, or otherwise,
+    arising from, out of, or in connection with the software or the use or
     other dealings in the software.
 */
 
@@ -45,12 +45,13 @@
 /// @brief System parameters structure
 struct __attribute__((packed)) SystemParameters
 {
-    int32_t SystemTemperature; // Internal system (STM32 processor) temperature
-    uint8_t CANResEnabled;     // CAN bus termination resistor enabled
-    float VBatt;               // Battery supply voltage
-    float SystemCurrent;       // Total current draw for all enabled channels
-    uint8_t ErrorFlags;        // Bitmask for system error flags
-    int CANAddress;            // CAN Bus address
+  int32_t SystemTemperature; // Internal system (STM32 processor) temperature
+  uint8_t CANResEnabled;     // CAN bus termination resistor enabled
+  float VBatt;               // Battery supply voltage
+  float SystemCurrent;       // Total current draw for all enabled channels
+  uint16_t ErrorFlags;       // Bitmask for system error flags
+  int CANAddress;            // CAN Bus address
+  uint32_t IMUwakeWindow;    // Wake window for the IMU to determine if something needs to be done or go back to sleep
 };
 
 /// @brief System parameters

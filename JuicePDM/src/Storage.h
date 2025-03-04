@@ -38,15 +38,10 @@
 #include <CRC32.h>
 #include <EEPROM.h> 
 #include <STM32SD.h>
+#include <M95640R.h>
 
-// SD sector size
-#define SD_SECTOR_SIZE 512
-
-// Logging ring buffer capacity in bytes
-#define RING_BUF_CAPACITY 2000
-
-// SPI clock speed
-#define SPI_CLOCK SD_SCK_MHZ(50)
+// SPI clock speed for the EEPROM
+#define EEPROM_SPI_SPEED 4000000
 
 /// @brief Saves the config data to EEPROM along with a calculated CRC
 void SaveConfig();
@@ -83,9 +78,6 @@ extern CRC32 crc;
 
 /// @brief Config storage union
 extern ConfigUnion ConfigData;
-
-/// @brief EEPROM read and write index
-extern uint32_t EEPROMindex;
 
 /// @brief Log file object
 extern File myfile;

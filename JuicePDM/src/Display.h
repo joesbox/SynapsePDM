@@ -1,5 +1,5 @@
-/*  IMU.h IMU functions.
-    Copyright (c) 2025 Joe Mann.  All right reserved.
+/*  Display.h LCD variables, functions and data handling.
+    Copyright (c) 2023 Joe Mann.  All right reserved.
 
     This work is licensed under the Creative Commons 
     Attribution-NonCommercial-ShareAlike 4.0 International License.
@@ -28,42 +28,12 @@
     other dealings in the software.
 */
 
-#ifndef IMU_H
-#define IMU_H
+#ifndef Display_H
+#define Display_H
 
-#define DEBUG
+#include <Globals.h>
 
-/// @brief Initialise the IMU
-void InitialiseIMU();
-
-/// @brief Read the IMU
-void ReadIMU();
-
-/// @brief Enable the interrupt for sleep mode
-void EnableMotionDetect();
-
-/// @brief Disable the interrupt for run mode
-void DisableMotionDetect();
-
-/// @brief IMU initialisation status
-extern bool IMUOK;
-
-/// @brief X-axis acceleration in Gs
-extern float accelX;
-
-/// @brief Y-axis acceleration in Gs
-extern float accelY;
-
-/// @brief Z-axis acceleration in Gs
-extern float accelZ;
-
-/// @brief X-axis rotation in deg/sec
-extern float gyroX;
-
-/// @brief Y-axis rotation in deg/sec
-extern float gyroY;
-
-/// @brief Z-axis rotation in deg/sec
-extern float gyroZ;
+/// @brief Initialise LCD
+void InitialiseDisplay();
 
 #endif

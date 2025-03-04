@@ -37,6 +37,7 @@
 #include <ChannelConfig.h>
 #include <System.h>
 #include <IMU.h>
+#include <SPI.h>
 
 // Firmware version
 #define FW_VER "0.1.1"
@@ -72,7 +73,7 @@
 #define CPU_TICK_MICROS (1E6 / F_CPU)
 
 // Maximum per-channel current supported by hardware. No channel can exceed this limit.
-#define CURRENT_MAX 13.0
+#define CURRENT_MAX 17.0
 
 // Sytem current max (total). Should never reach this as each channel is independantly monitored
 #define SYSTEM_CURRENT_MAX 78.0
@@ -89,14 +90,13 @@
 #define TASK_2_INTERVAL 80
 #define TASK_3_INTERVAL 100
 #define TASK_4_INTERVAL 60000
+#define GPS_INTERVAL 100
 
 #define DEBUG_INTERVAL 1000
+#define DEBUG_PIN PA15
 
 // Watchdog timer interval
 #define WATCHDOG_INTERVAL 2500
-
-// RGB LED serial data pin
-#define RGB_PIN 9
 
 // Unused pin that can be used to debug analog read timings which are critical to obtaining correct current measurements on PWM channels
 #define ANALOG_READ_DEBUG_PIN 20
@@ -105,7 +105,7 @@
 #define DEBUG
 
 // Battery measurement analog input pin
-#define VBATT_ANALOG_PIN A7
+#define VBATT_ANALOG_PIN PC4
 
 // Nominal battery voltage
 #define VBATT_NOMINAL 13.8
@@ -144,6 +144,9 @@
 #define IMU_INT1 PE4
 #define IMU_INT2 PE5
 
+// Default wake window for IMU checks
+#define DEFAULT_WW 5000
+
 // Power enable pins
 #define PWR_EN_5V PE7
 #define PWR_EN_3V3 PF11
@@ -154,6 +157,29 @@
 #define SLEEPING 2
 #define IGNITION_WAKE 3
 #define IMU_WAKE 4
+#define IMU_WAKE_WINDOW 5
+
+// SPI 2 Pins
+#define PICO PB15
+#define POCI PB14
+#define SCK2 PB13
+#define CS1 PB12
+#define CS2 PB11
+
+// LCD pins
+#define TFT_RST PD8
+#define TFT_DC PD9
+#define TFT_BL PB10
+
+// GSM Module Pins
+#define SIM_PWR PC6
+#define SIM_RST PC7
+#define SIM_FLIGHT PB8
+
+// SPI 2
+extern SPIClass SPI_2;
+
+extern DMA_HandleTypeDef hdma_tx;
 
 /// @brief Analogue input config structure
 struct __attribute__((packed)) AnalogueInputs
@@ -190,13 +216,16 @@ extern uint32_t task2Timer;
 extern uint32_t task3Timer;
 extern uint32_t task4Timer;
 extern uint32_t debugTimer;
+extern uint32_t imuWWtimer;
+extern uint32_t GPStimer;
 
-// Analogue channels
+// HSD Output channels
 extern ChannelConfig Channels[NUM_CHANNELS];
 
 // Channel configurations
 extern AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 
-// Initialise global data to known defaults
+/// @brief Initialise global data to known defaults
 void InititalizeData();
+
 #endif

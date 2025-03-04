@@ -35,6 +35,7 @@ SystemParameters SystemParams;
 bool CRCValid;
 bool SDCardOK;
 uint8_t PowerState;
+bool RTCSet;
 
 void IgnitionWake()
 {
@@ -44,15 +45,15 @@ void IgnitionWake()
 void IMUWake()
 {
     PowerState = IMU_WAKE;
+    Serial.println("IMU INT");
 }
 
 void InitialiseSystem()
 {
-    // Start the low power features
+    // Start the low power features. Attach sleep mode interrupts
     LowPower.begin();
     LowPower.attachInterruptWakeup(IGN_INPUT, IgnitionWake, RISING, DEEP_SLEEP_MODE);
-    //LowPower.attachInterruptWakeup(IMU_INT1, IMUWake, CHANGE, DEEP_SLEEP_MODE);
-    //LowPower.attachInterruptWakeup(IMU_INT2, IMUWake, CHANGE, DEEP_SLEEP_MODE);
+    LowPower.attachInterruptWakeup(IMU_INT1, IMUWake, RISING, DEEP_SLEEP_MODE);
 
     // Set power state to run
     PowerState = RUN;
@@ -61,6 +62,16 @@ void InitialiseSystem()
     analogReadResolution(12);
 
     WakeSystem();
+    pinMode(PA15, OUTPUT);
+
+    // SPI
+    pinMode(CS1, OUTPUT);
+    pinMode(CS2, OUTPUT);
+    digitalWrite(CS1, HIGH);
+    digitalWrite(CS2, HIGH);
+    SPI_2.begin();
+
+    RTCSet = false;
 }
 
 void UpdateSystem()
@@ -140,6 +151,8 @@ void SleepSystem()
 void WakeSystem()
 {
     // Power up peripherals
+    pinMode(PWR_EN_5V, OUTPUT);
+    pinMode(PWR_EN_3V3, OUTPUT);
     digitalWrite(PWR_EN_5V, HIGH);
     digitalWrite(PWR_EN_3V3, HIGH);
     delay(100);
