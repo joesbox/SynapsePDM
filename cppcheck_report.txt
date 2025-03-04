@@ -1,37 +1,40 @@
-JuicePDM/src/OutputHandler.cpp:168:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
+JuicePDM/src/OutputHandler.cpp:164:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
         float analogMean = 0.0f;
               ^
-JuicePDM/src/SerialComms.cpp:77:18: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
+JuicePDM/src/SerialComms.cpp:83:18: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
         chanSize = sizeof(Channels) / NUM_CHANNELS;
                  ^
-JuicePDM/src/Storage.cpp:270:34: warning: Either the condition 'i!=14' is redundant or the array 'Channels[14]' is accessed at index 14, which is out of bounds. [arrayIndexOutOfBoundsCond]
+JuicePDM/src/Storage.cpp:291:34: warning: Either the condition 'i!=14' is redundant or the array 'Channels[14]' is accessed at index 14, which is out of bounds. [arrayIndexOutOfBoundsCond]
             myfile.print(Channels[i].ErrorFlags);
                                  ^
-JuicePDM/src/Storage.cpp:273:19: note: Assuming that condition 'i!=14' is not redundant
+JuicePDM/src/Storage.cpp:294:19: note: Assuming that condition 'i!=14' is not redundant
             if (i != NUM_CHANNELS)
                   ^
-JuicePDM/src/Storage.cpp:270:34: note: Array index out of bounds
+JuicePDM/src/Storage.cpp:291:34: note: Array index out of bounds
             myfile.print(Channels[i].ErrorFlags);
                                  ^
-JuicePDM/src/System.cpp:44:0: style: The function 'IMUWake' is never used. [unusedFunction]
-
-^
 JuicePDM/src/CANComms.cpp:27:0: style: The function 'InitialiseCAN' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/OutputHandler.cpp:188:0: style: The function 'OutputTimer' is never used. [unusedFunction]
+JuicePDM/src/Display.cpp:39:0: style: The function 'InitialiseDisplay' is never used. [unusedFunction]
+
+^
+JuicePDM/src/OutputHandler.cpp:184:0: style: The function 'OutputTimer' is never used. [unusedFunction]
 
 ^
 JuicePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never used. [unusedFunction]
 
 ^
+JuicePDM/src/Display.cpp:45:0: style: The function 'Test' is never used. [unusedFunction]
+
+^
 JuicePDM/src/CANComms.cpp:34:0: style: The function 'canSniff' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:76:0: style: The function 'loop' is never used. [unusedFunction]
+JuicePDM/src/main.cpp:93:0: style: The function 'loop' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:55:0: style: The function 'setup' is never used. [unusedFunction]
+JuicePDM/src/main.cpp:57:0: style: The function 'setup' is never used. [unusedFunction]
 
 ^
 nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingInclude]
