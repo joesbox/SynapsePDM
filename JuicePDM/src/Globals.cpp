@@ -30,6 +30,7 @@
 
 #include "Globals.h"
 
+ChannelConfigUnion ChannelConfigData;
 ChannelConfig Channels[NUM_CHANNELS];
 AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 uint32_t task0Timer;
@@ -40,14 +41,14 @@ uint32_t task4Timer;
 uint32_t debugTimer;
 uint32_t imuWWtimer;
 uint32_t GPStimer;
+uint32_t LogTimer;
 
 // SPI 2
 SPIClass SPI_2(PICO, POCI, SCK2);
 
 DMA_HandleTypeDef hdma_tx;
 
-/// @brief Inititlise global data
-void InititalizeData()
+void InitialiseChannelData()
 {
   // Initialise channels to default values, ensure they are initially off
   for (int i = 0; i < NUM_CHANNELS; i++)
@@ -72,10 +73,5 @@ void InititalizeData()
     AnalogueIns[i].PullUpPin = ANAchannelInputPullUps[i];
     AnalogueIns[i].PullDownEnable = false;
     AnalogueIns[i].PullUpEnable = false;
-  }
-
-  // Initialise default system data
-  SystemParams.CANResEnabled = true;
-  SystemParams.CANAddress = ECU_ADDR;
-  SystemParams.IMUwakeWindow = DEFAULT_WW;
+  } 
 }

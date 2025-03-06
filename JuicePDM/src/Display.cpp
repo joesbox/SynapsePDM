@@ -35,7 +35,6 @@
 #define PURPLE 0xF81F // RGB565 value for purple
 
 
-
 void InitialiseDisplay()
 {
   pinMode(TFT_DC, OUTPUT);

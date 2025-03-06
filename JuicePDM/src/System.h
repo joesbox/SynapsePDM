@@ -42,29 +42,59 @@
 #define LL_ADC_RESOLUTION LL_ADC_RESOLUTION_12B
 #define ADC_RANGE 4096
 
+enum SpeedUnits
+{
+  MPH = 0, // Miles per hour
+  KPH,     // Kilometres per hour
+};
+
+enum DistanceUnits
+{
+  Metric = 0, // Metres
+  Imperial,   // Feet
+};
+
 /// @brief System parameters structure
 struct __attribute__((packed)) SystemParameters
 {
-  int32_t SystemTemperature; // Internal system (STM32 processor) temperature
-  uint8_t CANResEnabled;     // CAN bus termination resistor enabled
-  float VBatt;               // Battery supply voltage
-  float SystemCurrent;       // Total current draw for all enabled channels
-  uint16_t ErrorFlags;       // Bitmask for system error flags
-  int CANAddress;            // CAN Bus address
-  uint32_t IMUwakeWindow;    // Wake window for the IMU to determine if something needs to be done or go back to sleep
+  int32_t SystemTemperature;      // Internal system (STM32 processor) temperature
+  uint8_t CANResEnabled;          // CAN bus termination resistor enabled
+  float VBatt;                    // Battery supply voltage
+  float SystemCurrent;            // Total current draw for all enabled channels
+  uint16_t ErrorFlags;            // Bitmask for system error flags
+  int CANAddress;                 // CAN Bus address
+  uint32_t IMUwakeWindow;         // Wake window for the IMU to determine if something needs to be done or go back to sleep
+  SpeedUnits SpeedUnitPref;       // Speed units.
+  DistanceUnits DistanceUnitPref; // Distance units.
 };
 
 /// @brief System parameters
 extern SystemParameters SystemParams;
 
-/// @brief CRC check failed flag
-extern bool CRCValid;
+/// @brief  System config union for reading and writing from and to EEPROM storage
+union SystemConfigUnion
+{
+  SystemParameters data;
+  byte dataBytes[sizeof(SystemParameters)];
+};
+
+/// @brief Config storage union for system data
+extern SystemConfigUnion SystemConfigData;
+
+/// @brief System CRC check failed flag
+extern bool SystemCRCValid;
+
+/// @brief Channel CRC check failed flag
+extern bool ChannelCRCValid;
 
 /// @brief SD card OK flag
 extern bool SDCardOK;
 
 /// @brief Power state. 0 = Run, 1 = prepare for sleep, 2 = sleeping, 3 = Ignition wake, 4 = IMU wake
 extern uint8_t PowerState;
+
+/// @brief Flag to denote RTC has been set
+extern bool RTCSet;
 
 /// @brief Wake up call back for the ignition input pin
 void IgnitionWake();
@@ -74,6 +104,9 @@ void IMUWake();
 
 /// @brief Initialise system I/O and sleep functions
 void InitialiseSystem();
+
+/// @brief Initialise system data to known 
+void InitialiseSystemData();
 
 /// @brief Updates the system parameters
 void UpdateSystem();

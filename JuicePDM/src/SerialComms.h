@@ -62,7 +62,7 @@ const byte COMMAND_ID_FW_VER = 'v';
 const byte COMMAND_ID_BUILD_DATE = 'd';
 
 /// @brief Config storage union
-extern ConfigUnion SerialConfigData;
+extern ChannelConfigUnion SerialChannelData;
 
 /// @brief CRC32 calculation for serial comms
 extern CRC32 crcSerial;

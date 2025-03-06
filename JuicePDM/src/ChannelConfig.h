@@ -1,4 +1,4 @@
-/*  Channel.h The channel class defines all channel related variables and functions.
+/*  Channel.h Channel related variables and functions.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy

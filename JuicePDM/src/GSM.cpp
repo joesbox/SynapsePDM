@@ -60,12 +60,14 @@ void InitialiseGSM(bool enableData)
 
   SerialAT.begin(115200);
   modem.setNetworkMode(2);
+  SerialAT.println("AT+CGPSNEMARATE=1");
+
   Serial.print("Modem init: ");
   Serial.println(modem.init());
   // delay(6000);
-  //String modemInfo = modem.getModemInfo();
-  //Serial.print("Modem Info: ");
-  //Serial.println(modemInfo);
+  // String modemInfo = modem.getModemInfo();
+  // Serial.print("Modem Info: ");
+  // Serial.println(modemInfo);
   Serial.print("Get SIM info: ");
   Serial.println(modem.getSimStatus());
 
@@ -95,7 +97,41 @@ void InitialiseGSM(bool enableData)
 
 void UpdateGPS()
 {
-  modem.getGPS(&lat, &lon, &speed, &alt, &vsat, &usat, &accuracy, &year, &month, &day, &hour, &minute, &second);
-  
+
+  // TODO: Change NEMA update
+  bool success = modem.getGPS(&lat, &lon, &speed, &alt, &vsat, &usat, &accuracy, &year, &month, &day, &hour, &minute, &second);
+
+  if (success)
+  {
+    // Convert speed (knots) to preferred units
+    switch (SystemParams.SpeedUnitPref)
+    {
+    case MPH:
+      speed *= 1.15078F;
+      break;
+
+    case KPH:
+      speed *= 1.852F;
+      break;
+
+    default:
+      break;
+    }
+
+    // Convert distance to preferred units
+    switch (SystemParams.DistanceUnitPref)
+    {
+    case Imperial:      
+      alt *= 3.28084;
+      accuracy += 3.28084;
+      break;
+    case Metric:
+      // No coversion required
+      break;
+
+    default:
+      break;
+    }
+  }
   digitalToggleFast(PA_15);
 }

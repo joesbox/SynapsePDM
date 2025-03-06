@@ -46,10 +46,10 @@ extern float lat;
 /// @brief GPS Longitude
 extern float lon;
 
-/// @brief GPS Speed in knots
+/// @brief GPS Speed (default is knots)
 extern float speed;
 
-/// @brief GPS Altitude in metres
+/// @brief GPS Altitude (default is metres);
 extern float alt;
 
 /// @brief GPS Accuracy

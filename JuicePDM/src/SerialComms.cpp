@@ -29,7 +29,7 @@
 */
 #include "SerialComms.h"
 
-ConfigUnion SerialConfigData;
+ChannelConfigUnion SerialChannelData;
 CRC32 crcSerial;
 
 void InitialiseSerial()
@@ -170,9 +170,9 @@ void CheckSerial()
         uint32_t recvChecksum = 0;
         while (!Serial.available())
         {
-            if (i <= sizeof(ConfigStruct))
+            if (i <= sizeof(SystemConfigUnion))
             {
-                SerialConfigData.dataBytes[i] = Serial.read();
+                SerialChannelData.dataBytes[i] = Serial.read();
                 i++;
             }
             else
@@ -183,7 +183,7 @@ void CheckSerial()
         }
 
         // Calculate stored config bytes CRC
-        uint32_t checksum = CRC32::calculate(SerialConfigData.dataBytes, sizeof(ConfigStruct));
+        uint32_t checksum = CRC32::calculate(SerialChannelData.dataBytes, sizeof(ChannelConfigUnion));
 
         // Respond with pass or fail. Copy the new config over if the checksum has passed.
         if (checksum == recvChecksum)
@@ -191,23 +191,23 @@ void CheckSerial()
             // Copy relevant channel data
             for (int j = 0; j < NUM_CHANNELS; j++)
             {
-                Channels[j].ChanType = SerialConfigData.data.channelConfigStored[j].ChanType;
-                Channels[j].OutputControlPin = SerialConfigData.data.channelConfigStored[j].OutputControlPin;
-                Channels[j].CurrentLimitHigh = SerialConfigData.data.channelConfigStored[j].CurrentLimitHigh;
-                Channels[j].CurrentSensePin = SerialConfigData.data.channelConfigStored[j].CurrentSensePin;
-                Channels[j].CurrentThresholdHigh = SerialConfigData.data.channelConfigStored[j].CurrentThresholdHigh;
-                Channels[j].CurrentThresholdLow = SerialConfigData.data.channelConfigStored[j].CurrentThresholdLow;
-                Channels[j].Enabled = SerialConfigData.data.channelConfigStored[j].Enabled;
-                Channels[j].GroupNumber = SerialConfigData.data.channelConfigStored[j].GroupNumber;
-                Channels[j].InputControlPin = SerialConfigData.data.channelConfigStored[j].InputControlPin;
-                Channels[j].PWMSetDuty = SerialConfigData.data.channelConfigStored[j].PWMSetDuty;
-                Channels[j].Retry = SerialConfigData.data.channelConfigStored[j].Retry;
-                Channels[j].RetryCount = SerialConfigData.data.channelConfigStored[j].RetryCount;
-                Channels[j].RetryDelay = SerialConfigData.data.channelConfigStored[j].RetryDelay;
+                Channels[j].ChanType = SerialChannelData.data[j].ChanType;
+                Channels[j].OutputControlPin = SerialChannelData.data[j].OutputControlPin;
+                Channels[j].CurrentLimitHigh = SerialChannelData.data[j].CurrentLimitHigh;
+                Channels[j].CurrentSensePin = SerialChannelData.data[j].CurrentSensePin;
+                Channels[j].CurrentThresholdHigh = SerialChannelData.data[j].CurrentThresholdHigh;
+                Channels[j].CurrentThresholdLow = SerialChannelData.data[j].CurrentThresholdLow;
+                Channels[j].Enabled = SerialChannelData.data[j].Enabled;
+                Channels[j].GroupNumber = SerialChannelData.data[j].GroupNumber;
+                Channels[j].InputControlPin = SerialChannelData.data[j].InputControlPin;
+                Channels[j].PWMSetDuty = SerialChannelData.data[j].PWMSetDuty;
+                Channels[j].Retry = SerialChannelData.data[j].Retry;
+                Channels[j].RetryCount = SerialChannelData.data[j].RetryCount;
+                Channels[j].RetryDelay = SerialChannelData.data[j].RetryDelay;
             }
 
             // Set the system parameters
-            SystemParams.CANResEnabled = SerialConfigData.data.sysParams.CANResEnabled;
+            //SystemParams.CANResEnabled = SerialConfigData.data.sysParams.CANResEnabled;
 
             Serial.write(COMMAND_ID_CONFIM);
         }
@@ -219,7 +219,7 @@ void CheckSerial()
     break;
 
     case COMMAND_ID_SAVECHANGES:
-        SaveConfig();
+        SaveChannelConfig();
         break;
 
     case COMMAND_ID_FW_VER:

@@ -38,6 +38,7 @@
 #include <System.h>
 #include <IMU.h>
 #include <SPI.h>
+#include <Storage.h>
 
 // Firmware version
 #define FW_VER "0.1.1"
@@ -147,6 +148,15 @@
 // Default wake window for IMU checks
 #define DEFAULT_WW 5000
 
+// Default log frequecy of 10Hz
+#define DEFAULT_LOG_FREQUENCY 10
+
+// Default number of log lines. 36000 = 1 hour @ 10Hz
+#define DEFAULT_LOG_LINES 36000
+
+// Number of logs to keep on the SD card
+#define NUMBER_LOGS 10
+
 // Power enable pins
 #define PWR_EN_5V PE7
 #define PWR_EN_3V3 PF11
@@ -218,6 +228,7 @@ extern uint32_t task4Timer;
 extern uint32_t debugTimer;
 extern uint32_t imuWWtimer;
 extern uint32_t GPStimer;
+extern uint32_t LogTimer;
 
 // HSD Output channels
 extern ChannelConfig Channels[NUM_CHANNELS];
@@ -225,7 +236,20 @@ extern ChannelConfig Channels[NUM_CHANNELS];
 // Channel configurations
 extern AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 
-/// @brief Initialise global data to known defaults
-void InititalizeData();
+/// @brief  Channel config union for reading and writing from and to EEPROM storage
+union ChannelConfigUnion
+{
+  ChannelConfig data[NUM_CHANNELS];
+  byte dataBytes[sizeof(Channels)];
+};
+
+/// @brief Config storage union for channel data
+extern ChannelConfigUnion ChannelConfigData;
+
+/// @brief Initialise channel data to known defaults
+void InitialiseChannelData();
+
+/// @brief Initialise system data to known 
+void InitialiseSystemData();
 
 #endif

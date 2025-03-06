@@ -1,4 +1,4 @@
-/*  Channel.cpp The channel class defines all channel related variables and functions.
+/*  Channel.cpp Channel related variables and functions.
     Specifically applies to the Infineon BTS50010 High-Side Driver
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
@@ -21,3 +21,4 @@
     THE SOFTWARE.
 */
 #include "ChannelConfig.h"
+

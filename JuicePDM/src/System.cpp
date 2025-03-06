@@ -30,9 +30,11 @@
 
 #include "System.h"
 
+SystemConfigUnion SystemConfigData;
 SystemParameters SystemParams;
 
-bool CRCValid;
+bool SystemCRCValid;
+bool ChannelCRCValid;
 bool SDCardOK;
 uint8_t PowerState;
 bool RTCSet;
@@ -74,6 +76,18 @@ void InitialiseSystem()
     RTCSet = false;
 }
 
+void InitialiseSystemData()
+{
+   // Initialise default system data
+   SystemParams.CANResEnabled = true;
+   SystemParams.CANAddress = ECU_ADDR;
+   SystemParams.IMUwakeWindow = DEFAULT_WW;
+ 
+   StorageParams.LogFrequency = DEFAULT_LOG_FREQUENCY;  
+   StorageParams.MaxLogLength = DEFAULT_LOG_LINES;
+}
+
+
 void UpdateSystem()
 {
     // Get system temperature
@@ -81,7 +95,7 @@ void UpdateSystem()
     SystemParams.SystemTemperature = readTempSensor(VRef);
 
     // Calculate battery voltage
-    SystemParams.VBatt = analogRead(VBATT_ANALOG_PIN) * 0.0154f;
+    SystemParams.VBatt = analogRead(VBATT_ANALOG_PIN) * 0.0039787f;
 
     // Calculate system current draw
     SystemParams.SystemCurrent = 0.0f;
@@ -121,7 +135,7 @@ void UpdateSystem()
     }
 
     // Check CRC
-    if (!CRCValid)
+    if (!SystemCRCValid)
     {
         SystemParams.ErrorFlags |= CRC_CHECK_FAILED;
     }

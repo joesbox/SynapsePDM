@@ -50,18 +50,17 @@
 
 void wdtCallback();
 
-String lastThingCalled;
-
 STM32RTC &rtc1 = STM32RTC::getInstance();
+
 
 void setup()
 {
   rtc1.setClockSource(STM32RTC::LSE_CLOCK);
   rtc1.begin();
+  RTCSet = false;
 
   InitialiseSerial();
   InitialiseSystem();
-  InititalizeData();
 
   // Only initialise the SD card if we've got an accurate RTC
   if (rtc1.isTimeSet() && rtc1.getYear() > 24)
@@ -71,17 +70,39 @@ void setup()
 
   InitialiseOutputs();
   InitialiseInputs();
-  CRCValid = LoadConfig();
-  // CRC wasn't valid on the EEPROM read. Save the default vales to EEPROM now.
-  if (!CRCValid)
+
+  // Load system data
+  SystemCRCValid = LoadSystemConfig();
+  if (!SystemCRCValid)
   {
-    InititalizeData();
-    SaveConfig();
+    // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.
+    InitialiseSystemData();
+    SaveSystemConfig();
+  }
+
+  // Load channel data
+  ChannelCRCValid = LoadChannelConfig();
+  if (!ChannelCRCValid)
+  {
+    // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.
+    InitialiseChannelData();
+    SaveChannelConfig();
+  }
+
+  // Load storage data
+  StorageCRCValid = LoadStorageConfig();
+  if (!StorageCRCValid)
+  {
+    // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.
+    InitialiseStorageData();
+    SaveStorageConfig();
   }
 
   InitialiseIMU();
   InitialiseGSM(false);
   // InitialiseDisplay();
+
+  LogTimer = millis() + (1.0 / (float)StorageParams.LogFrequency * 1000.0); // Hz to milliseconds
   PowerState = RUN;
 
 #ifdef DEBUG
@@ -114,12 +135,8 @@ void loop()
       // Update channel outputs
       UpdateOutputs();
 
-      lastThingCalled = "UpdateOutputs";
-
       // Read input channel status
       HandleInputs();
-
-      lastThingCalled = "HandleInputs";
     }
 
     // Lower priority tasks
@@ -128,7 +145,6 @@ void loop()
       task2Timer = millis() + TASK_2_INTERVAL;
       // Update system parameters
       UpdateSystem();
-      lastThingCalled = "UpdateSystem";
 
       // Broadcast CAN updates
       // SendCANMessages();
@@ -138,26 +154,9 @@ void loop()
     if (millis() >= task3Timer)
     {
       task3Timer = millis() + TASK_3_INTERVAL;
-      if (!rtc1.isTimeSet() || rtc1.getYear() < 24)
-      {
-        if (year > 2024)
-        {
-          // GPS time must be updated, use that
-          rtc1.setDate(day, month, (year % 100));
-          rtc1.setTime(hour, minute, second);
-          InitialiseSD();
-        }
-      }
-      else
-      {
-        // RTC is set. Log SD card data
-        LogData();
-      }
 
       // Check for serial comms
       CheckSerial();
-
-      lastThingCalled = "LogData";
     }
 
     // Lowest priority tasks
@@ -177,11 +176,33 @@ void loop()
       Serial.println("One minute has passed...");
     }
 
-    // Lowest priority tasks
+    // GPS
     if (millis() >= GPStimer)
     {
       GPStimer = millis() + GPS_INTERVAL;
       UpdateGPS();
+    }
+
+    // Logging
+    if (millis() >= LogTimer)
+    {
+      LogTimer = millis() + (1.0 / (float)StorageParams.LogFrequency * 1000.0); // Hz to milliseconds
+      if (!RTCSet)
+      {
+        if (year > 2024)
+        {
+          RTCSet = true;
+          // GPS time must be updated, use that
+          rtc1.setDate(day, month, (year % 100));
+          rtc1.setTime(hour, minute, second);
+          InitialiseSD();
+        }
+      }
+      else
+      {
+        // RTC is set. Log SD card data
+        LogData();
+      }
     }
 
     // Debug
@@ -193,6 +214,8 @@ void loop()
       Serial.println(SystemParams.SystemTemperature);
       Serial.print("System error flags: ");
       Serial.println(SystemParams.ErrorFlags);
+      Serial.print("System voltage: ");
+      Serial.println(SystemParams.VBatt);
       Serial.print("System date: ");
       Serial.print(rtc1.getYear());
       Serial.print("-");
@@ -205,8 +228,12 @@ void loop()
       Serial.print(rtc1.getMinutes());
       Serial.print(":");
       Serial.println(rtc1.getSeconds());
-      Serial.print("CRC Valid: ");
-      Serial.println(CRCValid);
+      Serial.print("System CRC Valid: ");
+      Serial.println(SystemCRCValid);
+      Serial.print("Channel CRC Valid: ");
+      Serial.println(ChannelCRCValid);
+      Serial.print("Storage CRC Valid: ");
+      Serial.println(StorageCRCValid);
       Serial.print("Power state: ");
       Serial.println(PowerState);
       Serial.print("System error flags: ");
@@ -225,10 +252,9 @@ void loop()
       Serial.print(gyroY, 3);
       Serial.print(", ");
       Serial.println(gyroZ, 3);
-      Serial.print("GPS status: ");
       Serial.print("Latitude: ");
       Serial.println(lat, 6);
-      Serial.print("Lognitude: ");
+      Serial.print("Longitude: ");
       Serial.println(lon, 6);
       Serial.print("Speed: ");
       Serial.println(speed);

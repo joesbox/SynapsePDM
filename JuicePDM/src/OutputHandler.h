@@ -55,7 +55,6 @@
 // Interval timer used to control PWM outputs and analog read back
 //extern IntervalTimer myTimer;
 
-
 // Toggle error LED
 extern uint8_t toggle[NUM_CHANNELS];
 
