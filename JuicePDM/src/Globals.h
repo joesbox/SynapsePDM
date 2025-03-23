@@ -1,30 +1,30 @@
 /*  Globals.h Global variables, definitions and functions.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
-    This work is licensed under the Creative Commons 
+    This work is licensed under the Creative Commons
     Attribution-NonCommercial-ShareAlike 4.0 International License.
-    To view a copy of this license, visit 
-    https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a 
+    To view a copy of this license, visit
+    https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a
     letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
-  
+
     You are free to:
     - Share: Copy and redistribute the material in any medium or format.
     - Adapt: Remix, transform, and build upon the material.
-  
+
     Under the following terms:
-    - Attribution: You must give appropriate credit, provide a link to the license, 
-      and indicate if changes were made. You may do so in any reasonable manner, 
+    - Attribution: You must give appropriate credit, provide a link to the license,
+      and indicate if changes were made. You may do so in any reasonable manner,
       but not in any way that suggests the licensor endorses you or your use.
     - NonCommercial: You may not use the material for commercial purposes.
-    - ShareAlike: If you remix, transform, or build upon the material, 
+    - ShareAlike: If you remix, transform, or build upon the material,
       you must distribute your contributions under the same license as the original.
-  
-    DISCLAIMER: This software is provided "as is," without warranty of any kind, 
-    express or implied, including but not limited to the warranties of 
-    merchantability, fitness for a particular purpose, and noninfringement. 
-    In no event shall the authors or copyright holders be liable for any claim, 
-    damages, or other liability, whether in an action of contract, tort, or otherwise, 
-    arising from, out of, or in connection with the software or the use or 
+
+    DISCLAIMER: This software is provided "as is," without warranty of any kind,
+    express or implied, including but not limited to the warranties of
+    merchantability, fitness for a particular purpose, and noninfringement.
+    In no event shall the authors or copyright holders be liable for any claim,
+    damages, or other liability, whether in an action of contract, tort, or otherwise,
+    arising from, out of, or in connection with the software or the use or
     other dealings in the software.
 */
 
@@ -32,6 +32,7 @@
 #define Globals_H
 
 #include <Arduino.h>
+#include <Wire.h>
 #include <STM32LowPower.h>
 #include <STM32RTC.h>
 #include <ChannelConfig.h>
@@ -41,7 +42,7 @@
 #include <Storage.h>
 
 // Firmware version
-#define FW_VER "0.1.1"
+#define FW_VER "v0.1"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -86,24 +87,24 @@
 #define MAX_LOGFILE_SIZE 100000
 
 // Main task timer intervals (milliseconds)
-#define TASK_0_INTERVAL 10
-#define TASK_1_INTERVAL 50
-#define TASK_2_INTERVAL 80
-#define TASK_3_INTERVAL 100
-#define TASK_4_INTERVAL 60000
-#define GPS_INTERVAL 100
+#define TASK_1_INTERVAL 10
+#define TASK_2_INTERVAL 50
+#define TASK_3_INTERVAL 80
+#define TASK_4_INTERVAL 100
+#define TASK_5_INTERVAL 60000
+#define GPS_INTERVAL 1000
 
 #define DEBUG_INTERVAL 1000
-#define DEBUG_PIN PA15
 
-// Watchdog timer interval
-#define WATCHDOG_INTERVAL 2500
+// Watchdog timer interval (microseconds)
+#define WATCHDOG_INTERVAL 2000000
 
 // Unused pin that can be used to debug analog read timings which are critical to obtaining correct current measurements on PWM channels
 #define ANALOG_READ_DEBUG_PIN 20
 
 // Debug flag
 #define DEBUG
+#define DEBUG_PIN PA15
 
 // Battery measurement analog input pin
 #define VBATT_ANALOG_PIN PC4
@@ -123,7 +124,7 @@
 // System error bitmasks
 #define OVERCURRENT 0x01
 #define OVERTEMP 0x02
-#define UNDERVOLTGAGE 0x04
+#define UNDERVOLTAGE 0x04
 #define CRC_CHECK_FAILED 0x08
 #define SDCARD_ERROR 0x10
 
@@ -148,11 +149,11 @@
 // Default wake window for IMU checks
 #define DEFAULT_WW 5000
 
-// Default log frequecy of 10Hz
-#define DEFAULT_LOG_FREQUENCY 10
+// Default log frequecy of 1Hz
+#define DEFAULT_LOG_FREQUENCY 1
 
-// Default number of log lines. 36000 = 1 hour @ 10Hz
-#define DEFAULT_LOG_LINES 36000
+// Default number of log lines. 3600 = 1 hour @ 1Hz
+#define DEFAULT_LOG_LINES 3600
 
 // Number of logs to keep on the SD card
 #define NUMBER_LOGS 10
@@ -160,6 +161,17 @@
 // Power enable pins
 #define PWR_EN_5V PE7
 #define PWR_EN_3V3 PF11
+
+// Charging pins
+#define CHARGE_EN PG0
+#define BATT_INT PG1
+
+// Battery states
+#define COMMSOK 0
+#define BATTERY_CHARGED 1
+#define BATTERY_CHARGING 2
+#define BATTERY_LOW 3
+#define BATTERY_CRITICAL 4
 
 // Power states
 #define RUN 0
@@ -177,8 +189,8 @@
 #define CS2 PB11
 
 // LCD pins
-#define TFT_RST PD8
-#define TFT_DC PD9
+// #define TFT_RST PD8
+// #define TFT_DC PD9
 #define TFT_BL PB10
 
 // GSM Module Pins
@@ -194,11 +206,11 @@ extern DMA_HandleTypeDef hdma_tx;
 /// @brief Analogue input config structure
 struct __attribute__((packed)) AnalogueInputs
 {
-    uint8_t InputPin;    // Input pin
-    uint8_t PullUpPin;   // Pull-up enable pin
-    uint8_t PullDownPin; // Pull-down enable pin
-    bool PullUpEnable;   // Pull-up enable flag
-    bool PullDownEnable; // Pull-down enable flag
+  uint8_t InputPin;    // Input pin
+  uint8_t PullUpPin;   // Pull-up enable pin
+  uint8_t PullDownPin; // Pull-down enable pin
+  bool PullUpEnable;   // Pull-up enable flag
+  bool PullDownEnable; // Pull-down enable flag
 };
 
 // Channel digital input pins (defaults)
@@ -220,14 +232,7 @@ const uint8_t channelOutputPins[NUM_CHANNELS] = {PG10, PG9, PG6, PG5, PG4, PG3, 
 const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {PA0, PA1, PA2, PA3, PA4, PA5, PA6, PB1, PB0, PA7, PC3, PC2, PC1, PC0};
 
 // Timers for main tasks
-extern uint32_t task0Timer;
-extern uint32_t task1Timer;
-extern uint32_t task2Timer;
-extern uint32_t task3Timer;
-extern uint32_t task4Timer;
-extern uint32_t debugTimer;
 extern uint32_t imuWWtimer;
-extern uint32_t GPStimer;
 extern uint32_t LogTimer;
 
 // HSD Output channels
@@ -249,7 +254,7 @@ extern ChannelConfigUnion ChannelConfigData;
 /// @brief Initialise channel data to known defaults
 void InitialiseChannelData();
 
-/// @brief Initialise system data to known 
+/// @brief Initialise system data to known
 void InitialiseSystemData();
 
 #endif

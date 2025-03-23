@@ -31,36 +31,24 @@
 
 #include "OutputHandler.h"
 
-// IntervalTimer myTimer;
-
-volatile bool channelOutputStatus[NUM_CHANNELS];
-
-volatile uint32_t analogReadIntervals[NUM_CHANNELS];
-
-volatile uint8_t pwmCounter;
 volatile uint8_t analogCounter;
 uint analogValues[NUM_CHANNELS][ANALOG_READ_SAMPLES];
-volatile uint8_t realPWMValues[NUM_CHANNELS];
-volatile uint8_t channelLatch[NUM_CHANNELS];
 
-uint8_t toggle[NUM_CHANNELS];
+// Channel number used to identify associated channel
+int channelNum;
 
 /// @brief Handle output control
 void InitialiseOutputs()
 {
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    // Disable anything related to digital input on the analogue inputs
-    // pinMode(Channels[i].CurrentSensePin, INPUT_DISABLE);
-
     // Make sure all channels are off when we initialise
+    pinMode(Channels[i].OutputControlPin, OUTPUT);
     digitalWrite(Channels[i].OutputControlPin, LOW);
-
-    channelLatch[i] = 0;
   }
 
   // Reset the counters
-  pwmCounter = analogCounter = 0;  
+  analogCounter = 0;
 }
 
 /// @brief Update PWM or digital outputs
@@ -71,26 +59,12 @@ void UpdateOutputs()
   {
     switch (Channels[i].ChanType)
     {
-    case DIG_PWM:
-    case CAN_PWM:
+    case DIG:
+    case CAN_DIGITAL:
       if (Channels[i].Enabled)
       {
-        // Calculate the adjusted PWM for volage/average power
-        // float squared = (VBATT_NOMINAL / SystemParams.VBatt) * (VBATT_NOMINAL / SystemParams.VBatt);
-        // int pwmActual = round(Channels[i].PWMSetDuty * squared);
 
-        int pwmActual = Channels[i].PWMSetDuty;
-
-        if (pwmActual > 255)
-        {
-          pwmActual = 255;
-        }
-        else if (pwmActual < 0)
-        {
-          pwmActual = 0;
-        }
-        realPWMValues[i] = pwmActual;
-
+        digitalWriteFast(digitalPinToPinName(Channels[i].OutputControlPin), HIGH);
         int sum = 0;
         uint8_t total = 0;
         for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
@@ -105,14 +79,11 @@ void UpdateOutputs()
           Channels[i].AnalogRaw = analogMean;
         }
 
+        // TODO: Calibrate current readings for the BTS50025
+
         float isVoltage = (Channels[i].AnalogRaw / 1024.0) * 3.3;
         float amps = PTERM1 * pow(isVoltage, 4) + PTERM2 * pow(isVoltage, 3) + PTERM3 * pow(isVoltage, 2) + PTERM4 * isVoltage + PCONST;
-#ifdef DEBUG
-        Serial.print("Channel: ");
-        Serial.print(i + 1);
-        Serial.print(": ");
-        Serial.println(amps);
-#endif
+
         // Check for fault condition and current thresholds
         if (isVoltage > FAULT_THRESHOLD)
         {
@@ -137,88 +108,27 @@ void UpdateOutputs()
         }
 
         Channels[i].CurrentValue = amps;
-
-        Serial.println(Channels[i].ErrorFlags, BIN);
       }
       else
       {
-        realPWMValues[i] = 0;
-        // leds[i] = CRGB::Black;
-      }
-      break;
-    case DIG:
-    case CAN_DIGITAL:
-      if (Channels[i].Enabled)
-      {
-        // Digital channels get 100% duty
-        realPWMValues[i] = 255;
-        // leds[i] = CRGB::DarkGreen;
-
-        int sum = 0;
-        uint8_t total = 0;
-        for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
-        {
-          sum += analogRead(Channels[i].CurrentSensePin);
-          total++;
-        }
-        float analogMean = 0.0f;
-        if (total)
-        {
-          analogMean = sum / total;
-          Channels[i].AnalogRaw = analogMean;
-        }
-      }
-      else
-      {
-        realPWMValues[i] = 0;
+        digitalWriteFast(digitalPinToPinName(Channels[i].OutputControlPin), LOW);
+        Channels[i].CurrentValue = 0.0;
       }
       break;
     default:
-      realPWMValues[i] = 0;
+      digitalWriteFast(digitalPinToPinName(Channels[i].OutputControlPin), LOW);
+      Channels[i].CurrentValue = 0.0;
       break;
     }
   }
-}
-
-/// @brief This is called at an interval of every PWM_COUNT_INTERVAL. All channels use the same timing but will be enabled or disabled based on their duty
-void OutputTimer()
-{
-  // Check the type of channel we're dealing with (digital or PWM) and handle output accordingly
-  for (int i = 0; i < NUM_CHANNELS; i++)
-  {
-    if (Channels[i].Enabled)
-    {
-      if (realPWMValues[i] >= pwmCounter && !channelLatch[i])
-      {
-        // We are within the Ton perdiod of the duty cycle, keep the channel on
-        digitalWrite(Channels[i].OutputControlPin, HIGH);
-
-        // We've written the channel high once, no need to keep writing the channel high until we've reached the end of the Ton period
-        channelLatch[i] = 1;
-      }
-      else if (realPWMValues[i] < pwmCounter && channelLatch[i])
-      {
-        // We are within th Toff period of the duty cycle, keep the channel off
-        digitalWrite(Channels[i].OutputControlPin, LOW);
-
-        // No need to keep writing the pin low either
-        channelLatch[i] = 0;
-      }
-    }
-    else
-    {
-      digitalWrite(Channels[i].OutputControlPin, LOW);
-    }
-  }
-
-  // Increment the PWM counter at every interval
-  pwmCounter++;
 }
 
 void OutputsOff()
 {
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    digitalWrite(Channels[i].OutputControlPin, LOW);
+    digitalWriteFast(digitalPinToPinName(Channels[i].OutputControlPin), LOW);
+    Channels[i].CurrentValue = 0.0;
+    Channels[i].ErrorFlags = 0;
   }
 }

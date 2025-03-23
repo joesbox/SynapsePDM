@@ -33,10 +33,10 @@
 StorageConfigUnion StorageConfigData;
 StorageParameters StorageParams;
 uint16_t EEPROMindex;
-File myfile;
-char fileName[23];
+File dataFile;
+char fileName[24];
 char dateTimeStamp[23];
-int BytesStored;
+uint32_t BytesStored;
 bool UndervoltageLatch;
 bool StorageCRCValid;
 
@@ -48,8 +48,15 @@ STM32RTC &rtc2 = STM32RTC::getInstance();
 
 M95640R EEPROMext(&SPI_2, CS1);
 
+const char systemHeader[] = "Date,Time,System Temp,System Voltage,System Current,Error Flags,IMU Accel X,IMU Accel Y,IMU Accel Z,IMU Gyro X,IMU Gyro Y,IMU Gyro Z,Lat,Lon,Alt,Speed,Accuracy,";
+const char channelHeader[] = "Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,Multi-Channel,Group Number,Channel Error Flags";
+
+long startMillis;
+long endMillis;
+
 void SaveChannelConfig()
 {
+    SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
     // Reset EEPROM index
@@ -88,10 +95,12 @@ void SaveChannelConfig()
     // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
+    SPI_2.end();
 }
 
 bool LoadChannelConfig()
 {
+    SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
     // Set valid CRC flag to false
     bool validCRC = false;
@@ -138,12 +147,14 @@ bool LoadChannelConfig()
     // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
+    SPI_2.end();
 
     return validCRC;
 }
 
 void SaveSystemConfig()
 {
+    SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
     // Reset EEPROM index, system info comes straight after channel info
@@ -182,10 +193,12 @@ void SaveSystemConfig()
     // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
+    SPI_2.end();
 }
 
 bool LoadSystemConfig()
 {
+    SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
     // Set valid CRC flag to false
     bool validCRC = false;
@@ -232,22 +245,34 @@ bool LoadSystemConfig()
     // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
+    SPI_2.end();
 
     return validCRC;
 }
 
 void SaveStorageConfig()
 {
+
+    SPI_2.begin();
+    if (StorageParams.LogFrequency == 0)
+    {
+        StorageParams.LogFrequency = DEFAULT_LOG_FREQUENCY;
+    }
+
+    if (StorageParams.MaxLogLength == 0)
+    {
+        StorageParams.MaxLogLength = DEFAULT_LOG_LINES;
+    }
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
     // Reset EEPROM index, storage info comes straight after system info
     EEPROMindex = sizeof(ChannelConfigData.data) + sizeof(uint32_t) + sizeof(SystemConfigData.data) + sizeof(uint32_t);
 
     // Copy current storage info to storage structure
-    memcpy(&StorageConfigData.data, &StorageParams, sizeof(StorageParams));
+    memcpy(&StorageConfigData.data, &StorageParams, sizeof(StorageParameters));
 
     // Calculate stored config bytes CRC
-    uint32_t checksum = CRC32::calculate(StorageConfigData.dataBytes, sizeof(StorageParams));
+    uint32_t checksum = CRC32::calculate(StorageConfigData.dataBytes, sizeof(StorageParameters));
 
     // Store data and CRC value
     uint8_t int32Buf[4];
@@ -276,10 +301,12 @@ void SaveStorageConfig()
     // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
+    SPI_2.end();
 }
 
 bool LoadStorageConfig()
 {
+    SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
     // Set valid CRC flag to false
     bool validCRC = false;
@@ -305,7 +332,7 @@ bool LoadStorageConfig()
              int32_t(int32Buf[3]);
 
 #ifdef DEBUG
-    Serial.print("System checksum read: ");
+    Serial.print("Storage checksum read: ");
     Serial.print(result, HEX);
     Serial.print(", at index: ");
     Serial.println(EEPROMindex);
@@ -321,19 +348,35 @@ bool LoadStorageConfig()
         validCRC = true;
         // Copy storage info
         memcpy(&StorageParams, &StorageConfigData.data, sizeof(StorageParams));
+
+        // Load the circular buffer with the log files we're currently keeping
+        for (int i = 0; i < 10; i++)
+        {
+            if (strlen(StorageParams.LogFileNames[i]) != 0)
+            {
+                logs.unshift(StorageParams.LogFileNames[i]);
+            }
+        }
     }
 
     // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
+    SPI_2.end();
 
     return validCRC;
 }
 
 void InitialiseStorageData()
 {
-    StorageParams.LogFrequency = DEFAULT_LOG_FREQUENCY;
-    StorageParams.MaxLogLength = DEFAULT_LOG_LINES;
+    if (StorageParams.LogFrequency == 0)
+    {
+        StorageParams.LogFrequency = DEFAULT_LOG_FREQUENCY;
+    }
+    if (StorageParams.MaxLogLength == 0)
+    {
+        StorageParams.MaxLogLength = DEFAULT_LOG_LINES;
+    }
 }
 
 void InitialiseSD()
@@ -361,22 +404,15 @@ void InitialiseSD()
         sprintf(fileName, "%04d-%02d-%02d_%02d-%02d-%02d.csv", 2000 + rtc2.getYear(), rtc2.getMonth(), rtc2.getDay(), rtc2.getHours(), rtc2.getMinutes(), rtc2.getSeconds());
 
         // Create new file
-        myfile = SD.open(fileName, FILE_WRITE);
-        if (!SDCardOK)
-        {
-#ifdef DEBUG
-            Serial.println("SD init open error");
-#endif
-        }
+        dataFile = SD.open(fileName, FILE_WRITE);
 
         // Create file was succesful. Write the header.
-        if (myfile)
+        if (dataFile)
         {
             // Deal with log rotation
             if (!logs.isFull())
             {
                 // Circular buffer isn't full yet. Just unshit another file name in
-                Serial.println(fileName);
                 logs.unshift(fileName);
             }
             else
@@ -384,35 +420,44 @@ void InitialiseSD()
                 // Buffer is full. Delete the oldest file first before unshifting the new one
                 char fileToDelete[24];
                 logs.last().toCharArray(fileToDelete, sizeof(fileToDelete));
-                Serial.println(fileToDelete);
                 if (SD.exists(fileToDelete))
                 {
                     SD.remove(fileToDelete);
-                    logs.unshift(fileName);
                 }
+                logs.unshift(fileName);
             }
+
+            // Copy the circular buffer to storage parameters and save to EEPROM
+            for (int i = 0; i < logs.size(); i++)
+            {
+                logs[i].toCharArray(StorageParams.LogFileNames[i], sizeof(StorageParams.LogFileNames[i]));
+            }
+
+            SaveStorageConfig();
+
+            BytesStored = 0;
+
             // Print the file header to the buffer
-            myfile.print("Date,Time,System Temp,System Voltage,System Current,Error Flags,IMU Accel X,IMU Accel Y,IMU Accel Z,IMU Gyro X,IMU Gyro Y,IMU Gyro Z,Lat,Lon,Alt,Speed,Accuracy,");
+            BytesStored += dataFile.print(systemHeader);
 
             for (int i = 0; i < NUM_CHANNELS; i++)
             {
-                myfile.print("Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,PWM,Multi-Channel,Group Number,Channel Error Flags");
+                BytesStored += dataFile.print(channelHeader);
 
                 // Print a separating comma unless we're on the last channel
                 if (i < NUM_CHANNELS - 1)
                 {
-                    myfile.print(",");
+                    BytesStored += dataFile.print(",");
                 }
             }
 
-            myfile.println();
+            BytesStored += dataFile.println();
         }
         else
         {
             SDCardOK = false;
         }
 
-        BytesStored = 0;
 #ifdef DEBUG
         Serial.println("SD Card init complete.");
 #endif
@@ -425,151 +470,151 @@ void InitialiseSD()
     }
 }
 
-void LogData()
+#define BUFFER_SIZE 4096 // Adjust buffer size as needed
+char logBuffer[BUFFER_SIZE];
+uint16_t bufferIndex = 0;
+
+void FlushBuffer()
 {
-    // Log if we're not in an undervoltage condition and the SD card is OK
-    if (!(SystemParams.ErrorFlags & UNDERVOLTGAGE) && SDCardOK)
+    // TODO: write to data file periodically returns zero and gets stuck. Find the root cause.
+    int bytesNow = BytesStored;
+    if (bufferIndex > 0)
     {
-        // Print date and time
-        sprintf(dateTimeStamp, "%04d-%02d-%02d,%02d:%02d:%02d,", 2000 + rtc2.getYear(), rtc2.getMonth(), rtc2.getDay(), rtc2.getHours(), rtc2.getMinutes(), rtc2.getSeconds());
-        myfile.print(dateTimeStamp);
+        BytesStored += dataFile.write(logBuffer, bufferIndex);
+        dataFile.flush();
+        bufferIndex = 0;
 
-        // Add system parameters
-        myfile.print(SystemParams.SystemTemperature);
-        myfile.print(",");
-
-        myfile.print(SystemParams.VBatt);
-        myfile.print(",");
-
-        myfile.print(SystemParams.SystemCurrent);
-        myfile.print(",");
-
-        myfile.print(SystemParams.ErrorFlags, HEX);
-        myfile.print(",");
-
-        myfile.print(accelX);
-        myfile.print(",");
-
-        myfile.print(accelY);
-        myfile.print(",");
-
-        myfile.print(accelZ);
-        myfile.print(",");
-
-        myfile.print(gyroX);
-        myfile.print(",");
-
-        myfile.print(gyroY);
-        myfile.print(",");
-
-        myfile.print(gyroZ);
-        myfile.print(",");
-
-        myfile.print(lat, 6);
-        myfile.print(",");
-
-        myfile.print(lon, 6);
-        myfile.print(",");
-
-        myfile.print(alt);
-        myfile.print(",");
-
-        myfile.print(speed);
-        myfile.print(",");
-
-        myfile.print(accuracy);
-        myfile.print(",");
-
-        // Add info for each channel
-        for (int i = 0; i < NUM_CHANNELS; i++)
+        if (BytesStored - bytesNow == 0)
         {
-            switch (Channels[i].ChanType)
-            {
-            case DIG:
-                myfile.print("DIGI");
-                break;
-            case DIG_PWM:
-                myfile.print("DIGP");
-                break;
-            case CAN_DIGITAL:
-                myfile.print("CAND");
-                break;
-            case CAN_PWM:
-                myfile.print("CANP");
-                break;
-            default:
-                break;
-            }
-            myfile.print(",");
-            myfile.print(Channels[i].Enabled);
-
-            myfile.print(",");
-            myfile.print(Channels[i].CurrentValue);
-
-            myfile.print(",");
-            myfile.print(Channels[i].CurrentThresholdHigh);
-
-            myfile.print(",");
-            myfile.print(Channels[i].CurrentThresholdLow);
-
-            myfile.print(",");
-            myfile.print(Channels[i].PWMSetDuty);
-
-            myfile.print(",");
-            myfile.print(Channels[i].MultiChannel);
-
-            myfile.print(",");
-            myfile.print(Channels[i].GroupNumber);
-
-            myfile.print(",");
-            myfile.print(Channels[i].ErrorFlags, HEX);
-
-            // Print a separating comma unless we're on the last channel
-            if (i < NUM_CHANNELS - 1)
-            {
-                myfile.print(",");
-            }
-        }
-
-        myfile.println();
-        myfile.flush();
-
-        // Reached the length limit for this file. Create a new one
-        if (lineCount == 30)//StorageParams.MaxLogLength)
-        {
-            InitialiseSD();
-        }
-        lineCount++;
-    }
-    else
-    {
-        // Whatever we do next, we should close the current file
-        if (!UndervoltageLatch)
-        {
-            myfile.flush();
-            myfile.close();
-            SD.end();
-
-            // Latch this condition in case we find ourselves back here (probably cranking - sufficient voltage to run, insufficient voltage to log).
-            UndervoltageLatch = true;
-        }
-
-        // Undervoltage condition. Set SD card flag OK to false to ensure we come back here and initialise a new file when we have sufficient voltage
-        if (SystemParams.ErrorFlags & UNDERVOLTGAGE)
-        {
-            SDCardOK = false;
-        }
-        else
-        {
-            // We're back to normal operating voltage. Start a new file
+            Serial.println("SD write error");
+            dataFile.close();
             InitialiseSD();
         }
     }
 }
 
+void AppendToBuffer(const char *data)
+{
+    size_t len = strlen(data);
+    if (bufferIndex + len >= BUFFER_SIZE)
+    {
+        FlushBuffer();
+    }
+    strncpy(logBuffer + bufferIndex, data, len);
+    bufferIndex += len;
+}
+
+void LogData()
+{
+    if (!(SystemParams.ErrorFlags & UNDERVOLTAGE) && SDCardOK)
+    {
+        // Timestamp
+        char dateTimeStamp[32];
+        snprintf(dateTimeStamp, sizeof(dateTimeStamp), "%04d-%02d-%02d,%02d:%02d:%02d,",
+                 2000 + rtc2.getYear(), rtc2.getMonth(), rtc2.getDay(),
+                 rtc2.getHours(), rtc2.getMinutes(), rtc2.getSeconds());
+        AppendToBuffer(dateTimeStamp);
+
+        // Buffers for float conversion
+        char vbattBuffer[16], sysCurrentBuffer[16], accelXBuffer[16], accelYBuffer[16], accelZBuffer[16];
+        char gyroXBuffer[16], gyroYBuffer[16], gyroZBuffer[16], latBuffer[16], lonBuffer[16];
+        char altBuffer[16], speedBuffer[16], accuracyBuffer[16];
+
+        // Convert floating-point values using dtostrf
+        dtostrf(SystemParams.VBatt, 6, 2, vbattBuffer);
+        dtostrf(SystemParams.SystemCurrent, 6, 2, sysCurrentBuffer);
+        dtostrf(accelX, 6, 2, accelXBuffer);
+        dtostrf(accelY, 6, 2, accelYBuffer);
+        dtostrf(accelZ, 6, 2, accelZBuffer);
+        dtostrf(gyroX, 6, 2, gyroXBuffer);
+        dtostrf(gyroY, 6, 2, gyroYBuffer);
+        dtostrf(gyroZ, 6, 2, gyroZBuffer);
+        dtostrf(lat, 10, 6, latBuffer);
+        dtostrf(lon, 10, 6, lonBuffer);
+        dtostrf(alt, 6, 2, altBuffer);
+        dtostrf(speed, 6, 2, speedBuffer);
+        dtostrf(accuracy, 6, 2, accuracyBuffer);
+
+        // System Parameters Log
+        char logEntry[256];
+        snprintf(logEntry, sizeof(logEntry),
+                 "%d,%s,%s,%d,",
+                 SystemParams.SystemTemperature,
+                 vbattBuffer,
+                 sysCurrentBuffer,
+                 SystemParams.ErrorFlags);
+        AppendToBuffer(logEntry);
+
+        // Sensor Data
+        snprintf(logEntry, sizeof(logEntry),
+                 "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,",
+                 accelXBuffer, accelYBuffer, accelZBuffer,
+                 gyroXBuffer, gyroYBuffer, gyroZBuffer,
+                 latBuffer, lonBuffer, altBuffer,
+                 speedBuffer, accuracyBuffer);
+        AppendToBuffer(logEntry);
+
+        // Channel Data Logging
+        for (int i = 0; i < NUM_CHANNELS; i++)
+        {
+            char valueBuffer[16], highThreshBuffer[16], lowThreshBuffer[16];
+            dtostrf(Channels[i].CurrentValue, 6, 2, valueBuffer);
+            dtostrf(Channels[i].CurrentThresholdHigh, 6, 2, highThreshBuffer);
+            dtostrf(Channels[i].CurrentThresholdLow, 6, 2, lowThreshBuffer);
+
+            snprintf(logEntry, sizeof(logEntry),
+                     "%s,%d,%s,%s,%s,%d,%d,%d%s",
+                     (Channels[i].ChanType == DIG) ? "DIG" : (Channels[i].ChanType == PWM)       ? "PWM"
+                                                          : (Channels[i].ChanType == ANA)         ? "ANA"
+                                                          : (Channels[i].ChanType == CAN_DIGITAL) ? "CAND"
+                                                                                                  : "CANP",
+                     Channels[i].Enabled,
+                     valueBuffer, highThreshBuffer, lowThreshBuffer,
+                     Channels[i].MultiChannel,
+                     Channels[i].GroupNumber,
+                     Channels[i].ErrorFlags,
+                     (i < NUM_CHANNELS - 1) ? "," : "\n");
+            AppendToBuffer(logEntry);
+        }
+
+        // Periodic SD Flushing
+        lineCount++;
+        if (lineCount == StorageParams.MaxLogLength)
+        {
+            FlushBuffer();
+            dataFile.flush();
+            dataFile.close();
+            InitialiseSD();
+        }
+    }
+    else
+    {
+        // Handle SD or undervoltage errors
+        if (!UndervoltageLatch)
+        {
+            FlushBuffer();
+            CloseSDFile();
+            UndervoltageLatch = true;
+        }
+        if (SystemParams.ErrorFlags & UNDERVOLTAGE)
+        {
+            SDCardOK = false;
+        }
+        else
+        {
+            InitialiseSD();
+        }
+    }
+}
+
+void CloseSDFile()
+{
+    dataFile.flush();
+    dataFile.close();
+    SD.end();
+}
+
 void SleepSD()
 {
-    myfile.flush();
-    myfile.close();
-    SD.end();
+    CloseSDFile();
 }

@@ -30,108 +30,181 @@
 
 #include "GSM.h"
 
-#define TINY_GSM_MODEM_SIM7600
-#include <TinyGsmClient.h>
-#define SerialAT Serial1
-#define TINY_GSM_DEBUG SerialMon
+#define BAUD_RATE 115200
 
-#define GSM_AUTOBAUD_MIN 9600
-#define GSM_AUTOBAUD_MAX 115200
+uint32_t lastGPSTime = 0;
 
-#define TINY_GSM_USE_GPRS true
+bool moduleReady = false; // Track module initialization
 
-const char apn[] = "three.co.uk";
-const char gprsUser[] = "";
-const char gprsPass[] = "";
 float lat, lon, speed, alt, accuracy;
 int vsat, usat, year, month, day, hour, minute, second;
 
-TinyGsm modem(SerialAT);
-TinyGsmClient client(modem);
+bool GPSFix = false;
+
+uint8_t SIM7600State = 0; // 0 = Power up, 1 = Initialising, 2 = Ready for command, 4 = Wait response
+
+char simBuffer[512];
 
 void InitialiseGSM(bool enableData)
 {
-  pinMode(SIM_PWR, OUTPUT);
-  pinMode(SIM_RST, OUTPUT);
-  pinMode(SIM_FLIGHT, OUTPUT);
+    pinMode(SIM_PWR, OUTPUT);
+    pinMode(SIM_RST, OUTPUT);
+    pinMode(SIM_FLIGHT, OUTPUT);
 
-  // Power the module on
-  digitalWrite(SIM_PWR, HIGH);
+    digitalWrite(SIM_RST, LOW);
+    digitalWrite(SIM_FLIGHT, LOW);
 
-  SerialAT.begin(115200);
-  modem.setNetworkMode(2);
-  SerialAT.println("AT+CGPSNEMARATE=1");
+    // Power the module on
+    digitalWrite(SIM_PWR, HIGH);
+    delay(100);
+    Serial1.begin(BAUD_RATE);
+    SIM7600State = 0;
 
-  Serial.print("Modem init: ");
-  Serial.println(modem.init());
-  // delay(6000);
-  // String modemInfo = modem.getModemInfo();
-  // Serial.print("Modem Info: ");
-  // Serial.println(modemInfo);
-  Serial.print("Get SIM info: ");
-  Serial.println(modem.getSimStatus());
-
-  if (enableData)
-  {
-    // GPRS connection parameters are usually set after network registration
-    Serial.print(F("Connecting to "));
-    Serial.print(apn);
-    if (!modem.gprsConnect(apn, gprsUser, gprsPass))
-    {
-      Serial.println(" fail");
-      delay(10000);
-      return;
-    }
-    Serial.println(" success");
-
-    if (modem.isGprsConnected())
-    {
-      Serial.println("GPRS connected");
-    }
-  }
-
-  // Now initialise GPS
-  Serial.print("Enabling GPS: ");
-  Serial.println(modem.enableGPS());
+    Serial.println("Initializing SIM7600G...");
 }
 
-void UpdateGPS()
+void UpdateSIM7600(SIM7600Commands command)
 {
+    // Clear the buffer before reading
+    memset(simBuffer, 0, sizeof(simBuffer));
+    size_t bytesRead = 0;
 
-  // TODO: Change NEMA update
-  bool success = modem.getGPS(&lat, &lon, &speed, &alt, &vsat, &usat, &accuracy, &year, &month, &day, &hour, &minute, &second);
+    Serial.print("Available bytes: ");
+    Serial.println(Serial1.available());
 
-  if (success)
-  {
-    // Convert speed (knots) to preferred units
-    switch (SystemParams.SpeedUnitPref)
+    unsigned long startTime = millis();
+    while (millis() - startTime < 500)
+    { // Wait up to 500 millis
+        while (Serial1.available() && bytesRead < sizeof(simBuffer) - 1)
+        {
+            bytesRead += Serial1.readBytes(simBuffer + bytesRead, sizeof(simBuffer) - bytesRead - 1);
+        }
+    }
+    Serial.print(SIM7600State);
+    Serial.print(": ");
+    Serial.print("SIM7600 Buffer: ");
+    Serial.println(simBuffer);
+
+    switch (SIM7600State)
     {
-    case MPH:
-      speed *= 1.15078F;
-      break;
-
-    case KPH:
-      speed *= 1.852F;
-      break;
-
-    default:
-      break;
+    case 0:
+        // Power up
+        Serial1.print("AT\r");
+        break;
+    case 1:
+        Serial1.print("AT+CGPS=1\r");
+        break;
+    case 2:
+        // Ready for command
+        switch (command)
+        {
+        case GPS:
+            Serial1.print("AT+CGNSSINFO\r");
+            break;
+        case HTTP:
+            break;
+        case SMS:
+            break;
+        case MQTT:
+            break;
+        case MQTT_PUBLISH:
+            break;
+        case MQTT_SUBSCRIBE:
+            break;
+        case MQTT_UNSUBSCRIBE:
+            break;
+        case MQTT_CONNECT:
+            break;
+        case MQTT_DISCONNECT:
+            break;
+        case MQTT_PING:
+            break;
+        case MQTT_STATUS:
+            break;
+        }
+        break;
     }
 
-    // Convert distance to preferred units
-    switch (SystemParams.DistanceUnitPref)
+    // Check response
+    if (strstr(simBuffer, "AT") != nullptr || strstr(simBuffer, "OK") != nullptr || strstr(simBuffer, "DONE") != nullptr || strstr(simBuffer, "READY") != nullptr)
     {
-    case Imperial:      
-      alt *= 3.28084;
-      accuracy += 3.28084;
-      break;
-    case Metric:
-      // No coversion required
-      break;
-
-    default:
-      break;
+        if (SIM7600State == 0)
+        {
+            SIM7600State = 1; // Transition to initialise GPS state
+        }
+        else if (SIM7600State == 1)
+        {
+            SIM7600State = 2; // Transition to enable GPS
+        }
     }
-  }
-  digitalToggleFast(PA_15);
+
+    if (strstr(simBuffer, "ERROR") != nullptr)
+    {
+        SIM7600State = 2; // Transition to Ready for command state
+    }
+
+    if (strstr(simBuffer, "+CGNSSINFO") != nullptr)
+    {
+        // String response(simBuffer);
+        parseGPSData(simBuffer); // Parse GPS data
+        SIM7600State = 2;        // Transition to Ready for command state
+    }
+}
+
+void parseGPSData(const char *response)
+{
+    response += 11; // Skip "+CGNSSINFO: "
+
+    char buffer[100]; // Temporary buffer to modify the input string
+    strncpy(buffer, response, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null termination
+
+    char *tokens[15] = {nullptr};
+    char *token = strtok(buffer, ",");
+    int index = 0;
+
+    while (token != nullptr && index < 15)
+    {
+        tokens[index++] = token;
+        token = strtok(nullptr, ",");
+    }
+
+    if (index < 13) // Ensure enough tokens are parsed
+    {
+        Serial.println("Incomplete GPS data");
+        return;
+    }
+
+    // Parse values
+    int fixStatus = atoi(tokens[0]);
+
+    // Convert DMM to Decimal Degrees
+    auto convertToDecimalDegrees = [](const char *degMin, const char *dir) -> float
+    {
+        float value = atof(degMin);
+        int deg = int(value / 100);          // Extract degrees
+        float minutes = value - (deg * 100); // Extract minutes
+        float decimalDegrees = deg + (minutes / 60.0);
+
+        // Apply hemisphere correction
+        if (dir[0] == 'S' || dir[0] == 'W')
+            decimalDegrees *= -1;
+
+        return decimalDegrees;
+    };
+
+    lat = convertToDecimalDegrees(tokens[4], tokens[5]); // Latitude
+    lon = convertToDecimalDegrees(tokens[6], tokens[7]); // Longitude
+    alt = atof(tokens[10]);
+    speed = atof(tokens[11]);
+    float course = atof(tokens[12]);
+
+    // Extract date (DDMMYY)
+    if (strlen(tokens[8]) == 6)
+        sscanf(tokens[8], "%2d%2d%2d", &day, &month, &year);
+    year += 2000; // Convert two-digit year to full year (e.g., 24 -> 2024)
+
+    // Extract time (HHMMSS.s)
+    if (strlen(tokens[9]) >= 6)
+        sscanf(tokens[9], "%2d%2d%2d", &hour, &minute, &second);
 }

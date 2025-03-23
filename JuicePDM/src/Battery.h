@@ -1,4 +1,4 @@
-/*  Display.h LCD variables, functions and data handling.
+/*  Battery.h Battery charging variables, functions and data handling.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     This work is licensed under the Creative Commons 
@@ -28,29 +28,31 @@
     other dealings in the software.
 */
 
-#ifndef Display_H
-#define Display_H
+#ifndef Battery_H
+#define Battery_H
 
 #include <Globals.h>
-#include <TFT_eSPI.h>
-#include <synapse.h>
-#include <NotoSansBold15.h>
+#include <SparkFunBQ27441.h>
 
-#define USE_DMA_TO_TFT
+/// @brief Battery capacity in mAh
+const uint16_t BATTERY_CAPACITY = 2000;
 
-/// @brief Flag to denote if the background has been drawn
-extern bool backgroundDrawn;
+/// @brief Lowest operational voltage in mV
+const uint16_t TERMINATE_VOLTAGE = 3000;
 
-/// @brief Counter for splash screen delay
-extern long splashCounter;
+/// @brief Termination current. T4056 uses a C/10 Charge Termination. With a 1.2K current setting resistor, this would be 100mA.
+const uint16_t TAPER_CURRENT = 100;
 
-/// @brief Initialise LCD
-void InitialiseDisplay();
+/// @brief Battery state of charge (%)
+extern int SOC;
 
-/// @brief Draw the initial background
-void DrawBackground();
+/// @brief Initialises battery SOC reading
+void InitialiseBattery();
 
-/// @brief Update the display
-void UpdateDisplay();
+/// @brief Debug battery status
+void printBatteryStats();
+
+/// @brief Manages the backup battery
+void ManageBattery();
 
 #endif

@@ -33,14 +33,7 @@
 ChannelConfigUnion ChannelConfigData;
 ChannelConfig Channels[NUM_CHANNELS];
 AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
-uint32_t task0Timer;
-uint32_t task1Timer;
-uint32_t task2Timer;
-uint32_t task3Timer;
-uint32_t task4Timer;
-uint32_t debugTimer;
 uint32_t imuWWtimer;
-uint32_t GPStimer;
 uint32_t LogTimer;
 
 // SPI 2
@@ -57,7 +50,14 @@ void InitialiseChannelData()
     Channels[i].Enabled = false;
     Channels[i].OutputControlPin = channelOutputPins[i];
     Channels[i].CurrentSensePin = channelCurrentSensePins[i];
-    Channels[i].InputControlPin = DIchannelInputPins[0];
+    if (i < NUM_DI_CHANNELS)
+    {
+      Channels[i].InputControlPin = DIchannelInputPins[i];
+    }
+    else
+    {
+      Channels[i].InputControlPin = ANAchannelInputPins[i - NUM_DI_CHANNELS];
+    }    
     Channels[i].CurrentLimitHigh = CURRENT_MAX;
     Channels[i].CurrentThresholdHigh = CURRENT_MAX;
     Channels[i].CurrentThresholdLow = 0.0;

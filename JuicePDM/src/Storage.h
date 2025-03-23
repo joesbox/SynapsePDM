@@ -41,16 +41,30 @@
 #include <M95640R.h>
 #include <GSM.h>
 #include <CircularBuffer.hpp>
+#include <StreamUtils.h>
+#include <stm32f407xx.h>
+#include <OutputHandler.h>
+
+extern SD_HandleTypeDef hsd;
 
 // SPI clock speed for the EEPROM
 #define EEPROM_SPI_SPEED 4000000
 
+// Block size for SD writes
+#define BUFFER_SIZE 4096
+
+// SD clock divider
+#define SD_CLK_DIV 0x08
+
+extern long startMillis;
+extern long endMillis;
+
 /// @brief Storage parameters structure
 struct __attribute__((packed)) StorageParameters
 {
-  char LogFileNames[23][10]; // List of currently stored log files
+  char LogFileNames[10][24]; // List of currently stored log files
   uint32_t MaxLogLength;     // Max number of log lines
-  uint8_t LogFrequency;      // Log frequency in Hz. Max. rate of 10Hz
+  uint8_t LogFrequency;      // Log frequency in Hz.
 };
 
 /// @brief Storage parameters
@@ -67,7 +81,7 @@ union StorageConfigUnion
 extern StorageConfigUnion StorageConfigData;
 
 /// @brief Log file object
-extern File myfile;
+extern File dataFile;
 
 /// @brief Current log file name in use
 extern char fileName[];
@@ -76,7 +90,7 @@ extern char fileName[];
 extern char fileHeader[];
 
 /// @brief Accumulative bytes stored in a given log file
-extern int BytesStored;
+extern uint32_t BytesStored;
 
 /// @brief SD card was initialised at power on
 extern bool SDInit;
@@ -119,5 +133,8 @@ void LogData();
 
 /// @brief End the SD logging
 void SleepSD();
+
+/// @brief Closes the current SD file and ends the SD session
+void CloseSDFile();
 
 #endif

@@ -34,11 +34,35 @@
 #include <Arduino.h>
 #include <Globals.h>
 
+enum SIM7600Commands
+{
+  GPS,              // Retrieve GPS data
+  HTTP,             // Perform HTTP GET request
+  SMS,              // Send SMS
+  MQTT,             // MQTT commands
+  MQTT_PUBLISH,     // Publish MQTT message
+  MQTT_SUBSCRIBE,   // Subscribe to MQTT topic
+  MQTT_UNSUBSCRIBE, // Unsubscribe from MQTT topic
+  MQTT_CONNECT,     // Connect to MQTT server
+  MQTT_DISCONNECT,  // Disconnect from MQTT server
+  MQTT_PING,        // Ping MQTT server
+  MQTT_STATUS,      // Get MQTT status
+};
+
 /// @brief Initialise GSM/GPS
 void InitialiseGSM(bool enableData);
 
-/// @brief Update GPS info. Called periodically
-void UpdateGPS();
+void UpdateSIM7600(SIM7600Commands command);
+
+/// @brief Parse GPS response data
+/// @param response Response data
+void parseGPSData(const char *response);
+
+/// @brief GPS fix flag
+extern bool GPSFix;
+
+/// @brief Data connected flag
+extern bool dataConnected;
 
 /// @brief GPS Latitude
 extern float lat;
@@ -58,7 +82,7 @@ extern float accuracy;
 /// @brief GPS Visible satellites
 extern int vsat;
 
-/// @brief GPS Used satelites
+/// @brief GPS Used satellites
 extern int usat;
 
 /// @brief GPS Year
@@ -79,4 +103,4 @@ extern int minute;
 /// @brief GPS Second
 extern int second;
 
-#endif
+#endif // GSM_H

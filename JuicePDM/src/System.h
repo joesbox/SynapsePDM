@@ -66,6 +66,9 @@ struct __attribute__((packed)) SystemParameters
   uint32_t IMUwakeWindow;         // Wake window for the IMU to determine if something needs to be done or go back to sleep
   SpeedUnits SpeedUnitPref;       // Speed units.
   DistanceUnits DistanceUnitPref; // Distance units.
+  bool AllowData;                 // Allow mobile data
+  bool AllowGPS;                  // Allow GPS
+  bool GPSFastBaud;               // Fast baud has been configured for the SIM module
 };
 
 /// @brief System parameters
@@ -105,7 +108,7 @@ void IMUWake();
 /// @brief Initialise system I/O and sleep functions
 void InitialiseSystem();
 
-/// @brief Initialise system data to known 
+/// @brief Initialise system data to known
 void InitialiseSystemData();
 
 /// @brief Updates the system parameters

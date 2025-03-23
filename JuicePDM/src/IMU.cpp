@@ -45,9 +45,7 @@ void InitialiseIMU()
 {
   IMUOK = false;
   int8_t err = BMI2_OK;
-  Wire.setSCL(PB6);
-  Wire.setSDA(PB7);
-  Wire.begin();
+
 
   IMUOK = !imu.beginI2C(BMI2_I2C_PRIM_ADDR);
 
@@ -55,6 +53,26 @@ void InitialiseIMU()
   err |= imu.enableFeature(BMI2_ACCEL);
   err |= imu.enableFeature(BMI2_GYRO);
   err |= imu.enableFeature(BMI2_ANY_MOTION);
+
+  // Set accelerometer config
+  bmi2_sens_config accelConfig;
+  accelConfig.type = BMI2_ACCEL;
+  accelConfig.cfg.acc.odr = BMI2_ACC_ODR_50HZ;
+  accelConfig.cfg.acc.bwp = BMI2_ACC_OSR4_AVG1;
+  accelConfig.cfg.acc.filter_perf = BMI2_PERF_OPT_MODE;
+  accelConfig.cfg.acc.range = BMI2_ACC_RANGE_2G;
+  err = imu.setConfig(accelConfig);
+
+  // Set gyroscope config
+  bmi2_sens_config gyroConfig;
+  gyroConfig.type = BMI2_GYRO;
+  gyroConfig.cfg.gyr.odr = BMI2_GYR_ODR_50HZ;
+  gyroConfig.cfg.gyr.bwp = BMI2_GYR_OSR4_MODE;
+  gyroConfig.cfg.gyr.filter_perf = BMI2_PERF_OPT_MODE;
+  gyroConfig.cfg.gyr.ois_range = BMI2_GYR_OIS_250;
+  gyroConfig.cfg.gyr.range = BMI2_GYR_RANGE_125;
+  gyroConfig.cfg.gyr.noise_perf = BMI2_PERF_OPT_MODE;
+  err = imu.setConfig(gyroConfig);
 
   IMUOK = !err;
 }
@@ -75,11 +93,6 @@ void EnableMotionDetect()
 {
   int8_t err = BMI2_OK;
 
-  // .duration  - 5 = 20ms
-  // .threshold - 170 = 83mg
-  // .select_x  - Enabled
-  // .select_y  - Enabled
-  // .select_z  - Enabled
   bmi2_sens_config anyMotionConfig;
   anyMotionConfig.type = BMI2_ANY_MOTION;
   anyMotionConfig.cfg.any_motion.duration = 1;
@@ -99,12 +112,6 @@ void EnableMotionDetect()
   err |= imu.setInterruptPinConfig(intPinConfig);
   err |= imu.mapInterruptToPin(BMI2_ANY_MOTION_INT, BMI2_INT1);
   IMUOK = !err;
-
-#ifdef DEBUG
-  Serial.print("Set IMU config: ");
-  Serial.println(err);
-  delay(100);
-#endif
 }
 
 void DisableMotionDetect()

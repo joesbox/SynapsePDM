@@ -64,16 +64,35 @@ void InitialiseSystem()
     analogReadResolution(12);
 
     WakeSystem();
-    pinMode(PA15, OUTPUT);
+
+    // Debug pin
+    pinMode(DEBUG_PIN, OUTPUT);
+
+    // Spare I/O as inputs
+    pinMode(PA8, INPUT);    
+    pinMode(PC13, INPUT);
+    pinMode(PD10, INPUT);
+    pinMode(PD10, INPUT);
+    pinMode(PD11, INPUT);
+    pinMode(PD12, INPUT);
+    pinMode(PD13, INPUT);
+    pinMode(PD15, INPUT);
+    pinMode(PE6, INPUT);
+    pinMode(PG7, INPUT);
+    pinMode(PG8, INPUT);
 
     // SPI
     pinMode(CS1, OUTPUT);
     pinMode(CS2, OUTPUT);
     digitalWrite(CS1, HIGH);
     digitalWrite(CS2, HIGH);
-    SPI_2.begin();
 
     RTCSet = false;
+
+    // I2C
+    Wire.setSCL(PB6);
+    Wire.setSDA(PB7);
+    Wire.begin();
 }
 
 void InitialiseSystemData()
@@ -82,9 +101,6 @@ void InitialiseSystemData()
    SystemParams.CANResEnabled = true;
    SystemParams.CANAddress = ECU_ADDR;
    SystemParams.IMUwakeWindow = DEFAULT_WW;
- 
-   StorageParams.LogFrequency = DEFAULT_LOG_FREQUENCY;  
-   StorageParams.MaxLogLength = DEFAULT_LOG_LINES;
 }
 
 
@@ -117,11 +133,11 @@ void UpdateSystem()
     // Check battery voltage
     if (SystemParams.VBatt <= LOGGING_VBATT_THRESHOLD)
     {
-        SystemParams.ErrorFlags |= UNDERVOLTGAGE;
+        SystemParams.ErrorFlags |= UNDERVOLTAGE;
     }
     else
     {
-        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~UNDERVOLTGAGE;
+        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~UNDERVOLTAGE;
     }
 
     // Check current limit
@@ -153,6 +169,8 @@ void UpdateSystem()
     {
         SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~SDCARD_ERROR;
     }
+
+    // Check 
 }
 
 void SleepSystem()
