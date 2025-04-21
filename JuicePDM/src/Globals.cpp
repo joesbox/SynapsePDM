@@ -33,13 +33,23 @@
 ChannelConfigUnion ChannelConfigData;
 ChannelConfig Channels[NUM_CHANNELS];
 AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
+
 uint32_t imuWWtimer;
+uint32_t DisplayTimer;
+uint32_t CommsTimer;
+uint32_t BattTimer;
 uint32_t LogTimer;
+uint32_t GPSTimer;
+
+uint8_t RTCyear;
+uint8_t RTCmonth;
+uint8_t RTCday;
+uint8_t RTChour;
+uint8_t RTCminute;
+uint8_t RTCsecond;
 
 // SPI 2
 SPIClass SPI_2(PICO, POCI, SCK2);
-
-DMA_HandleTypeDef hdma_tx;
 
 void InitialiseChannelData()
 {

@@ -29,16 +29,18 @@
 enum ChannelType
 {
   DIG,         // Digital input
-  PWM,         // Pulse width modulation
+  DIG_PWM,     // Digital input, PWM output
   ANA,         // Analogue input (threshold based)
-  CAN_DIGITAL, // CAN bus controlled digital output  
-  CAN_PWM,     // CAN bus controlled PWM output
+  ANA_PWM,     // Analogue input, PWM output (scaled)
+  CAN_DIGITAL, // CAN bus controlled digital output
+  CAN_PWM      // CAN bus controlled PWM output
 };
 
 /// @brief Channel config structure
 struct __attribute__((packed)) ChannelConfig
 {
   ChannelType ChanType;       // Channel type
+  uint8_t PWMSetDuty;         // Current duty set percentage
   uint8_t Enabled;            // Channel enabled flag
   char ChannelName[3];        // Channel name
   volatile int AnalogRaw;     // Raw analog value. Used for calibration

@@ -59,7 +59,8 @@ void HandleInputs()
     {
         switch (Channels[i].ChanType)
         {
-        case DIG:        
+        case DIG:     
+        case DIG_PWM:   
             Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
             break;
         default:

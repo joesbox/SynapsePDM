@@ -69,21 +69,26 @@ void UpdateSIM7600(SIM7600Commands command)
     memset(simBuffer, 0, sizeof(simBuffer));
     size_t bytesRead = 0;
 
-    Serial.print("Available bytes: ");
-    Serial.println(Serial1.available());
-
     unsigned long startTime = millis();
-    while (millis() - startTime < 500)
-    { // Wait up to 500 millis
-        while (Serial1.available() && bytesRead < sizeof(simBuffer) - 1)
+    /*// while (millis() - startTime < 250)
+    //{ // Wait up to 500 millis
+    while (Serial1.available() && bytesRead < sizeof(simBuffer) - 1)
+    {
+        bytesRead += Serial1.readBytes(simBuffer + bytesRead, sizeof(simBuffer) - bytesRead - 1);
+    }
+    //}*/
+
+    while (Serial1.available())
+    {
+        if (bytesRead < sizeof(simBuffer) - 1)
         {
-            bytesRead += Serial1.readBytes(simBuffer + bytesRead, sizeof(simBuffer) - bytesRead - 1);
+            simBuffer[bytesRead++] = Serial1.read();
         }
     }
-    Serial.print(SIM7600State);
-    Serial.print(": ");
-    Serial.print("SIM7600 Buffer: ");
+    Serial.print("GpS buffer: ");
     Serial.println(simBuffer);
+    Serial.print("Read GPS bytes time: ");
+    Serial.println(millis() - startTime);
 
     switch (SIM7600State)
     {

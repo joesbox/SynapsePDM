@@ -1,0 +1,79 @@
+14:51:47.718 > Initializing SIM7600G...
+14:51:48.023 > Enabling DMA: 1
+14:51:48.134 > System checksum read: 28E0F0AF, at index: 676
+14:51:48.135 > EEPROM status register: 0
+14:51:50.236 > Channel Checksum written: 35815177, at index: 644
+14:51:50.236 > EEPROM status register: 3
+14:51:50.248 > Storage checksum read: A45EF6FF, at index: 925
+14:51:50.248 > EEPROM status register: 0
+14:51:51.046 > Storage Checksum written: 386FB2A2, at index: 925
+14:51:51.047 > EEPROM status register: 3
+14:51:51.289 > SD Card begin OK: 1
+14:51:52.087 > Storage Checksum written: A45EF6C0, at index: 925
+14:51:52.090 > EEPROM status register: 3
+14:51:52.112 > SD Card init complete.
+14:51:53.402 > Line count: 1
+14:51:53.403 > Bytes stored: 2430
+14:51:53.436 > Available bytes: 0
+14:51:53.935 > 0: SIM7600 Buffer: 
+14:51:53.938 > Log file bytes stored: 2430
+14:51:54.403 > Line count: 2
+14:51:54.404 > Bytes stored: 2923
+14:51:54.436 > Available bytes: 0
+14:51:54.936 > 0: SIM7600 Buffer: 
+14:51:54.939 > Log file bytes stored: 2923
+14:51:56.085 > Line count: 3
+14:51:56.085 > Bytes stored: 3416
+14:51:56.118 > Available bytes: 0
+14:51:56.617 > 0: SIM7600 Buffer: 
+14:51:56.620 > Log file bytes stored: 3416
+14:51:57.085 > Line count: 4
+14:51:57.087 > Bytes stored: 3909
+14:51:57.118 > Available bytes: 0
+14:51:57.618 > 0: SIM7600 Buffer: 
+14:51:57.621 > Log file bytes stored: 3909
+14:51:58.086 > Line count: 5
+14:51:58.087 > Bytes stored: 4402
+14:51:58.119 > Available bytes: 0
+14:51:58.619 > 0: SIM7600 Buffer: 
+14:51:58.622 > Log file bytes stored: 4402
+14:51:59.087 > Line count: 6
+14:51:59.088 > Bytes stored: 4895
+14:51:59.119 > Available bytes: 0
+14:51:59.620 > 0: SIM7600 Buffer: 
+14:51:59.623 > Log file bytes stored: 4895
+14:52:00.087 > Line count: 7
+14:52:00.088 > Bytes stored: 5388
+14:52:00.121 > Available bytes: 0
+14:52:00.621 > 0: SIM7600 Buffer: 
+14:52:00.624 > Log file bytes stored: 5388
+14:52:01.089 > Line count: 8
+14:52:01.090 > Bytes stored: 5881
+14:52:01.121 > Available bytes: 0
+14:52:04.222 > 0: SIM7600 Buffer: 
+14:52:04.222 > RDY
+14:52:04.222 > 
+14:52:04.222 > +CPIN: READY
+14:52:04.222 > 
+14:52:04.222 > SMS DONE
+14:52:04.222 > 
+14:52:04.222 > PB DONE
+14:52:04.222 > 
+14:52:04.225 > Log file bytes stored: 5881
+14:52:04.566 > Line count: 9
+14:52:04.568 > Bytes stored: 6375
+14:52:04.600 > Available bytes: 9
+14:52:05.599 > 1: SIM7600 Buffer: AT
+14:52:05.599 > OK
+14:52:05.599 > 
+14:52:05.602 > Log file bytes stored: 6375
+14:52:05.945 > Line count: 10
+14:52:05.945 > Bytes stored: 6868
+14:52:05.978 > Available bytes: 19
+14:52:06.977 > 2: SIM7600 Buffer: AT+CGPS=1
+14:52:06.978 > ERROR
+14:52:06.978 > 
+14:52:06.980 > Log file bytes stored: 6868
+14:52:07.322 > Line count: 11
+14:52:07.322 > Bytes stored: 7361
+14:52:07.355 > Available bytes: 50

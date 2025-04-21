@@ -1,0 +1,250 @@
+14:41:24.194 > Initializing SIM7600G...
+14:41:24.499 > Enabling DMA: 1
+14:41:24.611 > System checksum read: 28E0F0AF, at index: 676
+14:41:24.611 > EEPROM status register: 0
+14:41:26.713 > Channel Checksum written: 35815177, at index: 644
+14:41:26.713 > EEPROM status register: 3
+14:41:26.725 > Storage checksum read: 6F8A94FF, at index: 925
+14:41:26.726 > EEPROM status register: 0
+14:41:27.522 > Storage Checksum written: 386FB2A2, at index: 925
+14:41:27.523 > EEPROM status register: 3
+14:41:27.733 > SD Card begin OK: 1
+14:41:28.534 > Storage Checksum written: A45EF6C0, at index: 925
+14:41:28.537 > EEPROM status register: 3
+14:41:28.550 > SD Card init complete.
+14:41:29.840 > Line count: 1
+14:41:29.841 > Bytes stored: 2430
+14:41:29.875 > Available bytes: 0
+14:41:30.376 > 0: SIM7600 Buffer: 
+14:41:30.378 > Log file bytes stored: 2430
+14:41:30.840 > Line count: 2
+14:41:30.840 > Bytes stored: 2923
+14:41:30.870 > Available bytes: 0
+14:41:31.370 > 0: SIM7600 Buffer: 
+14:41:31.373 > Log file bytes stored: 2923
+14:41:32.521 > Line count: 3
+14:41:32.521 > Bytes stored: 3416
+14:41:32.551 > Available bytes: 0
+14:41:33.051 > 0: SIM7600 Buffer: 
+14:41:33.054 > Log file bytes stored: 3416
+14:41:33.522 > Line count: 4
+14:41:33.523 > Bytes stored: 3909
+14:41:33.554 > Available bytes: 0
+14:41:34.054 > 0: SIM7600 Buffer: 
+14:41:34.057 > Log file bytes stored: 3909
+14:41:34.523 > Line count: 5
+14:41:34.523 > Bytes stored: 4402
+14:41:34.555 > Available bytes: 0
+14:41:35.055 > 0: SIM7600 Buffer: 
+14:41:35.058 > Log file bytes stored: 4402
+14:41:35.524 > Line count: 6
+14:41:35.524 > Bytes stored: 4895
+14:41:35.555 > Available bytes: 0
+14:41:36.055 > 0: SIM7600 Buffer: 
+14:41:36.058 > Log file bytes stored: 4895
+14:41:36.525 > Line count: 7
+14:41:36.525 > Bytes stored: 5388
+14:41:36.557 > Available bytes: 0
+14:41:37.056 > 0: SIM7600 Buffer: 
+14:41:37.059 > Log file bytes stored: 5388
+14:41:37.526 > Line count: 8
+14:41:37.526 > Bytes stored: 5881
+14:41:37.555 > Available bytes: 0
+14:41:40.710 > 0: SIM7600 Buffer: 
+14:41:40.710 > RDY
+14:41:40.710 > 
+14:41:40.710 > +CPIN: READY
+14:41:40.710 > 
+14:41:40.710 > SMS DONE
+14:41:40.710 > 
+14:41:40.710 > PB DONE
+14:41:40.710 > 
+14:41:40.713 > Log file bytes stored: 5881
+14:41:41.054 > Line count: 9
+14:41:41.054 > Bytes stored: 6373
+14:41:41.085 > Available bytes: 9
+14:41:42.085 > 1: SIM7600 Buffer: AT
+14:41:42.086 > OK
+14:41:42.086 > 
+14:41:42.088 > Log file bytes stored: 6373
+14:41:42.429 > Line count: 10
+14:41:42.430 > Bytes stored: 6866
+14:41:42.459 > Available bytes: 19
+14:41:43.459 > 2: SIM7600 Buffer: AT+CGPS=1
+14:41:43.459 > ERROR
+14:41:43.459 > 
+14:41:43.462 > Log file bytes stored: 6866
+14:41:43.803 > Line count: 11
+14:41:43.803 > Bytes stored: 7359
+14:41:43.836 > Available bytes: 50
+14:41:44.835 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:44.835 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+14:41:44.835 > 
+14:41:44.835 > OK
+14:41:44.835 > 
+14:41:44.835 > Incomplete GPS data
+14:41:44.838 > Log file bytes stored: 7359
+14:41:45.179 > Line count: 12
+14:41:45.179 > Bytes stored: 7852
+14:41:45.212 > Available bytes: 50
+14:41:46.211 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:46.211 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+14:41:46.211 > 
+14:41:46.211 > OK
+14:41:46.211 > 
+14:41:46.211 > Incomplete GPS data
+14:41:46.214 > Log file bytes stored: 7852
+14:41:46.555 > Line count: 13
+14:41:46.556 > Bytes stored: 8345
+14:41:46.585 > Available bytes: 50
+14:41:47.584 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:47.586 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+14:41:47.586 > 
+14:41:47.586 > OK
+14:41:47.586 > 
+14:41:47.586 > Incomplete GPS data
+14:41:47.588 > Log file bytes stored: 8345
+14:41:47.929 > Line count: 14
+14:41:47.929 > Bytes stored: 8838
+14:41:47.959 > Available bytes: 50
+14:41:48.959 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:48.959 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+14:41:48.959 > 
+14:41:48.959 > OK
+14:41:48.959 > 
+14:41:48.959 > Incomplete GPS data
+14:41:48.962 > Log file bytes stored: 8838
+14:41:49.303 > Line count: 15
+14:41:49.303 > Bytes stored: 9331
+14:41:49.335 > Available bytes: 50
+14:41:50.335 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:50.335 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+14:41:50.335 > 
+14:41:50.335 > OK
+14:41:50.335 > 
+14:41:50.335 > Incomplete GPS data
+14:41:50.337 > Log file bytes stored: 9331
+14:41:50.679 > Line count: 16
+14:41:50.680 > Bytes stored: 9824
+14:41:50.709 > Available bytes: 50
+14:41:51.709 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:51.710 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+14:41:51.710 > 
+14:41:51.710 > OK
+14:41:51.710 > 
+14:41:51.710 > Incomplete GPS data
+14:41:51.712 > Log file bytes stored: 9824
+14:41:52.052 > Line count: 17
+14:41:52.053 > Bytes stored: 10317
+14:41:52.082 > Available bytes: 50
+14:41:53.083 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:53.083 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+14:41:53.083 > 
+14:41:53.083 > OK
+14:41:53.083 > 
+14:41:53.083 > Incomplete GPS data
+14:41:53.086 > Log file bytes stored: 10317
+14:41:53.427 > Line count: 18
+14:41:53.427 > Bytes stored: 10810
+14:41:53.459 > Available bytes: 50
+14:41:54.459 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:54.460 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+14:41:54.460 > 
+14:41:54.460 > OK
+14:41:54.460 > 
+14:41:54.460 > Incomplete GPS data
+14:41:54.461 > Log file bytes stored: 10810
+14:41:54.803 > Line count: 19
+14:41:54.803 > Bytes stored: 11303
+14:41:54.835 > Available bytes: 50
+14:41:55.835 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:55.835 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+14:41:55.835 > 
+14:41:55.835 > OK
+14:41:55.835 > 
+14:41:55.835 > Incomplete GPS data
+14:41:55.838 > Log file bytes stored: 11303
+14:41:56.179 > Line count: 20
+14:41:56.179 > Bytes stored: 11796
+14:41:56.209 > Available bytes: 112
+14:41:57.208 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:57.209 > +CGNSSINFO: 2,06,00,00,5239.907099,N,00035.059692,W,180425,134200.0,42.3,0.0,,1.7,1.5,0.9
+14:41:57.209 > 
+14:41:57.209 > OK
+14:41:57.209 > 
+14:41:57.212 > Log file bytes stored: 11796
+14:41:57.553 > Line count: 21
+14:41:57.554 > Bytes stored: 12292
+14:41:57.585 > Available bytes: 112
+14:41:58.585 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:58.585 > +CGNSSINFO: 2,06,00,00,5239.907909,N,00035.060903,W,180425,134201.0,38.5,0.0,,1.7,1.5,0.9
+14:41:58.585 > 
+14:41:58.585 > OK
+14:41:58.585 > 
+14:41:58.588 > Log file bytes stored: 12292
+14:41:58.929 > Line count: 22
+14:41:58.930 > Bytes stored: 12788
+14:41:58.961 > Available bytes: 112
+14:41:59.960 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:41:59.960 > +CGNSSINFO: 2,06,00,00,5239.908422,N,00035.061143,W,180425,134202.0,38.5,0.0,,1.7,1.5,0.9
+14:41:59.960 > 
+14:41:59.960 > OK
+14:41:59.960 > 
+14:41:59.963 > Log file bytes stored: 12788
+14:42:00.306 > Line count: 23
+14:42:00.306 > Bytes stored: 13284
+14:42:00.336 > Available bytes: 112
+14:42:01.335 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:42:01.336 > +CGNSSINFO: 2,06,00,00,5239.906989,N,00035.059350,W,180425,134204.0,42.1,0.0,,1.7,1.5,0.9
+14:42:01.336 > 
+14:42:01.336 > OK
+14:42:01.336 > 
+14:42:01.339 > Log file bytes stored: 13284
+14:42:01.680 > Line count: 24
+14:42:01.681 > Bytes stored: 13780
+14:42:01.710 > Available bytes: 112
+14:42:02.710 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:42:02.711 > +CGNSSINFO: 2,06,00,00,5239.906390,N,00035.059284,W,180425,134205.0,43.0,0.0,,1.7,1.5,0.9
+14:42:02.711 > 
+14:42:02.711 > OK
+14:42:02.711 > 
+14:42:02.713 > Log file bytes stored: 13780
+14:42:03.056 > Line count: 25
+14:42:03.056 > Bytes stored: 14277
+14:42:03.086 > Available bytes: 112
+14:42:04.085 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:42:04.085 > +CGNSSINFO: 2,06,00,00,5239.907450,N,00035.060368,W,180425,134206.0,42.3,0.0,,1.7,1.5,0.9
+14:42:04.085 > 
+14:42:04.085 > OK
+14:42:04.085 > 
+14:42:04.088 > Log file bytes stored: 14277
+14:42:04.429 > Line count: 26
+14:42:04.429 > Bytes stored: 14773
+14:42:04.459 > Available bytes: 112
+14:42:05.459 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:42:05.460 > +CGNSSINFO: 2,06,03,00,5239.907915,N,00035.061663,W,180425,134208.0,41.5,0.0,,1.5,1.2,0.8
+14:42:05.460 > 
+14:42:05.460 > OK
+14:42:05.460 > 
+14:42:05.463 > Log file bytes stored: 14773
+14:42:05.805 > Line count: 27
+14:42:05.805 > Bytes stored: 15269
+14:42:05.837 > Available bytes: 112
+14:42:06.837 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:42:06.838 > +CGNSSINFO: 2,06,03,00,5239.908450,N,00035.062772,W,180425,134209.0,40.6,0.0,,1.5,1.2,0.8
+14:42:06.838 > 
+14:42:06.838 > OK
+14:42:06.838 > 
+14:42:06.841 > Log file bytes stored: 15269
+14:42:07.181 > Line count: 28
+14:42:07.182 > Bytes stored: 15765
+14:42:07.211 > Available bytes: 112
+14:42:08.210 > 2: SIM7600 Buffer: AT+CGNSSINFO
+14:42:08.211 > +CGNSSINFO: 2,06,03,00,5239.909396,N,00035.063624,W,180425,134211.0,39.3,0.0,,1.5,1.2,0.8
+14:42:08.211 > 
+14:42:08.211 > OK
+14:42:08.211 > 
+14:42:08.214 > Log file bytes stored: 15765
+14:42:08.556 > Line count: 29
+14:42:08.557 > Bytes stored: 16261
+14:42:08.586 > Available bytes: 112

@@ -50,6 +50,20 @@ extern HardwareTimer *channelTimer;
 /// @brief Setup interrupts and analog read timers
 void InitialiseOutputs();
 
+/// @brief Setup GPIO for outputs. Push-pull, no pullups.
+void setupGPIO();
+
+/// @brief Configure DMA. Memory -> peripheral to set BSRR.
+void configureDMA();
+
+/// @brief Configure two timers to trigger DMA.
+void configureTimer();
+
+/// @brief Update duty cycle
+/// @param pinIndex Pin index
+/// @param dutyCycle Duty cycle in percentage (0 - 100)
+void updatePWMDutyCycle(uint8_t pinIndex, uint8_t dutyCycle);
+
 /// @brief Set PWM or digital outputs
 void UpdateOutputs();
 

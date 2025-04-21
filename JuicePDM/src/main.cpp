@@ -46,122 +46,48 @@
 #include <SerialComms.h>
 #include <GSM.h>
 #include <Display.h>
-#include <TaskScheduler.h>
 #include <Battery.h>
 
-void t1Callback();
-void t2Callback();
-void t3Callback();
-void t4Callback();
-void t5Callback();
-void GPSCallback();
-void LogCallback();
-void Debug();
-
-STM32RTC &rtc1 = STM32RTC::getInstance();
-
-Scheduler runner;
-
-Task t1(TASK_1_INTERVAL, TASK_FOREVER, &t1Callback);
-Task t2(TASK_2_INTERVAL, TASK_FOREVER, &t2Callback);
-Task t3(TASK_3_INTERVAL, TASK_FOREVER, &t3Callback);
-Task t4(TASK_4_INTERVAL, TASK_FOREVER, &t4Callback);
-Task t5(TASK_5_INTERVAL, TASK_FOREVER, &t5Callback);
-Task GPSTask(GPS_INTERVAL, TASK_FOREVER, &GPSCallback);
-Task LogTask(((1.0 / (float)DEFAULT_LOG_FREQUENCY) * 1000.0), TASK_FOREVER, &LogCallback);
-Task DebugTask(DEBUG_INTERVAL, TASK_FOREVER, &Debug);
+STM32RTC &rtc = STM32RTC::getInstance();
 
 constexpr int SPLASH_SCREEN_DELAY = 2000;
 constexpr int RTC_YEAR_THRESHOLD = 24;
 
-void t1Callback()
-{
-}
-
-void t2Callback()
-{
-  // Update channel outputs
-  //UpdateOutputs();
-
-  // Read input channel status
-  HandleInputs();
-
-  UpdateDisplay();
-}
-
-void t3Callback()
-{
-  UpdateSystem();
-}
-
-void t4Callback()
-{  
-  //CheckSerial();
-}
-
-void t5Callback()
-{
-  ManageBattery();
-}
-
-void GPSCallback()
-{
-  UpdateSIM7600(GPS);
-  ReadIMU();
-}
-
-void LogCallback()
-{
-  if (!RTCSet && year > RTC_YEAR_THRESHOLD)
-  {
-    RTCSet = true;
-    // GPS time must be updated, use that
-    rtc1.setDate(day, month, (year % 100));
-    rtc1.setTime(hour, minute, second);
-    InitialiseSD();
-  }
-  else if (RTCSet)
-  {
-    // RTC is set. Log SD card data
-    LogData();
-  }
-}
-
 void Debug()
 {
 #ifdef DEBUG
- /* Serial.print("System temperature: ");
-  Serial.println(SystemParams.SystemTemperature);
-  Serial.print("System error flags: ");
-  Serial.println(SystemParams.ErrorFlags);
-  Serial.print("System voltage: ");
-  Serial.println(SystemParams.VBatt);
-  Serial.print("Log interval: ");
-  Serial.println(LogTask.getInterval());
-  Serial.print("RTC Set: ");
-  Serial.println(RTCSet);
-  Serial.print("System date: ");
-  Serial.print(rtc1.getYear());
-  Serial.print("-");
-  Serial.print(rtc1.getMonth());
-  Serial.print("-");
-  Serial.println(rtc1.getDay());
-  Serial.print("System time: ");
-  Serial.print(rtc1.getHours());
-  Serial.print(":");
-  Serial.print(rtc1.getMinutes());
-  Serial.print(":");
-  Serial.println(rtc1.getSeconds());
-  Serial.print("System CRC Valid: ");
-  Serial.println(SystemCRCValid);
-  Serial.print("Channel CRC Valid: ");
-  Serial.println(ChannelCRCValid);
-  Serial.print("Storage CRC Valid: ");
-  Serial.println(StorageCRCValid);
-  Serial.print("Power state: ");
-  Serial.println(PowerState);
-  Serial.print("System error flags: ");
-  Serial.println(SystemParams.ErrorFlags, HEX);*/
+  /* Serial.print("System temperature: ");
+   Serial.println(SystemParams.SystemTemperature);
+   Serial.print("System error flags: ");
+   Serial.println(SystemParams.ErrorFlags);
+   Serial.print("System voltage: ");
+   Serial.println(SystemParams.VBatt);
+   Serial.print("Log interval: ");
+   Serial.println(LogTask.getInterval());
+   Serial.print("RTC Set: ");
+   Serial.println(RTCSet);
+   Serial.print("System date: ");
+   Serial.print(rtc.getYear());
+   Serial.print("-");
+   Serial.print(rtc.getMonth());
+   Serial.print("-");
+   Serial.println(rtc.getDay());
+   Serial.print("System time: ");
+   Serial.print(rtc.getHours());
+   Serial.print(":");
+   Serial.print(rtc.getMinutes());
+   Serial.print(":");
+   Serial.println(rtc.getSeconds());
+   Serial.print("System CRC Valid: ");
+   Serial.println(SystemCRCValid);
+   Serial.print("Channel CRC Valid: ");
+   Serial.println(ChannelCRCValid);
+   Serial.print("Storage CRC Valid: ");
+   Serial.println(StorageCRCValid);
+   Serial.print("Power state: ");
+   Serial.println(PowerState);
+   Serial.print("System error flags: ");
+   Serial.println(SystemParams.ErrorFlags, HEX);
   Serial.print("IMU OK: ");
   Serial.println(IMUOK);
 
@@ -210,14 +136,13 @@ void Debug()
 void setup()
 {
   Serial.begin(115200);
-
   while (!Serial)
     ;
   InitialiseSystem();
   InitialiseGSM(false);
   analogWrite(TFT_BL, 0);
-  rtc1.setClockSource(STM32RTC::LSE_CLOCK);
-  rtc1.begin();
+  rtc.setClockSource(STM32RTC::LSE_CLOCK);
+  rtc.begin();
   InitialiseSerial();
   InitialiseOutputs();
   InitialiseInputs();
@@ -254,42 +179,21 @@ void setup()
   }
 
   // Only initialise the SD card if we've got an accurate RTC
-  if (rtc1.isTimeSet() && rtc1.getYear() > 24)
+  if (rtc.isTimeSet() && rtc.getYear() > 24)
   {
     InitialiseSD();
     RTCSet = true;
   }
 
   InitialiseIMU();
-
-  LogTimer = ((1.0 / (float)StorageParams.LogFrequency) * 1000.0); // Hz to milliseconds
   PowerState = RUN;
-
-  LogTask.setInterval(LogTimer);
-  t1.setInterval(1);
-  runner.init();
-  runner.addTask(t1);
-  runner.addTask(t2);
-  runner.addTask(t3);
-  runner.addTask(t4);
-  runner.addTask(t5);
-  runner.addTask(GPSTask);
-  runner.addTask(LogTask);
-  runner.addTask(DebugTask);
-  t1.enable();
-  t2.enable();
-  t3.enable();
-  t4.enable();
-  t5.enable();
-  GPSTask.enable();
-  LogTask.enable();
-  DebugTask.enable();
 
   // Display the splash screen for 2 seconds
   splashCounter = millis() + SPLASH_SCREEN_DELAY;
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    strcpy(Channels[i].ChannelName, "FAN");
+    Channels[i].PWMSetDuty = 50;
+    Channels[i].ChanType = DIG_PWM;
   }
 }
 
@@ -344,9 +248,83 @@ void handlePowerState()
   }
 }
 
+uint32_t start;
+
 void loop()
 {
-  runner.execute();  
+
+  if (millis() > DisplayTimer)
+  {
+    DisplayTimer = millis() + DISPLAY_INTERVAL;
+    // Update channel outputs
+    UpdateOutputs();
+
+    // Read input channel status
+    HandleInputs();
+    if (backgroundDrawn)
+    {
+      UpdateDisplay();
+    }
+    UpdateSystem();
+  }
+
+  if (millis() > CommsTimer)
+  {
+    CommsTimer = millis() + COMMS_INTERVAL;
+    // CheckSerial();
+  }
+
+  if (millis() > BattTimer)
+  {
+    BattTimer = millis() + BATTERY_INTERVAL;
+    ManageBattery();
+  }
+
+  if (millis() > LogTimer)
+  {
+    LogTimer = millis() + LOG_INTERVAL;
+    RTCyear = rtc.getYear();
+    RTCmonth = rtc.getMonth();
+    RTCday = rtc.getDay();
+    RTChour = rtc.getHours();
+    RTCminute = rtc.getMinutes();
+    RTCsecond = rtc.getSeconds();
+
+    if (!RTCSet && year > RTC_YEAR_THRESHOLD)
+    {
+      RTCSet = true;
+      // GPS time must be updated, use that
+      rtc.setDate(day, month, (year % 100));
+      rtc.setTime(hour, minute, second);
+      InitialiseSD();
+    }
+    else if (RTCSet)
+    {
+      // RTC is set. Log SD card data
+      start = millis();
+      LogData();
+      Serial.print("Log time: ");
+      Serial.println(millis() - start);
+    }
+  }
+
+  if (millis() > GPSTimer)
+  {
+    GPSTimer = millis() + GPS_INTERVAL;
+    start = millis();
+    UpdateSIM7600(GPS);
+    Serial.print("GPS time: ");
+    Serial.println(millis() - start);
+    start = millis();
+    ReadIMU();
+    Serial.print("IMU time: ");
+    Serial.println(millis() - start);
+    start = millis();
+    Debug();
+    Serial.print("Debug time: ");
+    Serial.println(millis() - start);
+  }
+
   if (millis() > splashCounter && !backgroundDrawn)
   {
     DrawBackground();

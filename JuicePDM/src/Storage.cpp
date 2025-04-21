@@ -30,6 +30,7 @@
 
 #include "Storage.h"
 
+uint16_t bufferIndex = 0;
 StorageConfigUnion StorageConfigData;
 StorageParameters StorageParams;
 uint16_t EEPROMindex;
@@ -43,8 +44,6 @@ bool StorageCRCValid;
 CircularBuffer<String, 10> logs;
 
 uint32_t lineCount;
-
-STM32RTC &rtc2 = STM32RTC::getInstance();
 
 M95640R EEPROMext(&SPI_2, CS1);
 
@@ -252,7 +251,6 @@ bool LoadSystemConfig()
 
 void SaveStorageConfig()
 {
-
     SPI_2.begin();
     if (StorageParams.LogFrequency == 0)
     {
@@ -367,6 +365,20 @@ bool LoadStorageConfig()
     return validCRC;
 }
 
+void CleanEEPROM()
+{
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+    uint8_t dummy[32] = {0xFF};
+    for (int i = 0; i < 256; i++)
+    {
+        EEPROMext.EepromWrite(i, 32, dummy);
+    }
+    EEPROMext.EepromWaitEndWriteOperation();
+    EEPROMext.end();
+    SPI_2.end();
+}
+
 void InitialiseStorageData()
 {
     if (StorageParams.LogFrequency == 0)
@@ -384,6 +396,9 @@ void InitialiseSD()
     // Attempt to begin SD if this is the first init after boot or there was a problem
     if (!SDCardOK)
     {
+        SD.setDx(PC8, PC9, PC10, PC11);
+        SD.setCMD(PD2);
+        SD.setCK(PC12);
         SDCardOK = SD.begin();
         if (!SDCardOK)
         {
@@ -401,7 +416,7 @@ void InitialiseSD()
     if (SDCardOK)
     {
         // Filename format is: YYYY-MM-DD_HH-MM-SS.csv
-        sprintf(fileName, "%04d-%02d-%02d_%02d-%02d-%02d.csv", 2000 + rtc2.getYear(), rtc2.getMonth(), rtc2.getDay(), rtc2.getHours(), rtc2.getMinutes(), rtc2.getSeconds());
+        sprintf(fileName, "%04d-%02d-%02d_%02d-%02d-%02d.csv", (2000 + RTCyear), RTCmonth, RTCday, RTChour, RTCminute, RTCsecond);
 
         // Create new file
         dataFile = SD.open(fileName, FILE_WRITE);
@@ -470,119 +485,122 @@ void InitialiseSD()
     }
 }
 
-#define BUFFER_SIZE 4096 // Adjust buffer size as needed
-char logBuffer[BUFFER_SIZE];
-uint16_t bufferIndex = 0;
-
-void FlushBuffer()
-{
-    // TODO: write to data file periodically returns zero and gets stuck. Find the root cause.
-    int bytesNow = BytesStored;
-    if (bufferIndex > 0)
-    {
-        BytesStored += dataFile.write(logBuffer, bufferIndex);
-        dataFile.flush();
-        bufferIndex = 0;
-
-        if (BytesStored - bytesNow == 0)
-        {
-            Serial.println("SD write error");
-            dataFile.close();
-            InitialiseSD();
-        }
-    }
-}
-
-void AppendToBuffer(const char *data)
-{
-    size_t len = strlen(data);
-    if (bufferIndex + len >= BUFFER_SIZE)
-    {
-        FlushBuffer();
-    }
-    strncpy(logBuffer + bufferIndex, data, len);
-    bufferIndex += len;
-}
-
+extern SD_HandleTypeDef uSdHandle;
 void LogData()
 {
+    char timeStamp[100];
+    char sysLog[150];
+    char channelLog[150];
+    int writtenBytes = 0;
     if (!(SystemParams.ErrorFlags & UNDERVOLTAGE) && SDCardOK)
     {
         // Timestamp
-        char dateTimeStamp[32];
-        snprintf(dateTimeStamp, sizeof(dateTimeStamp), "%04d-%02d-%02d,%02d:%02d:%02d,",
-                 2000 + rtc2.getYear(), rtc2.getMonth(), rtc2.getDay(),
-                 rtc2.getHours(), rtc2.getMinutes(), rtc2.getSeconds());
-        AppendToBuffer(dateTimeStamp);
+        snprintf(timeStamp, sizeof(timeStamp), "%04d-%02d-%02d,%02d:%02d:%02d,", (2000 + RTCyear), RTCmonth, RTCday, RTChour, RTCminute, RTCsecond);
+        writtenBytes = dataFile.write(timeStamp, strlen(timeStamp));
+        delay(30);
+        if (writtenBytes == 0)
+        {
+            Serial.println("Logging failed on timestamp entry");
+            Serial.println(dataFile.getErrorstate());
+            Serial.println(dataFile.getWriteError());
+            
+            Serial.println(HAL_SD_GetError(&uSdHandle));
 
-        // Buffers for float conversion
-        char vbattBuffer[16], sysCurrentBuffer[16], accelXBuffer[16], accelYBuffer[16], accelZBuffer[16];
-        char gyroXBuffer[16], gyroYBuffer[16], gyroZBuffer[16], latBuffer[16], lonBuffer[16];
-        char altBuffer[16], speedBuffer[16], accuracyBuffer[16];
-
-        // Convert floating-point values using dtostrf
-        dtostrf(SystemParams.VBatt, 6, 2, vbattBuffer);
-        dtostrf(SystemParams.SystemCurrent, 6, 2, sysCurrentBuffer);
-        dtostrf(accelX, 6, 2, accelXBuffer);
-        dtostrf(accelY, 6, 2, accelYBuffer);
-        dtostrf(accelZ, 6, 2, accelZBuffer);
-        dtostrf(gyroX, 6, 2, gyroXBuffer);
-        dtostrf(gyroY, 6, 2, gyroYBuffer);
-        dtostrf(gyroZ, 6, 2, gyroZBuffer);
-        dtostrf(lat, 10, 6, latBuffer);
-        dtostrf(lon, 10, 6, lonBuffer);
-        dtostrf(alt, 6, 2, altBuffer);
-        dtostrf(speed, 6, 2, speedBuffer);
-        dtostrf(accuracy, 6, 2, accuracyBuffer);
+            while (true)
+                ;
+            SDCardOK = false;
+            CloseSDFile();
+            InitialiseSD();
+            return;
+        }
+        BytesStored += writtenBytes;
 
         // System Parameters Log
-        char logEntry[256];
-        snprintf(logEntry, sizeof(logEntry),
-                 "%d,%s,%s,%d,",
-                 SystemParams.SystemTemperature,
-                 vbattBuffer,
-                 sysCurrentBuffer,
-                 SystemParams.ErrorFlags);
-        AppendToBuffer(logEntry);
-
-        // Sensor Data
-        snprintf(logEntry, sizeof(logEntry),
-                 "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,",
-                 accelXBuffer, accelYBuffer, accelZBuffer,
-                 gyroXBuffer, gyroYBuffer, gyroZBuffer,
-                 latBuffer, lonBuffer, altBuffer,
-                 speedBuffer, accuracyBuffer);
-        AppendToBuffer(logEntry);
+        snprintf(sysLog, sizeof(sysLog), "%d,%.2f,%.2f,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.6f,%.6f,%.2f,%.2f,%.2f,", SystemParams.SystemTemperature, SystemParams.VBatt, SystemParams.SystemCurrent,
+                 SystemParams.ErrorFlags, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, lat, lon, alt, speed, accuracy);
+        writtenBytes = dataFile.write(sysLog, strlen(sysLog));
+        delay(30);
+        if (writtenBytes == 0)
+        {
+            Serial.println("Logging failed on syslog entry");
+            Serial.println(dataFile.getErrorstate());
+            Serial.println(dataFile.getWriteError());
+            Serial.println(HAL_SD_GetError(&uSdHandle));
+            while (true)
+                ;
+            SDCardOK = false;
+            CloseSDFile();
+            InitialiseSD();
+            return;
+        }
+        BytesStored += writtenBytes;
 
         // Channel Data Logging
         for (int i = 0; i < NUM_CHANNELS; i++)
         {
-            char valueBuffer[16], highThreshBuffer[16], lowThreshBuffer[16];
-            dtostrf(Channels[i].CurrentValue, 6, 2, valueBuffer);
-            dtostrf(Channels[i].CurrentThresholdHigh, 6, 2, highThreshBuffer);
-            dtostrf(Channels[i].CurrentThresholdLow, 6, 2, lowThreshBuffer);
-
-            snprintf(logEntry, sizeof(logEntry),
-                     "%s,%d,%s,%s,%s,%d,%d,%d%s",
-                     (Channels[i].ChanType == DIG) ? "DIG" : (Channels[i].ChanType == PWM)       ? "PWM"
-                                                          : (Channels[i].ChanType == ANA)         ? "ANA"
-                                                          : (Channels[i].ChanType == CAN_DIGITAL) ? "CAND"
-                                                                                                  : "CANP",
+            char chanType[6];
+            char logEntry[40];
+            switch (Channels[i].ChanType)
+            {
+            case DIG:
+                snprintf(chanType, sizeof(chanType), "%s", "DIG");
+                break;
+            case DIG_PWM:
+                snprintf(chanType, sizeof(chanType), "%s", "PWM");
+                break;
+            case ANA:
+                snprintf(chanType, sizeof(chanType), "%s", "ANA");
+                break;
+            case ANA_PWM:
+                snprintf(chanType, sizeof(chanType), "%s", "ANAP");
+                break;
+            case CAN_DIGITAL:
+                snprintf(chanType, sizeof(chanType), "%s", "CAN");
+                break;
+            case CAN_PWM:
+                snprintf(chanType, sizeof(chanType), "%s", "CANP");
+                break;
+            }
+            snprintf(channelLog, sizeof(channelLog), "%s,%d,%.2f,%.2f,%.2f,%d,%d,%d%s",
+                     chanType,
                      Channels[i].Enabled,
-                     valueBuffer, highThreshBuffer, lowThreshBuffer,
+                     Channels[i].CurrentValue,
+                     Channels[i].CurrentThresholdHigh,
+                     Channels[i].CurrentThresholdLow,
                      Channels[i].MultiChannel,
                      Channels[i].GroupNumber,
                      Channels[i].ErrorFlags,
                      (i < NUM_CHANNELS - 1) ? "," : "\n");
-            AppendToBuffer(logEntry);
+            writtenBytes = dataFile.write(channelLog, strlen(channelLog));
+            delay(20);
+            BytesStored += writtenBytes;
+            if (writtenBytes == 0)
+            {
+                Serial.println("Logging failed on channel entry");
+                Serial.println(dataFile.getErrorstate());
+                Serial.println(dataFile.getWriteError());
+                Serial.println(HAL_SD_GetError(&uSdHandle));
+                while (true)
+                    ;
+                Serial.print("Channel index: ");
+                Serial.println(i);
+                SDCardOK = false;
+                CloseSDFile();
+                InitialiseSD();
+                return;
+            }
         }
 
         // Periodic SD Flushing
         lineCount++;
+        Serial.print("Line count: ");
+        Serial.println(lineCount);
+        Serial.print("Bytes stored: ");
+        Serial.println(BytesStored);
+        dataFile.flush();
+        delay(30);
         if (lineCount == StorageParams.MaxLogLength)
         {
-            FlushBuffer();
-            dataFile.flush();
             dataFile.close();
             InitialiseSD();
         }
@@ -592,7 +610,6 @@ void LogData()
         // Handle SD or undervoltage errors
         if (!UndervoltageLatch)
         {
-            FlushBuffer();
             CloseSDFile();
             UndervoltageLatch = true;
         }

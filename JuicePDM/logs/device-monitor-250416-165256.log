@@ -1,0 +1,1123 @@
+16:52:56.350 > Initializing SIM7600G...
+16:52:56.655 > Enabling DMA: 1
+16:52:57.225 > System checksum read: 28E0F0AF, at index: 676
+16:52:57.226 > EEPROM status register: 0
+16:52:59.326 > Channel Checksum written: 35815177, at index: 644
+16:52:59.328 > EEPROM status register: 3
+16:52:59.339 > Storage checksum read: 386FB2FF, at index: 925
+16:52:59.340 > EEPROM status register: 0
+16:53:00.137 > Storage Checksum written: 386FB2A2, at index: 925
+16:53:00.137 > EEPROM status register: 3
+16:53:01.092 > Available bytes: 0
+16:53:01.592 > 0: SIM7600 Buffer: 
+16:53:01.595 > Log file bytes stored: 0
+16:53:02.094 > Available bytes: 0
+16:53:02.594 > 0: SIM7600 Buffer: 
+16:53:02.596 > Log file bytes stored: 0
+16:53:03.773 > Available bytes: 0
+16:53:04.273 > 0: SIM7600 Buffer: 
+16:53:04.276 > Log file bytes stored: 0
+16:53:04.774 > Available bytes: 0
+16:53:05.274 > 0: SIM7600 Buffer: 
+16:53:05.277 > Log file bytes stored: 0
+16:53:05.775 > Available bytes: 0
+16:53:06.275 > 0: SIM7600 Buffer: 
+16:53:06.278 > Log file bytes stored: 0
+16:53:06.776 > Available bytes: 0
+16:53:07.276 > 0: SIM7600 Buffer: 
+16:53:07.278 > Log file bytes stored: 0
+16:53:07.777 > Available bytes: 0
+16:53:08.277 > 0: SIM7600 Buffer: 
+16:53:08.280 > Log file bytes stored: 0
+16:53:08.777 > Available bytes: 0
+16:53:09.278 > 0: SIM7600 Buffer: 
+16:53:09.281 > Log file bytes stored: 0
+16:53:09.778 > Available bytes: 0
+16:53:12.851 > 0: SIM7600 Buffer: 
+16:53:12.852 > RDY
+16:53:12.852 > 
+16:53:12.852 > +CPIN: READY
+16:53:12.852 > 
+16:53:12.852 > SMS DONE
+16:53:12.852 > 
+16:53:12.852 > PB DONE
+16:53:12.852 > 
+16:53:12.853 > Log file bytes stored: 0
+16:53:12.854 > Available bytes: 9
+16:53:13.853 > 1: SIM7600 Buffer: AT
+16:53:13.854 > OK
+16:53:13.854 > 
+16:53:13.856 > Log file bytes stored: 0
+16:53:13.857 > Available bytes: 19
+16:53:14.856 > 2: SIM7600 Buffer: AT+CGPS=1
+16:53:14.858 > ERROR
+16:53:14.858 > 
+16:53:14.859 > Log file bytes stored: 0
+16:53:14.860 > Available bytes: 22
+16:53:15.862 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:15.862 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:15.862 > 
+16:53:15.862 > OK
+16:53:15.862 > 
+16:53:15.862 > Incomplete GPS data
+16:53:15.865 > Log file bytes stored: 0
+16:53:15.866 > Available bytes: 23
+16:53:16.868 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:16.869 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:16.869 > 
+16:53:16.869 > OK
+16:53:16.869 > 
+16:53:16.869 > Incomplete GPS data
+16:53:16.871 > Log file bytes stored: 0
+16:53:16.872 > Available bytes: 23
+16:53:17.874 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:17.874 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:17.874 > 
+16:53:17.874 > OK
+16:53:17.874 > 
+16:53:17.874 > Incomplete GPS data
+16:53:17.877 > Log file bytes stored: 0
+16:53:17.878 > Available bytes: 22
+16:53:18.880 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:18.882 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:18.882 > 
+16:53:18.882 > OK
+16:53:18.882 > 
+16:53:18.882 > Incomplete GPS data
+16:53:18.883 > Log file bytes stored: 0
+16:53:18.884 > Available bytes: 22
+16:53:19.886 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:19.887 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:19.887 > 
+16:53:19.887 > OK
+16:53:19.887 > 
+16:53:19.887 > Incomplete GPS data
+16:53:19.890 > Log file bytes stored: 0
+16:53:19.890 > Available bytes: 23
+16:53:20.892 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:20.893 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:20.893 > 
+16:53:20.893 > OK
+16:53:20.893 > 
+16:53:20.893 > Incomplete GPS data
+16:53:20.894 > Log file bytes stored: 0
+16:53:20.895 > Available bytes: 20
+16:53:21.898 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:21.899 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:21.899 > 
+16:53:21.899 > OK
+16:53:21.899 > 
+16:53:21.899 > Incomplete GPS data
+16:53:21.901 > Log file bytes stored: 0
+16:53:21.901 > Available bytes: 22
+16:53:22.904 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:22.905 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:22.905 > 
+16:53:22.905 > OK
+16:53:22.905 > 
+16:53:22.905 > Incomplete GPS data
+16:53:22.907 > Log file bytes stored: 0
+16:53:22.907 > Available bytes: 22
+16:53:23.910 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:23.911 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:23.911 > 
+16:53:23.911 > OK
+16:53:23.911 > 
+16:53:23.911 > Incomplete GPS data
+16:53:23.913 > Log file bytes stored: 0
+16:53:23.914 > Available bytes: 22
+16:53:24.916 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:24.917 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:24.917 > 
+16:53:24.917 > OK
+16:53:24.917 > 
+16:53:24.917 > Incomplete GPS data
+16:53:24.919 > Log file bytes stored: 0
+16:53:24.920 > Available bytes: 22
+16:53:25.922 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:25.922 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:25.922 > 
+16:53:25.922 > OK
+16:53:25.922 > 
+16:53:25.922 > Incomplete GPS data
+16:53:25.925 > Log file bytes stored: 0
+16:53:25.925 > Available bytes: 22
+16:53:26.928 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:26.929 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:26.929 > 
+16:53:26.929 > OK
+16:53:26.929 > 
+16:53:26.929 > Incomplete GPS data
+16:53:26.931 > Log file bytes stored: 0
+16:53:26.932 > Available bytes: 21
+16:53:27.933 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:27.934 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+16:53:27.934 > 
+16:53:27.934 > OK
+16:53:27.934 > 
+16:53:27.934 > Incomplete GPS data
+16:53:27.937 > Log file bytes stored: 0
+16:53:27.937 > Available bytes: 22
+16:53:28.945 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:28.946 > +CGNSSINFO: 2,09,00,00,5239.899387,N,00035.072588,W,160425,155353.0,34.5,0.0,,1.2,0.9,0.8
+16:53:28.946 > 
+16:53:28.946 > OK
+16:53:28.946 > 
+16:53:28.948 > Log file bytes stored: 0
+16:53:28.952 > SD Begin error
+16:53:28.953 > SD Card begin OK: 0
+16:53:28.953 > Available bytes: 67
+16:53:29.955 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:29.956 > +CGNSSINFO: 2,09,00,00,5239.899492,N,00035.073328,W,160425,155354.0,36.6,0.0,,1.2,0.9,0.8
+16:53:29.956 > 
+16:53:29.956 > OK
+16:53:29.956 > 
+16:53:29.959 > Log file bytes stored: 0
+16:53:29.961 > SD Begin error
+16:53:29.961 > SD Card begin OK: 0
+16:53:29.961 > Available bytes: 26
+16:53:30.967 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:30.968 > +CGNSSINFO: 2,09,00,00,5239.901369,N,00035.070586,W,160425,155355.0,37.9,0.0,,1.2,0.9,0.8
+16:53:30.968 > 
+16:53:30.968 > OK
+16:53:30.969 > 
+16:53:30.970 > Log file bytes stored: 0
+16:53:30.971 > SD Begin error
+16:53:30.971 > SD Card begin OK: 0
+16:53:30.972 > Available bytes: 24
+16:53:31.978 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:31.978 > +CGNSSINFO: 2,09,00,00,5239.901864,N,00035.070249,W,160425,155356.0,39.0,0.0,,1.2,0.9,0.8
+16:53:31.978 > 
+16:53:31.978 > OK
+16:53:31.978 > 
+16:53:31.981 > Log file bytes stored: 0
+16:53:31.982 > SD Begin error
+16:53:31.982 > SD Card begin OK: 0
+16:53:31.983 > Available bytes: 24
+16:53:32.988 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:32.989 > +CGNSSINFO: 2,09,00,00,5239.901979,N,00035.071104,W,160425,155356.0,36.5,0.0,,1.2,0.9,0.8
+16:53:32.989 > 
+16:53:32.989 > OK
+16:53:32.989 > 
+16:53:32.992 > Log file bytes stored: 0
+16:53:32.993 > SD Begin error
+16:53:32.993 > SD Card begin OK: 0
+16:53:32.993 > Available bytes: 24
+16:53:33.999 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:34.000 > +CGNSSINFO: 2,09,00,00,5239.902130,N,00035.071285,W,160425,155357.0,35.6,0.0,,1.2,0.9,0.8
+16:53:34.000 > 
+16:53:34.000 > OK
+16:53:34.000 > 
+16:53:34.002 > Log file bytes stored: 0
+16:53:34.003 > SD Begin error
+16:53:34.003 > SD Card begin OK: 0
+16:53:34.003 > Available bytes: 23
+16:53:35.010 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:35.010 > +CGNSSINFO: 2,09,00,00,5239.902321,N,00035.071320,W,160425,155358.0,36.4,0.0,,1.2,0.9,0.8
+16:53:35.010 > 
+16:53:35.010 > OK
+16:53:35.010 > 
+16:53:35.013 > Log file bytes stored: 0
+16:53:35.014 > SD Begin error
+16:53:35.014 > SD Card begin OK: 0
+16:53:35.014 > Available bytes: 24
+16:53:36.021 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:36.021 > +CGNSSINFO: 2,09,00,00,5239.902600,N,00035.070865,W,160425,155359.0,36.8,0.0,,1.2,0.9,0.8
+16:53:36.021 > 
+16:53:36.021 > OK
+16:53:36.021 > 
+16:53:36.024 > Log file bytes stored: 0
+16:53:36.025 > SD Begin error
+16:53:36.025 > SD Card begin OK: 0
+16:53:36.025 > Available bytes: 24
+16:53:37.032 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:37.032 > +CGNSSINFO: 2,09,00,00,5239.902890,N,00035.070511,W,160425,155400.0,37.7,0.0,,1.2,0.9,0.8
+16:53:37.032 > 
+16:53:37.032 > OK
+16:53:37.032 > 
+16:53:37.035 > Log file bytes stored: 0
+16:53:37.036 > SD Begin error
+16:53:37.036 > SD Card begin OK: 0
+16:53:37.036 > Available bytes: 23
+16:53:38.043 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:38.043 > +CGNSSINFO: 2,09,00,00,5239.903213,N,00035.070141,W,160425,155401.0,38.5,0.0,,1.2,0.9,0.8
+16:53:38.043 > 
+16:53:38.043 > OK
+16:53:38.043 > 
+16:53:38.046 > Log file bytes stored: 0
+16:53:38.047 > SD Begin error
+16:53:38.047 > SD Card begin OK: 0
+16:53:38.047 > Available bytes: 24
+16:53:39.053 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:39.053 > +CGNSSINFO: 2,09,00,00,5239.903412,N,00035.069935,W,160425,155402.0,38.9,0.0,,1.2,0.9,0.8
+16:53:39.055 > 
+16:53:39.055 > OK
+16:53:39.055 > 
+16:53:39.057 > Log file bytes stored: 0
+16:53:39.058 > SD Begin error
+16:53:39.058 > SD Card begin OK: 0
+16:53:39.058 > Available bytes: 23
+16:53:40.065 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:40.066 > +CGNSSINFO: 2,09,00,00,5239.903541,N,00035.069739,W,160425,155403.0,38.9,0.0,,1.2,0.9,0.8
+16:53:40.066 > 
+16:53:40.066 > OK
+16:53:40.066 > 
+16:53:40.068 > Log file bytes stored: 0
+16:53:40.069 > SD Begin error
+16:53:40.069 > SD Card begin OK: 0
+16:53:40.069 > Available bytes: 24
+16:53:41.075 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:41.076 > +CGNSSINFO: 2,09,00,00,5239.903594,N,00035.069632,W,160425,155404.0,39.0,0.0,,1.2,0.9,0.8
+16:53:41.076 > 
+16:53:41.076 > OK
+16:53:41.076 > 
+16:53:41.079 > Log file bytes stored: 0
+16:53:41.079 > SD Begin error
+16:53:41.079 > SD Card begin OK: 0
+16:53:41.080 > Available bytes: 24
+16:53:42.086 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:42.087 > +CGNSSINFO: 2,09,00,00,5239.903604,N,00035.069613,W,160425,155405.0,39.1,0.0,,1.2,0.9,0.8
+16:53:42.087 > 
+16:53:42.087 > OK
+16:53:42.087 > 
+16:53:42.090 > Log file bytes stored: 0
+16:53:42.090 > SD Begin error
+16:53:42.091 > SD Card begin OK: 0
+16:53:42.091 > Available bytes: 24
+16:53:43.098 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:43.098 > +CGNSSINFO: 2,08,00,00,5239.903608,N,00035.069600,W,160425,155406.0,39.1,0.0,,1.3,1.1,0.8
+16:53:43.098 > 
+16:53:43.098 > OK
+16:53:43.098 > 
+16:53:43.101 > Log file bytes stored: 0
+16:53:43.102 > SD Begin error
+16:53:43.102 > SD Card begin OK: 0
+16:53:43.102 > Available bytes: 24
+16:53:44.108 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:44.108 > +CGNSSINFO: 2,08,00,00,5239.903608,N,00035.069593,W,160425,155407.0,39.1,0.0,,1.3,1.1,0.8
+16:53:44.108 > 
+16:53:44.108 > OK
+16:53:44.108 > 
+16:53:44.111 > Log file bytes stored: 0
+16:53:44.112 > SD Begin error
+16:53:44.112 > SD Card begin OK: 0
+16:53:44.112 > Available bytes: 24
+16:53:45.120 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:45.120 > +CGNSSINFO: 2,08,02,00,5239.903667,N,00035.069261,W,160425,155408.0,39.6,0.0,,1.3,1.0,0.8
+16:53:45.120 > 
+16:53:45.120 > OK
+16:53:45.120 > 
+16:53:45.123 > Log file bytes stored: 0
+16:53:45.124 > SD Begin error
+16:53:45.124 > SD Card begin OK: 0
+16:53:45.124 > Available bytes: 24
+16:53:46.130 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:46.131 > +CGNSSINFO: 2,08,02,00,5239.903789,N,00035.068961,W,160425,155409.0,39.9,0.0,,1.3,1.0,0.8
+16:53:46.131 > 
+16:53:46.131 > OK
+16:53:46.131 > 
+16:53:46.133 > Log file bytes stored: 0
+16:53:46.134 > SD Begin error
+16:53:46.134 > SD Card begin OK: 0
+16:53:46.134 > Available bytes: 24
+16:53:47.142 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:47.142 > +CGNSSINFO: 2,08,02,00,5239.903700,N,00035.069163,W,160425,155410.0,39.7,0.0,,1.3,1.0,0.8
+16:53:47.142 > 
+16:53:47.142 > OK
+16:53:47.142 > 
+16:53:47.145 > Log file bytes stored: 0
+16:53:47.146 > SD Begin error
+16:53:47.146 > SD Card begin OK: 0
+16:53:47.146 > Available bytes: 2
+16:53:48.155 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:48.155 > +CGNSSINFO: 2,08,02,00,5239.903562,N,00035.069406,W,160425,155411.0,39.4,0.0,,1.3,1.0,0.8
+16:53:48.156 > 
+16:53:48.156 > OK
+16:53:48.156 > 
+16:53:48.158 > Log file bytes stored: 0
+16:53:48.159 > SD Begin error
+16:53:48.159 > SD Card begin OK: 0
+16:53:48.161 > Available bytes: 3
+16:53:49.169 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:49.170 > +CGNSSINFO: 2,08,02,00,5239.903423,N,00035.069666,W,160425,155412.0,39.2,0.0,,1.3,1.0,0.8
+16:53:49.170 > 
+16:53:49.170 > OK
+16:53:49.170 > 
+16:53:49.173 > Log file bytes stored: 0
+16:53:49.174 > SD Begin error
+16:53:49.174 > SD Card begin OK: 0
+16:53:49.174 > Available bytes: 23
+16:53:50.180 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:50.180 > +CGNSSINFO: 2,08,02,00,5239.903402,N,00035.069694,W,160425,155413.0,39.1,0.0,,1.3,1.0,0.8
+16:53:50.180 > 
+16:53:50.180 > OK
+16:53:50.180 > 
+16:53:50.183 > Log file bytes stored: 0
+16:53:50.184 > SD Begin error
+16:53:50.184 > SD Card begin OK: 0
+16:53:50.184 > Available bytes: 23
+16:53:51.191 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:51.191 > +CGNSSINFO: 2,08,02,00,5239.903747,N,00035.069020,W,160425,155414.0,39.8,0.0,,1.3,1.0,0.8
+16:53:51.191 > 
+16:53:51.191 > OK
+16:53:51.191 > 
+16:53:51.194 > Log file bytes stored: 0
+16:53:51.195 > SD Begin error
+16:53:51.195 > SD Card begin OK: 0
+16:53:51.195 > Available bytes: 23
+16:53:52.202 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:52.203 > +CGNSSINFO: 2,08,02,00,5239.904053,N,00035.068426,W,160425,155415.0,40.5,0.0,,1.3,1.0,0.8
+16:53:52.203 > 
+16:53:52.203 > OK
+16:53:52.203 > 
+16:53:52.205 > Log file bytes stored: 0
+16:53:52.206 > SD Begin error
+16:53:52.206 > SD Card begin OK: 0
+16:53:52.206 > Available bytes: 23
+16:53:53.213 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:53.214 > +CGNSSINFO: 2,08,02,00,5239.904217,N,00035.068107,W,160425,155416.0,40.8,0.0,,1.3,1.0,0.8
+16:53:53.214 > 
+16:53:53.214 > OK
+16:53:53.214 > 
+16:53:53.217 > Log file bytes stored: 0
+16:53:53.218 > SD Begin error
+16:53:53.218 > SD Card begin OK: 0
+16:53:53.219 > Available bytes: 23
+16:53:54.223 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:54.223 > +CGNSSINFO: 2,08,02,00,5239.904384,N,00035.067772,W,160425,155417.0,41.2,0.0,,1.3,1.0,0.8
+16:53:54.223 > 
+16:53:54.223 > OK
+16:53:54.224 > 
+16:53:54.226 > Log file bytes stored: 0
+16:53:54.228 > SD Begin error
+16:53:54.228 > SD Card begin OK: 0
+16:53:54.228 > Available bytes: 23
+16:53:55.235 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:55.235 > +CGNSSINFO: 2,08,02,00,5239.904503,N,00035.067530,W,160425,155418.0,41.5,0.0,,1.3,1.0,0.8
+16:53:55.235 > 
+16:53:55.235 > OK
+16:53:55.235 > 
+16:53:55.238 > Log file bytes stored: 0
+16:53:55.239 > SD Begin error
+16:53:55.239 > SD Card begin OK: 0
+16:53:55.239 > Available bytes: 23
+16:53:56.246 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:56.246 > +CGNSSINFO: 2,08,02,00,5239.904551,N,00035.067417,W,160425,155419.0,41.6,0.0,,1.3,1.0,0.8
+16:53:56.247 > 
+16:53:56.247 > OK
+16:53:56.247 > 
+16:53:56.249 > Log file bytes stored: 0
+16:53:56.250 > SD Begin error
+16:53:56.250 > SD Card begin OK: 0
+16:53:56.250 > Available bytes: 22
+16:53:57.257 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:57.257 > +CGNSSINFO: 2,08,02,00,5239.904571,N,00035.067366,W,160425,155420.0,41.7,0.0,,1.3,1.0,0.8
+16:53:57.257 > 
+16:53:57.257 > OK
+16:53:57.257 > 
+16:53:57.260 > Log file bytes stored: 0
+16:53:57.261 > SD Begin error
+16:53:57.261 > SD Card begin OK: 0
+16:53:57.261 > Available bytes: 13
+16:53:58.268 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:58.268 > +CGNSSINFO: 2,08,02,00,5239.904582,N,00035.067329,W,160425,155421.0,41.7,0.0,,1.3,1.0,0.8
+16:53:58.268 > 
+16:53:58.268 > OK
+16:53:58.268 > 
+16:53:58.271 > Log file bytes stored: 0
+16:53:58.272 > SD Begin error
+16:53:58.272 > SD Card begin OK: 0
+16:53:58.272 > Available bytes: 24
+16:53:59.279 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:53:59.279 > +CGNSSINFO: 2,08,02,00,5239.904586,N,00035.067307,W,160425,155422.0,41.7,0.0,,1.3,1.0,0.8
+16:53:59.280 > 
+16:53:59.280 > OK
+16:53:59.280 > 
+16:53:59.283 > Log file bytes stored: 0
+16:53:59.284 > SD Begin error
+16:53:59.284 > SD Card begin OK: 0
+16:53:59.284 > Available bytes: 24
+16:54:00.290 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:00.290 > +CGNSSINFO: 2,08,02,00,5239.904583,N,00035.067301,W,160425,155423.0,41.7,0.0,,1.3,1.0,0.8
+16:54:00.290 > 
+16:54:00.290 > OK
+16:54:00.290 > 
+16:54:00.294 > Log file bytes stored: 0
+16:54:00.294 > SD Begin error
+16:54:00.295 > SD Card begin OK: 0
+16:54:00.295 > Available bytes: 24
+16:54:01.301 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:01.302 > +CGNSSINFO: 2,08,02,00,5239.904581,N,00035.067291,W,160425,155424.0,41.8,0.0,,1.3,1.0,0.8
+16:54:01.302 > 
+16:54:01.302 > OK
+16:54:01.302 > 
+16:54:01.304 > Log file bytes stored: 0
+16:54:01.306 > SD Begin error
+16:54:01.306 > SD Card begin OK: 0
+16:54:01.306 > Available bytes: 24
+16:54:02.313 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:02.313 > +CGNSSINFO: 2,08,02,00,5239.904580,N,00035.067286,W,160425,155425.0,41.8,0.0,,1.3,1.0,0.8
+16:54:02.313 > 
+16:54:02.313 > OK
+16:54:02.313 > 
+16:54:02.316 > Log file bytes stored: 0
+16:54:02.316 > SD Begin error
+16:54:02.317 > SD Card begin OK: 0
+16:54:02.317 > Available bytes: 24
+16:54:03.324 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:03.324 > +CGNSSINFO: 2,08,02,00,5239.904581,N,00035.067279,W,160425,155426.0,41.8,0.0,,1.3,1.0,0.8
+16:54:03.324 > 
+16:54:03.324 > OK
+16:54:03.324 > 
+16:54:03.327 > Log file bytes stored: 0
+16:54:03.328 > SD Begin error
+16:54:03.328 > SD Card begin OK: 0
+16:54:03.328 > Available bytes: 24
+16:54:04.334 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:04.335 > +CGNSSINFO: 2,08,02,00,5239.904580,N,00035.067271,W,160425,155427.0,41.8,0.0,,1.3,1.0,0.8
+16:54:04.335 > 
+16:54:04.335 > OK
+16:54:04.335 > 
+16:54:04.337 > Log file bytes stored: 0
+16:54:04.339 > SD Begin error
+16:54:04.339 > SD Card begin OK: 0
+16:54:04.339 > Available bytes: 24
+16:54:05.345 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:05.345 > +CGNSSINFO: 2,08,02,00,5239.904579,N,00035.067269,W,160425,155428.0,41.8,0.0,,1.3,1.0,0.8
+16:54:05.345 > 
+16:54:05.345 > OK
+16:54:05.345 > 
+16:54:05.348 > Log file bytes stored: 0
+16:54:05.349 > SD Begin error
+16:54:05.349 > SD Card begin OK: 0
+16:54:05.349 > Available bytes: 24
+16:54:06.357 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:06.357 > +CGNSSINFO: 2,08,02,00,5239.904581,N,00035.067259,W,160425,155429.0,41.8,0.0,,1.3,1.0,0.8
+16:54:06.357 > 
+16:54:06.357 > OK
+16:54:06.357 > 
+16:54:06.360 > Log file bytes stored: 0
+16:54:06.360 > SD Begin error
+16:54:06.360 > SD Card begin OK: 0
+16:54:06.360 > Available bytes: 24
+16:54:07.367 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:07.367 > +CGNSSINFO: 2,08,02,00,5239.904579,N,00035.067265,W,160425,155430.0,41.8,0.0,,1.3,1.0,0.8
+16:54:07.367 > 
+16:54:07.367 > OK
+16:54:07.367 > 
+16:54:07.370 > Log file bytes stored: 0
+16:54:07.371 > SD Begin error
+16:54:07.371 > SD Card begin OK: 0
+16:54:07.371 > Available bytes: 23
+16:54:08.378 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:08.379 > +CGNSSINFO: 2,08,02,00,5239.904574,N,00035.067268,W,160425,155431.0,41.8,0.0,,1.3,1.0,0.8
+16:54:08.379 > 
+16:54:08.379 > OK
+16:54:08.379 > 
+16:54:08.381 > Log file bytes stored: 0
+16:54:08.383 > SD Begin error
+16:54:08.383 > SD Card begin OK: 0
+16:54:08.383 > Available bytes: 11
+16:54:09.392 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:09.392 > +CGNSSINFO: 2,08,02,00,5239.904582,N,00035.067249,W,160425,155432.0,41.8,0.0,,1.3,1.0,0.8
+16:54:09.392 > 
+16:54:09.392 > OK
+16:54:09.392 > 
+16:54:09.395 > Log file bytes stored: 0
+16:54:09.396 > SD Begin error
+16:54:09.396 > SD Card begin OK: 0
+16:54:09.396 > Available bytes: 23
+16:54:10.403 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:10.405 > +CGNSSINFO: 2,08,02,00,5239.904593,N,00035.067226,W,160425,155433.0,41.9,0.0,,1.3,1.0,0.8
+16:54:10.405 > 
+16:54:10.405 > OK
+16:54:10.405 > 
+16:54:10.406 > Log file bytes stored: 0
+16:54:10.407 > SD Begin error
+16:54:10.407 > SD Card begin OK: 0
+16:54:10.407 > Available bytes: 23
+16:54:11.413 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:11.415 > +CGNSSINFO: 2,08,02,00,5239.904598,N,00035.067213,W,160425,155434.0,41.9,0.0,,1.3,1.0,0.8
+16:54:11.415 > 
+16:54:11.415 > OK
+16:54:11.415 > 
+16:54:11.418 > Log file bytes stored: 0
+16:54:11.418 > SD Begin error
+16:54:11.419 > SD Card begin OK: 0
+16:54:11.419 > Available bytes: 23
+16:54:12.425 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:12.425 > +CGNSSINFO: 2,08,02,00,5239.904601,N,00035.067204,W,160425,155435.0,41.9,0.0,,1.3,1.0,0.8
+16:54:12.425 > 
+16:54:12.425 > OK
+16:54:12.425 > 
+16:54:12.427 > Log file bytes stored: 0
+16:54:12.428 > SD Begin error
+16:54:12.428 > SD Card begin OK: 0
+16:54:12.428 > Available bytes: 24
+16:54:13.436 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:13.436 > +CGNSSINFO: 2,08,02,00,5239.904599,N,00035.067201,W,160425,155436.0,41.9,0.0,,1.3,1.0,0.8
+16:54:13.436 > 
+16:54:13.436 > OK
+16:54:13.436 > 
+16:54:13.439 > Log file bytes stored: 0
+16:54:13.439 > SD Begin error
+16:54:13.439 > SD Card begin OK: 0
+16:54:13.439 > Available bytes: 23
+16:54:14.447 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:14.447 > +CGNSSINFO: 2,08,02,00,5239.904594,N,00035.067206,W,160425,155437.0,41.9,0.0,,1.3,1.0,0.8
+16:54:14.447 > 
+16:54:14.447 > OK
+16:54:14.447 > 
+16:54:14.450 > Log file bytes stored: 0
+16:54:14.451 > SD Begin error
+16:54:14.451 > SD Card begin OK: 0
+16:54:14.451 > Available bytes: 23
+16:54:15.458 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:15.458 > +CGNSSINFO: 2,08,02,00,5239.904591,N,00035.067205,W,160425,155438.0,41.9,0.0,,1.3,1.0,0.8
+16:54:15.458 > 
+16:54:15.458 > OK
+16:54:15.458 > 
+16:54:15.461 > Log file bytes stored: 0
+16:54:15.462 > SD Begin error
+16:54:15.462 > SD Card begin OK: 0
+16:54:15.462 > Available bytes: 23
+16:54:16.469 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:16.469 > +CGNSSINFO: 2,08,02,00,5239.904594,N,00035.067196,W,160425,155439.0,41.9,0.0,,1.3,1.0,0.8
+16:54:16.469 > 
+16:54:16.469 > OK
+16:54:16.469 > 
+16:54:16.472 > Log file bytes stored: 0
+16:54:16.473 > SD Begin error
+16:54:16.473 > SD Card begin OK: 0
+16:54:16.473 > Available bytes: 23
+16:54:17.480 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:17.481 > +CGNSSINFO: 2,08,02,00,5239.904594,N,00035.067188,W,160425,155440.0,41.9,0.0,,1.3,1.0,0.8
+16:54:17.481 > 
+16:54:17.481 > OK
+16:54:17.481 > 
+16:54:17.483 > Log file bytes stored: 0
+16:54:17.483 > SD Begin error
+16:54:17.484 > SD Card begin OK: 0
+16:54:17.484 > Available bytes: 20
+16:54:18.490 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:18.491 > +CGNSSINFO: 2,08,02,00,5239.904595,N,00035.067179,W,160425,155441.0,42.0,0.0,,1.3,1.0,0.8
+16:54:18.491 > 
+16:54:18.491 > OK
+16:54:18.491 > 
+16:54:18.494 > Log file bytes stored: 0
+16:54:18.495 > SD Begin error
+16:54:18.495 > SD Card begin OK: 0
+16:54:18.495 > Available bytes: 0
+16:54:19.533 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:19.534 > +CGNSSINFO: 2,08,02,00,5239.904593,N,00035.067167,W,160425,155442.0,42.0,0.0,,1.3,1.0,0.8
+16:54:19.534 > 
+16:54:19.534 > OK
+16:54:19.534 > 
+16:54:19.537 > Log file bytes stored: 0
+16:54:19.538 > SD Begin error
+16:54:19.538 > SD Card begin OK: 0
+16:54:19.538 > Available bytes: 13
+16:54:20.545 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:20.546 > +CGNSSINFO: 2,08,02,00,5239.904592,N,00035.067154,W,160425,155443.0,42.0,0.0,,1.3,1.0,0.8
+16:54:20.546 > 
+16:54:20.546 > OK
+16:54:20.546 > 
+16:54:20.549 > Log file bytes stored: 0
+16:54:20.549 > SD Begin error
+16:54:20.549 > SD Card begin OK: 0
+16:54:20.550 > Available bytes: 23
+16:54:21.556 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:21.556 > +CGNSSINFO: 2,08,02,00,5239.904592,N,00035.067137,W,160425,155444.0,42.0,0.0,,1.3,1.0,0.8
+16:54:21.556 > 
+16:54:21.556 > OK
+16:54:21.556 > 
+16:54:21.559 > Log file bytes stored: 0
+16:54:21.560 > SD Begin error
+16:54:21.560 > SD Card begin OK: 0
+16:54:21.560 > Available bytes: 22
+16:54:22.567 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:22.568 > +CGNSSINFO: 2,08,02,00,5239.904588,N,00035.067128,W,160425,155445.0,42.0,0.0,,1.3,1.0,0.8
+16:54:22.568 > 
+16:54:22.568 > OK
+16:54:22.568 > 
+16:54:22.570 > Log file bytes stored: 0
+16:54:22.572 > SD Begin error
+16:54:22.572 > SD Card begin OK: 0
+16:54:22.572 > Available bytes: 18
+16:54:23.579 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:23.579 > +CGNSSINFO: 2,08,02,00,5239.904584,N,00035.067121,W,160425,155446.0,42.0,0.0,,1.3,1.0,0.8
+16:54:23.579 > 
+16:54:23.579 > OK
+16:54:23.579 > 
+16:54:23.582 > Log file bytes stored: 0
+16:54:23.583 > SD Begin error
+16:54:23.583 > SD Card begin OK: 0
+16:54:23.583 > Available bytes: 23
+16:54:24.590 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:24.591 > +CGNSSINFO: 2,08,02,00,5239.904579,N,00035.067121,W,160425,155447.0,42.1,0.0,,1.3,1.0,0.8
+16:54:24.591 > 
+16:54:24.591 > OK
+16:54:24.591 > 
+16:54:24.593 > Log file bytes stored: 0
+16:54:24.594 > SD Begin error
+16:54:24.594 > SD Card begin OK: 0
+16:54:24.594 > Available bytes: 22
+16:54:25.601 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:25.601 > +CGNSSINFO: 2,08,02,00,5239.904576,N,00035.067115,W,160425,155448.0,42.1,0.0,,1.3,1.0,0.8
+16:54:25.601 > 
+16:54:25.601 > OK
+16:54:25.601 > 
+16:54:25.604 > Log file bytes stored: 0
+16:54:25.605 > SD Begin error
+16:54:25.605 > SD Card begin OK: 0
+16:54:25.605 > Available bytes: 22
+16:54:26.612 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:26.612 > +CGNSSINFO: 2,08,02,00,5239.904578,N,00035.067101,W,160425,155449.0,42.1,0.0,,1.3,1.0,0.8
+16:54:26.612 > 
+16:54:26.612 > OK
+16:54:26.612 > 
+16:54:26.615 > Log file bytes stored: 0
+16:54:26.616 > SD Begin error
+16:54:26.616 > SD Card begin OK: 0
+16:54:26.616 > Available bytes: 22
+16:54:27.623 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:27.624 > +CGNSSINFO: 2,08,02,00,5239.904577,N,00035.067095,W,160425,155450.0,42.1,0.0,,1.3,1.0,0.8
+16:54:27.624 > 
+16:54:27.624 > OK
+16:54:27.624 > 
+16:54:27.626 > Log file bytes stored: 0
+16:54:27.627 > SD Begin error
+16:54:27.627 > SD Card begin OK: 0
+16:54:27.627 > Available bytes: 23
+16:54:28.634 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:28.634 > +CGNSSINFO: 2,08,02,00,5239.904574,N,00035.067092,W,160425,155452.0,42.1,0.0,,1.3,1.0,0.8
+16:54:28.634 > 
+16:54:28.634 > OK
+16:54:28.634 > 
+16:54:28.637 > Log file bytes stored: 0
+16:54:28.637 > SD Begin error
+16:54:28.637 > SD Card begin OK: 0
+16:54:28.638 > Available bytes: 23
+16:54:29.644 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:29.646 > +CGNSSINFO: 2,08,02,00,5239.904576,N,00035.067086,W,160425,155453.0,42.1,0.0,,1.3,1.0,0.8
+16:54:29.646 > 
+16:54:29.646 > OK
+16:54:29.646 > 
+16:54:29.648 > Log file bytes stored: 0
+16:54:29.649 > SD Begin error
+16:54:29.649 > SD Card begin OK: 0
+16:54:29.649 > Available bytes: 22
+16:54:30.655 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:30.656 > +CGNSSINFO: 2,08,02,00,5239.904578,N,00035.067081,W,160425,155454.0,42.1,0.0,,1.3,1.0,0.8
+16:54:30.656 > 
+16:54:30.656 > OK
+16:54:30.656 > 
+16:54:30.659 > Log file bytes stored: 0
+16:54:30.659 > SD Begin error
+16:54:30.659 > SD Card begin OK: 0
+16:54:30.659 > Available bytes: 22
+16:54:31.667 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:31.667 > +CGNSSINFO: 2,09,02,00,5239.904576,N,00035.067068,W,160425,155455.0,42.2,0.0,,1.2,0.9,0.8
+16:54:31.667 > 
+16:54:31.667 > OK
+16:54:31.667 > 
+16:54:31.670 > Log file bytes stored: 0
+16:54:31.670 > SD Begin error
+16:54:31.671 > SD Card begin OK: 0
+16:54:31.671 > Available bytes: 23
+16:54:32.678 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:32.678 > +CGNSSINFO: 2,09,02,00,5239.904574,N,00035.067061,W,160425,155456.0,42.2,0.0,,1.2,0.9,0.8
+16:54:32.678 > 
+16:54:32.678 > OK
+16:54:32.678 > 
+16:54:32.681 > Log file bytes stored: 0
+16:54:32.682 > SD Begin error
+16:54:32.682 > SD Card begin OK: 0
+16:54:32.682 > Available bytes: 23
+16:54:33.689 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:33.689 > +CGNSSINFO: 2,09,02,00,5239.904573,N,00035.067051,W,160425,155457.0,42.2,0.0,,1.2,0.9,0.8
+16:54:33.689 > 
+16:54:33.689 > OK
+16:54:33.689 > 
+16:54:33.692 > Log file bytes stored: 0
+16:54:33.693 > SD Begin error
+16:54:33.693 > SD Card begin OK: 0
+16:54:33.693 > Available bytes: 23
+16:54:34.699 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:34.699 > +CGNSSINFO: 2,09,02,00,5239.904571,N,00035.067050,W,160425,155458.0,42.2,0.0,,1.2,0.9,0.8
+16:54:34.699 > 
+16:54:34.699 > OK
+16:54:34.699 > 
+16:54:34.702 > Log file bytes stored: 0
+16:54:34.703 > SD Begin error
+16:54:34.703 > SD Card begin OK: 0
+16:54:34.703 > Available bytes: 23
+16:54:35.710 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:35.710 > +CGNSSINFO: 2,09,02,00,5239.904572,N,00035.067045,W,160425,155459.0,42.2,0.0,,1.2,0.9,0.8
+16:54:35.710 > 
+16:54:35.710 > OK
+16:54:35.710 > 
+16:54:35.713 > Log file bytes stored: 0
+16:54:35.714 > SD Begin error
+16:54:35.714 > SD Card begin OK: 0
+16:54:35.714 > Available bytes: 22
+16:54:36.721 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:36.722 > +CGNSSINFO: 2,09,02,00,5239.904574,N,00035.067038,W,160425,155500.0,42.3,0.0,,1.2,0.9,0.8
+16:54:36.722 > 
+16:54:36.722 > OK
+16:54:36.722 > 
+16:54:36.724 > Log file bytes stored: 0
+16:54:36.725 > SD Begin error
+16:54:36.725 > SD Card begin OK: 0
+16:54:36.725 > Available bytes: 23
+16:54:37.732 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:37.732 > +CGNSSINFO: 2,09,02,00,5239.904574,N,00035.067032,W,160425,155501.0,42.3,0.0,,1.2,0.9,0.8
+16:54:37.732 > 
+16:54:37.732 > OK
+16:54:37.732 > 
+16:54:37.735 > Log file bytes stored: 0
+16:54:37.736 > SD Begin error
+16:54:37.736 > SD Card begin OK: 0
+16:54:37.736 > Available bytes: 23
+16:54:38.743 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:38.744 > +CGNSSINFO: 2,09,02,00,5239.904573,N,00035.067026,W,160425,155502.0,42.3,0.0,,1.2,0.9,0.8
+16:54:38.744 > 
+16:54:38.744 > OK
+16:54:38.744 > 
+16:54:38.747 > Log file bytes stored: 0
+16:54:38.747 > SD Begin error
+16:54:38.747 > SD Card begin OK: 0
+16:54:38.747 > Available bytes: 16
+16:54:39.755 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:39.755 > +CGNSSINFO: 2,09,02,00,5239.904571,N,00035.067024,W,160425,155503.0,42.3,0.0,,1.2,0.9,0.8
+16:54:39.755 > 
+16:54:39.755 > OK
+16:54:39.755 > 
+16:54:39.758 > Log file bytes stored: 0
+16:54:39.759 > SD Begin error
+16:54:39.760 > SD Card begin OK: 0
+16:54:39.760 > Available bytes: 24
+16:54:40.765 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:40.766 > +CGNSSINFO: 2,10,02,00,5239.904567,N,00035.067020,W,160425,155504.0,42.3,0.0,,1.1,0.8,0.8
+16:54:40.766 > 
+16:54:40.766 > OK
+16:54:40.766 > 
+16:54:40.770 > Log file bytes stored: 0
+16:54:40.770 > SD Begin error
+16:54:40.770 > SD Card begin OK: 0
+16:54:40.770 > Available bytes: 24
+16:54:41.777 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:41.778 > +CGNSSINFO: 2,10,02,00,5239.904562,N,00035.067024,W,160425,155505.0,42.3,0.0,,1.1,0.8,0.8
+16:54:41.778 > 
+16:54:41.778 > OK
+16:54:41.778 > 
+16:54:41.780 > Log file bytes stored: 0
+16:54:41.781 > SD Begin error
+16:54:41.781 > SD Card begin OK: 0
+16:54:41.781 > Available bytes: 23
+16:54:42.788 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:42.789 > +CGNSSINFO: 2,10,02,00,5239.904561,N,00035.067013,W,160425,155506.0,42.3,0.0,,1.1,0.8,0.8
+16:54:42.789 > 
+16:54:42.789 > OK
+16:54:42.789 > 
+16:54:42.791 > Log file bytes stored: 0
+16:54:42.792 > SD Begin error
+16:54:42.792 > SD Card begin OK: 0
+16:54:42.792 > Available bytes: 24
+16:54:43.799 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:43.799 > +CGNSSINFO: 2,10,02,00,5239.904558,N,00035.066981,W,160425,155507.0,42.4,0.0,,1.1,0.8,0.8
+16:54:43.799 > 
+16:54:43.799 > OK
+16:54:43.799 > 
+16:54:43.803 > Log file bytes stored: 0
+16:54:43.804 > SD Begin error
+16:54:43.804 > SD Card begin OK: 0
+16:54:43.804 > Available bytes: 22
+16:54:44.810 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:44.811 > +CGNSSINFO: 2,10,02,00,5239.904551,N,00035.066969,W,160425,155508.0,42.4,0.0,,1.1,0.8,0.8
+16:54:44.811 > 
+16:54:44.811 > OK
+16:54:44.811 > 
+16:54:44.813 > Log file bytes stored: 0
+16:54:44.814 > SD Begin error
+16:54:44.815 > SD Card begin OK: 0
+16:54:44.815 > Available bytes: 23
+16:54:45.820 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:45.821 > +CGNSSINFO: 2,10,02,00,5239.904546,N,00035.066958,W,160425,155509.0,42.4,0.0,,1.1,0.8,0.8
+16:54:45.821 > 
+16:54:45.821 > OK
+16:54:45.821 > 
+16:54:45.824 > Log file bytes stored: 0
+16:54:45.824 > SD Begin error
+16:54:45.824 > SD Card begin OK: 0
+16:54:45.824 > Available bytes: 24
+16:54:46.832 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:46.832 > +CGNSSINFO: 2,10,02,00,5239.904539,N,00035.066965,W,160425,155510.0,42.4,0.0,,1.1,0.8,0.8
+16:54:46.832 > 
+16:54:46.832 > OK
+16:54:46.832 > 
+16:54:46.835 > Log file bytes stored: 0
+16:54:46.836 > SD Begin error
+16:54:46.836 > SD Card begin OK: 0
+16:54:46.836 > Available bytes: 23
+16:54:47.843 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:47.843 > +CGNSSINFO: 2,10,02,00,5239.904534,N,00035.066962,W,160425,155511.0,42.4,0.0,,1.1,0.8,0.8
+16:54:47.843 > 
+16:54:47.843 > OK
+16:54:47.843 > 
+16:54:47.846 > Log file bytes stored: 0
+16:54:47.847 > SD Begin error
+16:54:47.847 > SD Card begin OK: 0
+16:54:47.847 > Available bytes: 23
+16:54:48.853 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:48.853 > +CGNSSINFO: 2,09,02,00,5239.904529,N,00035.066950,W,160425,155512.0,42.5,0.0,,1.2,0.9,0.8
+16:54:48.853 > 
+16:54:48.853 > OK
+16:54:48.853 > 
+16:54:48.857 > Log file bytes stored: 0
+16:54:48.857 > SD Begin error
+16:54:48.857 > SD Card begin OK: 0
+16:54:48.857 > Available bytes: 23
+16:54:49.864 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:49.864 > +CGNSSINFO: 2,09,02,00,5239.904524,N,00035.066943,W,160425,155513.0,42.5,0.0,,1.2,0.9,0.8
+16:54:49.864 > 
+16:54:49.864 > OK
+16:54:49.864 > 
+16:54:49.868 > Log file bytes stored: 0
+16:54:49.869 > SD Begin error
+16:54:49.869 > SD Card begin OK: 0
+16:54:49.869 > Available bytes: 23
+16:54:50.875 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:50.875 > +CGNSSINFO: 2,09,02,00,5239.904520,N,00035.066939,W,160425,155514.0,42.5,0.0,,1.2,0.9,0.8
+16:54:50.875 > 
+16:54:50.875 > OK
+16:54:50.875 > 
+16:54:50.879 > Log file bytes stored: 0
+16:54:50.879 > SD Begin error
+16:54:50.880 > SD Card begin OK: 0
+16:54:50.880 > Available bytes: 23
+16:54:51.886 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:51.886 > +CGNSSINFO: 2,09,02,00,5239.904517,N,00035.066929,W,160425,155515.0,42.5,0.0,,1.2,0.9,0.8
+16:54:51.886 > 
+16:54:51.886 > OK
+16:54:51.886 > 
+16:54:51.889 > Log file bytes stored: 0
+16:54:51.890 > SD Begin error
+16:54:51.890 > SD Card begin OK: 0
+16:54:51.890 > Available bytes: 23
+16:54:52.897 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:52.898 > +CGNSSINFO: 2,09,02,00,5239.904515,N,00035.066930,W,160425,155516.0,42.5,0.0,,1.2,0.9,0.8
+16:54:52.898 > 
+16:54:52.898 > OK
+16:54:52.898 > 
+16:54:52.901 > Log file bytes stored: 0
+16:54:52.901 > SD Begin error
+16:54:52.902 > SD Card begin OK: 0
+16:54:52.902 > Available bytes: 23
+16:54:53.908 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:53.909 > +CGNSSINFO: 2,09,02,00,5239.904509,N,00035.066932,W,160425,155517.0,42.5,0.0,,1.2,0.9,0.8
+16:54:53.909 > 
+16:54:53.909 > OK
+16:54:53.909 > 
+16:54:53.911 > Log file bytes stored: 0
+16:54:53.912 > SD Begin error
+16:54:53.912 > SD Card begin OK: 0
+16:54:53.912 > Available bytes: 23
+16:54:54.919 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:54.919 > +CGNSSINFO: 2,09,02,00,5239.904506,N,00035.066926,W,160425,155518.0,42.5,0.0,,1.2,0.9,0.8
+16:54:54.919 > 
+16:54:54.919 > OK
+16:54:54.919 > 
+16:54:54.923 > Log file bytes stored: 0
+16:54:54.924 > SD Begin error
+16:54:54.924 > SD Card begin OK: 0
+16:54:54.924 > Available bytes: 23
+16:54:55.930 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:55.930 > +CGNSSINFO: 2,09,02,00,5239.904507,N,00035.066914,W,160425,155519.0,42.6,0.0,,1.2,0.9,0.8
+16:54:55.930 > 
+16:54:55.930 > OK
+16:54:55.930 > 
+16:54:55.934 > Log file bytes stored: 0
+16:54:55.934 > SD Begin error
+16:54:55.934 > SD Card begin OK: 0
+16:54:55.934 > Available bytes: 24
+16:54:56.942 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:56.942 > +CGNSSINFO: 2,09,02,00,5239.904507,N,00035.066912,W,160425,155520.0,42.5,0.0,,1.2,0.9,0.8
+16:54:56.942 > 
+16:54:56.942 > OK
+16:54:56.942 > 
+16:54:56.944 > Log file bytes stored: 0
+16:54:56.945 > SD Begin error
+16:54:56.945 > SD Card begin OK: 0
+16:54:56.945 > Available bytes: 23
+16:54:57.952 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:57.952 > +CGNSSINFO: 2,09,02,00,5239.904506,N,00035.066908,W,160425,155521.0,42.6,0.0,,1.2,0.9,0.8
+16:54:57.952 > 
+16:54:57.952 > OK
+16:54:57.952 > 
+16:54:57.955 > Log file bytes stored: 0
+16:54:57.956 > SD Begin error
+16:54:57.956 > SD Card begin OK: 0
+16:54:57.956 > Available bytes: 24
+16:54:58.964 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:58.964 > +CGNSSINFO: 2,09,02,00,5239.904500,N,00035.066909,W,160425,155522.0,42.6,0.0,,1.2,0.9,0.8
+16:54:58.964 > 
+16:54:58.964 > OK
+16:54:58.964 > 
+16:54:58.967 > Log file bytes stored: 0
+16:54:58.967 > SD Begin error
+16:54:58.968 > SD Card begin OK: 0
+16:54:58.968 > Available bytes: 23
+16:54:59.974 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:54:59.974 > +CGNSSINFO: 2,09,02,00,5239.904498,N,00035.066908,W,160425,155523.0,42.6,0.0,,1.2,0.9,0.8
+16:54:59.974 > 
+16:54:59.974 > OK
+16:54:59.974 > 
+16:54:59.977 > Log file bytes stored: 0
+16:54:59.978 > SD Begin error
+16:54:59.978 > SD Card begin OK: 0
+16:54:59.978 > Available bytes: 24
+16:55:00.984 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:00.984 > +CGNSSINFO: 2,09,02,00,5239.904489,N,00035.066919,W,160425,155524.0,42.6,0.0,,1.2,0.9,0.8
+16:55:00.984 > 
+16:55:00.984 > OK
+16:55:00.984 > 
+16:55:00.988 > Log file bytes stored: 0
+16:55:00.988 > SD Begin error
+16:55:00.988 > SD Card begin OK: 0
+16:55:00.988 > Available bytes: 23
+16:55:01.996 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:01.997 > +CGNSSINFO: 2,09,02,00,5239.904482,N,00035.066939,W,160425,155525.0,42.6,0.0,,1.2,0.9,0.8
+16:55:01.997 > 
+16:55:01.997 > OK
+16:55:01.997 > 
+16:55:02.000 > Log file bytes stored: 0
+16:55:02.000 > SD Begin error
+16:55:02.000 > SD Card begin OK: 0
+16:55:02.000 > Available bytes: 24
+16:55:03.007 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:03.007 > +CGNSSINFO: 2,09,02,00,5239.904481,N,00035.066940,W,160425,155526.0,42.6,0.0,,1.2,0.9,0.8
+16:55:03.007 > 
+16:55:03.007 > OK
+16:55:03.007 > 
+16:55:03.010 > Log file bytes stored: 0
+16:55:03.011 > SD Begin error
+16:55:03.011 > SD Card begin OK: 0
+16:55:03.011 > Available bytes: 24
+16:55:04.018 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:04.019 > +CGNSSINFO: 2,09,02,00,5239.904478,N,00035.066932,W,160425,155527.0,42.6,0.0,,1.2,0.9,0.8
+16:55:04.019 > 
+16:55:04.019 > OK
+16:55:04.019 > 
+16:55:04.021 > Log file bytes stored: 0
+16:55:04.023 > SD Begin error
+16:55:04.023 > SD Card begin OK: 0
+16:55:04.023 > Available bytes: 24
+16:55:05.028 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:05.029 > +CGNSSINFO: 2,09,02,00,5239.904481,N,00035.066920,W,160425,155528.0,42.6,0.0,,1.2,0.9,0.8
+16:55:05.029 > 
+16:55:05.029 > OK
+16:55:05.029 > 
+16:55:05.031 > Log file bytes stored: 0
+16:55:05.032 > SD Begin error
+16:55:05.032 > SD Card begin OK: 0
+16:55:05.033 > Available bytes: 23
+16:55:06.040 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:06.040 > +CGNSSINFO: 2,09,02,00,5239.904482,N,00035.066919,W,160425,155529.0,42.6,0.0,,1.2,0.9,0.8
+16:55:06.040 > 
+16:55:06.040 > OK
+16:55:06.040 > 
+16:55:06.043 > Log file bytes stored: 0
+16:55:06.043 > SD Begin error
+16:55:06.043 > SD Card begin OK: 0
+16:55:06.043 > Available bytes: 22
+16:55:07.050 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:07.052 > +CGNSSINFO: 2,09,02,00,5239.904479,N,00035.066925,W,160425,155530.0,42.6,0.0,,1.2,0.9,0.8
+16:55:07.052 > 
+16:55:07.052 > OK
+16:55:07.052 > 
+16:55:07.054 > Log file bytes stored: 0
+16:55:07.054 > SD Begin error
+16:55:07.054 > SD Card begin OK: 0
+16:55:07.055 > Available bytes: 24
+16:55:08.061 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:08.061 > +CGNSSINFO: 2,09,02,00,5239.904478,N,00035.066926,W,160425,155531.0,42.6,0.0,,1.2,0.9,0.8
+16:55:08.061 > 
+16:55:08.061 > OK
+16:55:08.061 > 
+16:55:08.064 > Log file bytes stored: 0
+16:55:08.065 > SD Begin error
+16:55:08.065 > SD Card begin OK: 0
+16:55:08.065 > Available bytes: 24
+16:55:09.073 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:09.074 > +CGNSSINFO: 2,10,02,00,5239.904477,N,00035.066921,W,160425,155532.0,42.6,0.0,,1.1,0.8,0.8
+16:55:09.074 > 
+16:55:09.074 > OK
+16:55:09.074 > 
+16:55:09.076 > Log file bytes stored: 0
+16:55:09.077 > SD Begin error
+16:55:09.078 > SD Card begin OK: 0
+16:55:09.078 > Available bytes: 23
+16:55:10.084 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:10.085 > +CGNSSINFO: 2,10,02,00,5239.904474,N,00035.066919,W,160425,155533.0,42.7,0.0,,1.1,0.8,0.8
+16:55:10.085 > 
+16:55:10.085 > OK
+16:55:10.085 > 
+16:55:10.087 > Log file bytes stored: 0
+16:55:10.088 > SD Begin error
+16:55:10.088 > SD Card begin OK: 0
+16:55:10.088 > Available bytes: 23
+16:55:11.094 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:11.094 > +CGNSSINFO: 2,10,02,00,5239.904473,N,00035.066908,W,160425,155534.0,42.7,0.0,,1.1,0.8,0.8
+16:55:11.094 > 
+16:55:11.094 > OK
+16:55:11.094 > 
+16:55:11.097 > Log file bytes stored: 0
+16:55:11.098 > SD Begin error
+16:55:11.098 > SD Card begin OK: 0
+16:55:11.098 > Available bytes: 23
+16:55:12.105 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:12.105 > +CGNSSINFO: 2,10,02,00,5239.904471,N,00035.066900,W,160425,155535.0,42.7,0.0,,1.1,0.8,0.8
+16:55:12.105 > 
+16:55:12.105 > OK
+16:55:12.105 > 
+16:55:12.108 > Log file bytes stored: 0
+16:55:12.109 > SD Begin error
+16:55:12.109 > SD Card begin OK: 0
+16:55:12.109 > Available bytes: 22
+16:55:13.116 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:13.116 > +CGNSSINFO: 2,10,02,00,5239.904470,N,00035.066890,W,160425,155536.0,42.8,0.0,,1.1,0.8,0.8
+16:55:13.116 > 
+16:55:13.116 > OK
+16:55:13.116 > 
+16:55:13.119 > Log file bytes stored: 0
+16:55:13.120 > SD Begin error
+16:55:13.120 > SD Card begin OK: 0
+16:55:13.120 > Available bytes: 13
+16:55:14.129 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:14.129 > +CGNSSINFO: 2,10,02,00,5239.904466,N,00035.066878,W,160425,155537.0,42.8,0.0,,1.1,0.8,0.8
+16:55:14.129 > 
+16:55:14.129 > OK
+16:55:14.129 > 
+16:55:14.132 > Log file bytes stored: 0
+16:55:14.133 > SD Begin error
+16:55:14.133 > SD Card begin OK: 0
+16:55:14.133 > Available bytes: 13
+16:55:15.142 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:15.142 > +CGNSSINFO: 2,10,02,00,5239.904468,N,00035.066866,W,160425,155538.0,42.8,0.0,,1.1,0.8,0.8
+16:55:15.142 > 
+16:55:15.142 > OK
+16:55:15.142 > 
+16:55:15.146 > Log file bytes stored: 0
+16:55:15.146 > SD Begin error
+16:55:15.146 > SD Card begin OK: 0
+16:55:15.146 > Available bytes: 24
+16:55:16.153 > 2: SIM7600 Buffer: AT+CGNSSINFO
+16:55:16.153 > +CGNSSINFO: 2,09,02,00,5239.904469,N,00035.066855,W,160425,155539.0,42.8,0.0,,1.2,0.9,0.8
+16:55:16.153 > 
+16:55:16.153 > OK
+16:55:16.153 > 
+16:55:16.156 > Log file bytes stored: 0
+16:55:16.157 > SD Begin error
+16:55:16.157 > SD Card begin OK: 0
+16:55:16.157 > Available bytes: 24

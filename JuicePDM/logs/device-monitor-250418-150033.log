@@ -1,0 +1,130 @@
+15:00:33.647 > Initializing SIM7600G...
+15:00:33.952 > Enabling DMA: 1
+15:00:34.063 > System checksum read: 28E0F0AF, at index: 676
+15:00:34.063 > EEPROM status register: 0
+15:00:36.165 > Channel Checksum written: 35815177, at index: 644
+15:00:36.166 > EEPROM status register: 3
+15:00:36.177 > Storage checksum read: A45EF6FF, at index: 925
+15:00:36.178 > EEPROM status register: 0
+15:00:36.975 > Storage Checksum written: 386FB2A2, at index: 925
+15:00:36.975 > EEPROM status register: 3
+15:00:37.186 > SD Card begin OK: 1
+15:00:37.984 > Storage Checksum written: A45EF6C0, at index: 925
+15:00:37.986 > EEPROM status register: 3
+15:00:38.002 > SD Card init complete.
+15:00:39.293 > Line count: 1
+15:00:39.294 > Bytes stored: 2430
+15:00:39.324 > Available bytes: 0
+15:00:39.824 > 0: SIM7600 Buffer: 
+15:00:39.827 > Log file bytes stored: 2430
+15:00:40.293 > Line count: 2
+15:00:40.293 > Bytes stored: 2923
+15:00:40.325 > Available bytes: 0
+15:00:40.825 > 0: SIM7600 Buffer: 
+15:00:40.828 > Log file bytes stored: 2923
+15:00:41.973 > Line count: 3
+15:00:41.973 > Bytes stored: 3416
+15:00:42.005 > Available bytes: 0
+15:00:42.505 > 0: SIM7600 Buffer: 
+15:00:42.508 > Log file bytes stored: 3416
+15:00:42.974 > Line count: 4
+15:00:42.974 > Bytes stored: 3909
+15:00:43.006 > Available bytes: 0
+15:00:43.506 > 0: SIM7600 Buffer: 
+15:00:43.509 > Log file bytes stored: 3909
+15:00:43.975 > Line count: 5
+15:00:43.976 > Bytes stored: 4402
+15:00:44.007 > Available bytes: 0
+15:00:44.506 > 0: SIM7600 Buffer: 
+15:00:44.509 > Log file bytes stored: 4402
+15:00:44.976 > Line count: 6
+15:00:44.977 > Bytes stored: 4895
+15:00:45.007 > Available bytes: 0
+15:00:45.508 > 0: SIM7600 Buffer: 
+15:00:45.511 > Log file bytes stored: 4895
+15:00:45.978 > Line count: 7
+15:00:45.978 > Bytes stored: 5389
+15:00:46.010 > Available bytes: 0
+15:00:46.510 > 0: SIM7600 Buffer: 
+15:00:46.512 > Log file bytes stored: 5389
+15:00:46.978 > Line count: 8
+15:00:46.980 > Bytes stored: 5881
+15:00:47.010 > Available bytes: 0
+15:00:50.212 > 0: SIM7600 Buffer: 
+15:00:50.213 > RDY
+15:00:50.213 > 
+15:00:50.213 > +CPIN: READY
+15:00:50.213 > 
+15:00:50.213 > SMS DONE
+15:00:50.213 > 
+15:00:50.213 > PB DONE
+15:00:50.213 > 
+15:00:50.215 > Log file bytes stored: 5881
+15:00:50.556 > Line count: 9
+15:00:50.557 > Bytes stored: 6374
+15:00:50.588 > Available bytes: 9
+15:00:51.589 > 1: SIM7600 Buffer: AT
+15:00:51.589 > OK
+15:00:51.589 > 
+15:00:51.592 > Log file bytes stored: 6374
+15:00:51.932 > Line count: 10
+15:00:51.933 > Bytes stored: 6867
+15:00:51.964 > Available bytes: 19
+15:00:52.964 > 2: SIM7600 Buffer: AT+CGPS=1
+15:00:52.965 > ERROR
+15:00:52.965 > 
+15:00:52.968 > Log file bytes stored: 6867
+15:00:53.308 > Line count: 11
+15:00:53.309 > Bytes stored: 7359
+15:00:53.340 > Available bytes: 50
+15:00:54.340 > 2: SIM7600 Buffer: AT+CGNSSINFO
+15:00:54.340 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+15:00:54.340 > 
+15:00:54.340 > OK
+15:00:54.340 > 
+15:00:54.340 > Incomplete GPS data
+15:00:54.343 > Log file bytes stored: 7359
+15:00:54.684 > Line count: 12
+15:00:54.685 > Bytes stored: 7853
+15:00:54.716 > Available bytes: 50
+15:00:55.717 > 2: SIM7600 Buffer: AT+CGNSSINFO
+15:00:55.718 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+15:00:55.718 > 
+15:00:55.718 > OK
+15:00:55.718 > 
+15:00:55.718 > Incomplete GPS data
+15:00:55.720 > Log file bytes stored: 7853
+15:00:56.060 > Line count: 13
+15:00:56.061 > Bytes stored: 8346
+15:00:56.092 > Available bytes: 50
+15:00:57.092 > 2: SIM7600 Buffer: AT+CGNSSINFO
+15:00:57.092 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+15:00:57.092 > 
+15:00:57.092 > OK
+15:00:57.092 > 
+15:00:57.092 > Incomplete GPS data
+15:00:57.095 > Log file bytes stored: 8346
+15:00:57.436 > Line count: 14
+15:00:57.437 > Bytes stored: 8839
+15:00:57.468 > Available bytes: 50
+15:00:58.468 > 2: SIM7600 Buffer: AT+CGNSSINFO
+15:00:58.469 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+15:00:58.469 > 
+15:00:58.469 > OK
+15:00:58.469 > 
+15:00:58.469 > Incomplete GPS data
+15:00:58.471 > Log file bytes stored: 8839
+15:00:58.813 > Line count: 15
+15:00:58.813 > Bytes stored: 9332
+15:00:58.843 > Available bytes: 50
+15:00:59.844 > 2: SIM7600 Buffer: AT+CGNSSINFO
+15:00:59.844 > +CGNSSINFO: ,,,,,,,,,,,,,,,
+15:00:59.844 > 
+15:00:59.844 > OK
+15:00:59.844 > 
+15:00:59.844 > Incomplete GPS data
+15:00:59.847 > Log file bytes stored: 9332
+15:00:59.847 > Available bytes: 0
+15:01:00.347 > 2: SIM7600 Buffer: 
+15:01:00.350 > Log file bytes stored: 9332
+15:01:00.363 > Prepare sleep

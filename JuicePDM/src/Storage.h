@@ -41,20 +41,13 @@
 #include <M95640R.h>
 #include <GSM.h>
 #include <CircularBuffer.hpp>
-#include <StreamUtils.h>
-#include <stm32f407xx.h>
+#include <stm32f446xx.h>
 #include <OutputHandler.h>
-
-extern SD_HandleTypeDef hsd;
 
 // SPI clock speed for the EEPROM
 #define EEPROM_SPI_SPEED 4000000
 
-// Block size for SD writes
-#define BUFFER_SIZE 4096
-
-// SD clock divider
-#define SD_CLK_DIV 0x08
+#define SD_HW_FLOW_CTRL_ENABLE
 
 extern long startMillis;
 extern long endMillis;
@@ -124,6 +117,9 @@ bool LoadStorageConfig();
 
 /// @brief Inititalise storage data to known values
 void InitialiseStorageData();
+
+/// @brief Initialise the EEPROM storage
+void CleanEEPROM();
 
 /// @brief Initialises SD datalogging
 void InitialiseSD();

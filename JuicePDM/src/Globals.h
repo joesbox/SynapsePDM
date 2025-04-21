@@ -87,11 +87,10 @@
 #define MAX_LOGFILE_SIZE 100000
 
 // Main task timer intervals (milliseconds)
-#define TASK_1_INTERVAL 10
-#define TASK_2_INTERVAL 50
-#define TASK_3_INTERVAL 80
-#define TASK_4_INTERVAL 100
-#define TASK_5_INTERVAL 60000
+#define DISPLAY_INTERVAL 50
+#define COMMS_INTERVAL 100
+#define BATTERY_INTERVAL 60000
+#define LOG_INTERVAL 1000
 #define GPS_INTERVAL 1000
 
 #define DEBUG_INTERVAL 1000
@@ -201,8 +200,6 @@
 // SPI 2
 extern SPIClass SPI_2;
 
-extern DMA_HandleTypeDef hdma_tx;
-
 /// @brief Analogue input config structure
 struct __attribute__((packed)) AnalogueInputs
 {
@@ -233,7 +230,11 @@ const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {PA0, PA1, PA2, PA3, PA4, 
 
 // Timers for main tasks
 extern uint32_t imuWWtimer;
+extern uint32_t DisplayTimer;
+extern uint32_t CommsTimer;
+extern uint32_t BattTimer;
 extern uint32_t LogTimer;
+extern uint32_t GPSTimer;
 
 // HSD Output channels
 extern ChannelConfig Channels[NUM_CHANNELS];
@@ -250,6 +251,13 @@ union ChannelConfigUnion
 
 /// @brief Config storage union for channel data
 extern ChannelConfigUnion ChannelConfigData;
+
+extern uint8_t RTCyear;
+extern uint8_t RTCmonth;
+extern uint8_t RTCday;
+extern uint8_t RTChour;
+extern uint8_t RTCminute;
+extern uint8_t RTCsecond;
 
 /// @brief Initialise channel data to known defaults
 void InitialiseChannelData();

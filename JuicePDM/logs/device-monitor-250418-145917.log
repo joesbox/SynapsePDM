@@ -1,0 +1,52 @@
+14:59:17.262 > Initializing SIM7600G...
+14:59:17.567 > Enabling DMA: 1
+14:59:17.678 > System checksum read: 28E0F0AF, at index: 676
+14:59:17.678 > EEPROM status register: 0
+14:59:19.780 > Channel Checksum written: 35815177, at index: 644
+14:59:19.781 > EEPROM status register: 3
+14:59:19.793 > Storage checksum read: A45EF6FF, at index: 925
+14:59:19.794 > EEPROM status register: 0
+14:59:20.591 > Storage Checksum written: 386FB2A2, at index: 925
+14:59:20.591 > EEPROM status register: 3
+14:59:20.819 > SD Card begin OK: 1
+14:59:21.617 > Storage Checksum written: A45EF6C0, at index: 925
+14:59:21.620 > EEPROM status register: 3
+14:59:21.635 > SD Card init complete.
+14:59:22.926 > Line count: 1
+14:59:22.927 > Bytes stored: 2430
+14:59:22.959 > Available bytes: 0
+14:59:23.459 > 0: SIM7600 Buffer: 
+14:59:23.462 > Log file bytes stored: 2430
+14:59:23.928 > Line count: 2
+14:59:23.929 > Bytes stored: 2923
+14:59:23.960 > Available bytes: 0
+14:59:24.459 > 0: SIM7600 Buffer: 
+14:59:24.463 > Log file bytes stored: 2923
+14:59:25.607 > Line count: 3
+14:59:25.608 > Bytes stored: 3416
+14:59:25.639 > Available bytes: 0
+14:59:26.140 > 0: SIM7600 Buffer: 
+14:59:26.142 > Log file bytes stored: 3416
+14:59:26.608 > Line count: 4
+14:59:26.609 > Bytes stored: 3909
+14:59:26.640 > Available bytes: 0
+14:59:27.140 > 0: SIM7600 Buffer: 
+14:59:27.143 > Log file bytes stored: 3909
+14:59:27.608 > Line count: 5
+14:59:27.609 > Bytes stored: 4402
+14:59:27.640 > Available bytes: 0
+14:59:28.140 > 0: SIM7600 Buffer: 
+14:59:28.143 > Log file bytes stored: 4402
+14:59:28.609 > Line count: 6
+14:59:28.610 > Bytes stored: 4895
+14:59:28.641 > Available bytes: 0
+14:59:29.141 > 0: SIM7600 Buffer: 
+14:59:29.145 > Log file bytes stored: 4895
+14:59:29.611 > Line count: 7
+14:59:29.612 > Bytes stored: 5388
+14:59:29.643 > Available bytes: 0
+14:59:30.144 > 0: SIM7600 Buffer: 
+14:59:30.146 > Log file bytes stored: 5388
+14:59:30.612 > Line count: 8
+14:59:30.613 > Bytes stored: 5881
+14:59:30.644 > Available bytes: 0

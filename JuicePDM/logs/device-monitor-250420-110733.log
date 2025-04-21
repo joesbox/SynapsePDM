@@ -1,0 +1,291 @@
+11:07:33.668 > Initializing SIM7600G...
+11:07:33.973 > Enabling DMA: 1
+11:07:34.084 > System checksum read: 28E0F0AF, at index: 676
+11:07:34.085 > EEPROM status register: 0
+11:07:36.188 > Channel Checksum written: 35815177, at index: 644
+11:07:36.188 > EEPROM status register: 3
+11:07:36.199 > Storage checksum read: A45EF6FF, at index: 925
+11:07:36.200 > EEPROM status register: 0
+11:07:36.997 > Storage Checksum written: 386FB2A2, at index: 925
+11:07:36.998 > EEPROM status register: 3
+11:07:37.215 > SD Card begin OK: 1
+11:07:38.014 > Storage Checksum written: A45EF6C0, at index: 925
+11:07:38.015 > EEPROM status register: 3
+11:07:38.031 > SD Card init complete.
+11:07:39.320 > Line count: 1
+11:07:39.321 > Bytes stored: 2430
+11:07:39.352 > Log time: 373
+11:07:40.352 > Read GPS bytes time: 1000
+11:07:40.352 > GPS time: 1000
+11:07:40.355 > IMU time: 3
+11:07:40.355 > Log file bytes stored: 2430
+11:07:40.355 > Debug time: 0
+11:07:40.696 > Line count: 2
+11:07:40.697 > Bytes stored: 2924
+11:07:40.728 > Log time: 373
+11:07:41.728 > Read GPS bytes time: 1000
+11:07:41.728 > GPS time: 1000
+11:07:41.731 > IMU time: 2
+11:07:41.731 > Log file bytes stored: 2924
+11:07:41.731 > Debug time: 1
+11:07:42.753 > Line count: 3
+11:07:42.753 > Bytes stored: 3418
+11:07:42.785 > Log time: 373
+11:07:43.785 > Read GPS bytes time: 1000
+11:07:43.785 > GPS time: 1000
+11:07:43.788 > IMU time: 2
+11:07:43.788 > Log file bytes stored: 3418
+11:07:43.788 > Debug time: 1
+11:07:44.129 > Line count: 4
+11:07:44.129 > Bytes stored: 3912
+11:07:44.161 > Log time: 373
+11:07:45.161 > Read GPS bytes time: 1000
+11:07:45.161 > GPS time: 1000
+11:07:45.164 > IMU time: 2
+11:07:45.164 > Log file bytes stored: 3912
+11:07:45.164 > Debug time: 1
+11:07:45.506 > Line count: 5
+11:07:45.506 > Bytes stored: 4406
+11:07:45.538 > Log time: 374
+11:07:46.537 > Read GPS bytes time: 1000
+11:07:46.538 > GPS time: 1000
+11:07:46.540 > IMU time: 2
+11:07:46.541 > Log file bytes stored: 4406
+11:07:46.541 > Debug time: 1
+11:07:46.882 > Line count: 6
+11:07:46.882 > Bytes stored: 4900
+11:07:46.914 > Log time: 373
+11:07:47.473 > Read GPS bytes time: 559
+11:07:47.473 > GPS time: 559
+11:07:47.476 > IMU time: 3
+11:07:47.476 > Log file bytes stored: 4900
+11:07:47.476 > Debug time: 0
+11:07:47.882 > Line count: 7
+11:07:47.883 > Bytes stored: 5394
+11:07:47.914 > Log time: 373
+11:07:50.188 > Read GPS bytes time: 2274
+11:07:50.189 > GPS time: 2274
+11:07:50.191 > IMU time: 2
+11:07:50.191 > Log file bytes stored: 5394
+11:07:50.191 > Debug time: 0
+11:07:50.532 > Line count: 8
+11:07:50.532 > Bytes stored: 5888
+11:07:50.564 > Log time: 373
+11:07:51.564 > Read GPS bytes time: 1000
+11:07:51.564 > GPS time: 1000
+11:07:51.567 > IMU time: 2
+11:07:51.567 > Log file bytes stored: 5888
+11:07:51.567 > Debug time: 0
+11:07:51.908 > Line count: 9
+11:07:51.909 > Bytes stored: 6382
+11:07:51.940 > Log time: 373
+11:07:52.940 > Read GPS bytes time: 1000
+11:07:52.940 > GPS time: 1000
+11:07:52.943 > IMU time: 3
+11:07:52.943 > Log file bytes stored: 6382
+11:07:52.943 > Debug time: 0
+11:07:53.285 > Line count: 10
+11:07:53.285 > Bytes stored: 6876
+11:07:53.318 > Log time: 375
+11:07:54.318 > Read GPS bytes time: 1000
+11:07:54.319 > Incomplete GPS data
+11:07:54.319 > GPS time: 1000
+11:07:54.321 > IMU time: 3
+11:07:54.321 > Log file bytes stored: 6876
+11:07:54.321 > Debug time: 0
+11:07:54.663 > Line count: 11
+11:07:54.663 > Bytes stored: 7370
+11:07:54.696 > Log time: 374
+11:07:55.696 > Read GPS bytes time: 1000
+11:07:55.696 > Incomplete GPS data
+11:07:55.696 > GPS time: 1000
+11:07:55.699 > IMU time: 3
+11:07:55.699 > Log file bytes stored: 7370
+11:07:55.699 > Debug time: 0
+11:07:56.040 > Line count: 12
+11:07:56.041 > Bytes stored: 7864
+11:07:56.072 > Log time: 374
+11:07:57.073 > Read GPS bytes time: 1000
+11:07:57.073 > Incomplete GPS data
+11:07:57.073 > GPS time: 1000
+11:07:57.076 > IMU time: 3
+11:07:57.076 > Log file bytes stored: 7864
+11:07:57.076 > Debug time: 0
+11:07:57.416 > Line count: 13
+11:07:57.416 > Bytes stored: 8358
+11:07:57.448 > Log time: 373
+11:07:58.448 > Read GPS bytes time: 1000
+11:07:58.448 > Incomplete GPS data
+11:07:58.448 > GPS time: 1000
+11:07:58.451 > IMU time: 3
+11:07:58.451 > Log file bytes stored: 8358
+11:07:58.451 > Debug time: 0
+11:07:58.792 > Line count: 14
+11:07:58.792 > Bytes stored: 8852
+11:07:58.824 > Log time: 373
+11:07:59.824 > Read GPS bytes time: 1000
+11:07:59.825 > Incomplete GPS data
+11:07:59.825 > GPS time: 1000
+11:07:59.827 > IMU time: 3
+11:07:59.827 > Log file bytes stored: 8852
+11:07:59.827 > Debug time: 0
+11:08:00.168 > Line count: 15
+11:08:00.168 > Bytes stored: 9346
+11:08:00.202 > Log time: 374
+11:08:01.201 > Read GPS bytes time: 1000
+11:08:01.201 > Incomplete GPS data
+11:08:01.201 > GPS time: 1000
+11:08:01.203 > IMU time: 3
+11:08:01.203 > Log file bytes stored: 9346
+11:08:01.203 > Debug time: 0
+11:08:01.546 > Line count: 16
+11:08:01.547 > Bytes stored: 9840
+11:08:01.578 > Log time: 374
+11:08:02.578 > Read GPS bytes time: 1000
+11:08:02.578 > Incomplete GPS data
+11:08:02.578 > GPS time: 1000
+11:08:02.581 > IMU time: 3
+11:08:02.581 > Log file bytes stored: 9840
+11:08:02.581 > Debug time: 0
+11:08:02.922 > Line count: 17
+11:08:02.922 > Bytes stored: 10334
+11:08:02.954 > Log time: 373
+11:08:03.954 > Read GPS bytes time: 1000
+11:08:03.954 > Incomplete GPS data
+11:08:03.954 > GPS time: 1000
+11:08:03.957 > IMU time: 3
+11:08:03.957 > Log file bytes stored: 10334
+11:08:03.957 > Debug time: 0
+11:08:04.298 > Line count: 18
+11:08:04.298 > Bytes stored: 10828
+11:08:04.330 > Log time: 373
+11:08:05.330 > Read GPS bytes time: 1000
+11:08:05.330 > Incomplete GPS data
+11:08:05.330 > GPS time: 1000
+11:08:05.333 > IMU time: 3
+11:08:05.333 > Log file bytes stored: 10828
+11:08:05.333 > Debug time: 0
+11:08:05.673 > Line count: 19
+11:08:05.673 > Bytes stored: 11322
+11:08:05.705 > Log time: 373
+11:08:06.705 > Read GPS bytes time: 1000
+11:08:06.705 > Incomplete GPS data
+11:08:06.705 > GPS time: 1000
+11:08:06.708 > IMU time: 3
+11:08:06.708 > Log file bytes stored: 11322
+11:08:06.708 > Debug time: 0
+11:08:07.050 > Line count: 20
+11:08:07.050 > Bytes stored: 11816
+11:08:07.081 > Log time: 373
+11:08:08.082 > Read GPS bytes time: 1000
+11:08:08.082 > Incomplete GPS data
+11:08:08.082 > GPS time: 1000
+11:08:08.085 > IMU time: 3
+11:08:08.085 > Log file bytes stored: 11816
+11:08:08.085 > Debug time: 0
+11:08:08.427 > Line count: 21
+11:08:08.427 > Bytes stored: 12310
+11:08:08.459 > Log time: 374
+11:08:09.458 > Read GPS bytes time: 1000
+11:08:09.458 > Incomplete GPS data
+11:08:09.458 > GPS time: 1000
+11:08:09.461 > IMU time: 3
+11:08:09.461 > Log file bytes stored: 12310
+11:08:09.461 > Debug time: 0
+11:08:09.803 > Line count: 22
+11:08:09.803 > Bytes stored: 12803
+11:08:09.834 > Log time: 373
+11:08:10.834 > Read GPS bytes time: 1000
+11:08:10.834 > Incomplete GPS data
+11:08:10.834 > GPS time: 1000
+11:08:10.837 > IMU time: 3
+11:08:10.837 > Log file bytes stored: 12803
+11:08:10.837 > Debug time: 0
+11:08:11.178 > Line count: 23
+11:08:11.178 > Bytes stored: 13297
+11:08:11.209 > Log time: 372
+11:08:12.209 > Read GPS bytes time: 1000
+11:08:12.209 > GPS time: 1000
+11:08:12.212 > IMU time: 3
+11:08:12.212 > Log file bytes stored: 13297
+11:08:12.212 > Debug time: 0
+11:08:12.554 > Line count: 24
+11:08:12.554 > Bytes stored: 13794
+11:08:12.586 > Log time: 374
+11:08:13.586 > Read GPS bytes time: 1000
+11:08:13.586 > GPS time: 1000
+11:08:13.589 > IMU time: 3
+11:08:13.589 > Log file bytes stored: 13794
+11:08:13.589 > Debug time: 0
+11:08:13.931 > Line count: 25
+11:08:13.931 > Bytes stored: 14291
+11:08:13.963 > Log time: 374
+11:08:14.963 > Read GPS bytes time: 1000
+11:08:14.964 > GPS time: 1000
+11:08:14.966 > IMU time: 3
+11:08:14.967 > Log file bytes stored: 14291
+11:08:14.967 > Debug time: 0
+11:08:15.308 > Line count: 26
+11:08:15.308 > Bytes stored: 14788
+11:08:15.340 > Log time: 374
+11:08:16.340 > Read GPS bytes time: 1000
+11:08:16.341 > GPS time: 1000
+11:08:16.343 > IMU time: 3
+11:08:16.344 > Log file bytes stored: 14788
+11:08:16.344 > Debug time: 0
+11:08:16.685 > Line count: 27
+11:08:16.685 > Bytes stored: 15285
+11:08:16.717 > Log time: 374
+11:08:17.717 > Read GPS bytes time: 1000
+11:08:17.718 > GPS time: 1000
+11:08:17.720 > IMU time: 3
+11:08:17.720 > Log file bytes stored: 15285
+11:08:17.720 > Debug time: 0
+11:08:18.062 > Line count: 28
+11:08:18.062 > Bytes stored: 15782
+11:08:18.093 > Log time: 374
+11:08:19.094 > Read GPS bytes time: 1000
+11:08:19.094 > GPS time: 1000
+11:08:19.097 > IMU time: 3
+11:08:19.097 > Log file bytes stored: 15782
+11:08:19.097 > Debug time: 0
+11:08:19.439 > Line count: 29
+11:08:19.439 > Bytes stored: 16279
+11:08:19.471 > Log time: 374
+11:08:20.471 > Read GPS bytes time: 1000
+11:08:20.471 > GPS time: 1000
+11:08:20.474 > IMU time: 3
+11:08:20.474 > Log file bytes stored: 16279
+11:08:20.474 > Debug time: 0
+11:08:20.815 > Line count: 30
+11:08:20.815 > Bytes stored: 16776
+11:08:20.846 > Log time: 373
+11:08:21.847 > Read GPS bytes time: 1000
+11:08:21.847 > GPS time: 1000
+11:08:21.849 > IMU time: 3
+11:08:21.849 > Log file bytes stored: 16776
+11:08:21.849 > Debug time: 0
+11:08:22.191 > Line count: 31
+11:08:22.191 > Bytes stored: 17273
+11:08:22.223 > Log time: 373
+11:08:23.223 > Read GPS bytes time: 1000
+11:08:23.223 > GPS time: 1000
+11:08:23.226 > IMU time: 3
+11:08:23.226 > Log file bytes stored: 17273
+11:08:23.226 > Debug time: 0
+11:08:23.567 > Line count: 32
+11:08:23.567 > Bytes stored: 17770
+11:08:23.600 > Log time: 374
+11:08:24.599 > Read GPS bytes time: 1000
+11:08:24.599 > GPS time: 1000
+11:08:24.603 > IMU time: 3
+11:08:24.603 > Log file bytes stored: 17770
+11:08:24.603 > Debug time: 0
+11:08:24.944 > Line count: 33
+11:08:24.945 > Bytes stored: 18267
+11:08:24.977 > Log time: 374
+11:08:25.976 > Read GPS bytes time: 1000
+11:08:25.977 > GPS time: 1000
+11:08:25.979 > IMU time: 3
+11:08:25.980 > Log file bytes stored: 18267
+11:08:25.980 > Debug time: 0
