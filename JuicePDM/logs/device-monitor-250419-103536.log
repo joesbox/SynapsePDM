@@ -1,401 +1,0 @@
-10:35:36.682 > Initializing SIM7600G...
-10:35:36.987 > Enabling DMA: 1
-10:35:37.851 > System checksum read: 28E0F0AF, at index: 676
-10:35:37.851 > EEPROM status register: 0
-10:35:39.952 > Channel Checksum written: 35815177, at index: 644
-10:35:39.953 > EEPROM status register: 3
-10:35:39.964 > Storage checksum read: 7B243CFF, at index: 925
-10:35:39.965 > EEPROM status register: 0
-10:35:40.762 > Storage Checksum written: 386FB2A2, at index: 925
-10:35:40.762 > EEPROM status register: 3
-10:35:41.719 > Available bytes: 0
-10:35:42.218 > 0: SIM7600 Buffer: 
-10:35:42.221 > Log file bytes stored: 0
-10:35:42.719 > Available bytes: 0
-10:35:43.219 > 0: SIM7600 Buffer: 
-10:35:43.222 > Log file bytes stored: 0
-10:35:44.399 > Available bytes: 0
-10:35:44.900 > 0: SIM7600 Buffer: 
-10:35:44.903 > Log file bytes stored: 0
-10:35:45.401 > Available bytes: 0
-10:35:45.900 > 0: SIM7600 Buffer: 
-10:35:45.903 > Log file bytes stored: 0
-10:35:46.401 > Available bytes: 0
-10:35:46.901 > 0: SIM7600 Buffer: 
-10:35:46.904 > Log file bytes stored: 0
-10:35:47.402 > Available bytes: 0
-10:35:47.902 > 0: SIM7600 Buffer: 
-10:35:47.905 > Log file bytes stored: 0
-10:35:48.403 > Available bytes: 0
-10:35:48.903 > 0: SIM7600 Buffer: 
-10:35:48.905 > Log file bytes stored: 0
-10:35:49.404 > Available bytes: 0
-10:35:49.904 > 0: SIM7600 Buffer: 
-10:35:49.906 > Log file bytes stored: 0
-10:35:50.404 > Available bytes: 0
-10:35:53.197 > 0: SIM7600 Buffer: 
-10:35:53.197 > RDY
-10:35:53.197 > 
-10:35:53.197 > +CPIN: READY
-10:35:53.197 > 
-10:35:53.197 > SMS DONE
-10:35:53.197 > 
-10:35:53.197 > PB DONE
-10:35:53.197 > 
-10:35:53.200 > Log file bytes stored: 0
-10:35:53.200 > Available bytes: 9
-10:35:54.199 > 1: SIM7600 Buffer: AT
-10:35:54.199 > OK
-10:35:54.199 > 
-10:35:54.203 > Log file bytes stored: 0
-10:35:54.204 > Available bytes: 19
-10:35:55.203 > 2: SIM7600 Buffer: AT+CGPS=1
-10:35:55.203 > ERROR
-10:35:55.203 > 
-10:35:55.205 > Log file bytes stored: 0
-10:35:55.206 > Available bytes: 22
-10:35:56.209 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:35:56.209 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:35:56.209 > 
-10:35:56.209 > OK
-10:35:56.209 > 
-10:35:56.209 > Incomplete GPS data
-10:35:56.212 > Log file bytes stored: 0
-10:35:56.212 > Available bytes: 23
-10:35:57.215 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:35:57.215 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:35:57.215 > 
-10:35:57.215 > OK
-10:35:57.215 > 
-10:35:57.215 > Incomplete GPS data
-10:35:57.217 > Log file bytes stored: 0
-10:35:57.218 > Available bytes: 23
-10:35:58.221 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:35:58.221 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:35:58.221 > 
-10:35:58.221 > OK
-10:35:58.221 > 
-10:35:58.221 > Incomplete GPS data
-10:35:58.223 > Log file bytes stored: 0
-10:35:58.224 > Available bytes: 23
-10:35:59.227 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:35:59.227 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:35:59.227 > 
-10:35:59.227 > OK
-10:35:59.227 > 
-10:35:59.227 > Incomplete GPS data
-10:35:59.230 > Log file bytes stored: 0
-10:35:59.230 > Available bytes: 22
-10:36:00.232 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:00.232 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:00.232 > 
-10:36:00.232 > OK
-10:36:00.232 > 
-10:36:00.232 > Incomplete GPS data
-10:36:00.235 > Log file bytes stored: 0
-10:36:00.235 > Available bytes: 22
-10:36:01.238 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:01.238 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:01.238 > 
-10:36:01.238 > OK
-10:36:01.238 > 
-10:36:01.238 > Incomplete GPS data
-10:36:01.240 > Log file bytes stored: 0
-10:36:01.242 > Available bytes: 22
-10:36:02.244 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:02.245 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:02.245 > 
-10:36:02.245 > OK
-10:36:02.245 > 
-10:36:02.245 > Incomplete GPS data
-10:36:02.247 > Log file bytes stored: 0
-10:36:02.248 > Available bytes: 21
-10:36:03.249 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:03.250 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:03.250 > 
-10:36:03.250 > OK
-10:36:03.250 > 
-10:36:03.250 > Incomplete GPS data
-10:36:03.253 > Log file bytes stored: 0
-10:36:03.254 > Available bytes: 22
-10:36:04.256 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:04.256 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:04.256 > 
-10:36:04.256 > OK
-10:36:04.256 > 
-10:36:04.256 > Incomplete GPS data
-10:36:04.258 > Log file bytes stored: 0
-10:36:04.259 > Available bytes: 21
-10:36:05.261 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:05.263 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:05.263 > 
-10:36:05.263 > OK
-10:36:05.263 > 
-10:36:05.263 > Incomplete GPS data
-10:36:05.265 > Log file bytes stored: 0
-10:36:05.266 > Available bytes: 22
-10:36:06.267 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:06.267 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:06.267 > 
-10:36:06.267 > OK
-10:36:06.267 > 
-10:36:06.268 > Incomplete GPS data
-10:36:06.271 > Log file bytes stored: 0
-10:36:06.272 > Available bytes: 22
-10:36:07.274 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:07.274 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:07.274 > 
-10:36:07.274 > OK
-10:36:07.274 > 
-10:36:07.274 > Incomplete GPS data
-10:36:07.277 > Log file bytes stored: 0
-10:36:07.278 > Available bytes: 22
-10:36:08.280 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:08.280 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:08.280 > 
-10:36:08.280 > OK
-10:36:08.280 > 
-10:36:08.280 > Incomplete GPS data
-10:36:08.283 > Log file bytes stored: 0
-10:36:08.284 > Available bytes: 22
-10:36:09.285 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:09.286 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:09.286 > 
-10:36:09.286 > OK
-10:36:09.286 > 
-10:36:09.286 > Incomplete GPS data
-10:36:09.288 > Log file bytes stored: 0
-10:36:09.289 > Available bytes: 22
-10:36:10.292 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:10.292 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:10.292 > 
-10:36:10.292 > OK
-10:36:10.292 > 
-10:36:10.292 > Incomplete GPS data
-10:36:10.295 > Log file bytes stored: 0
-10:36:10.295 > Available bytes: 22
-10:36:11.297 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:11.298 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:11.298 > 
-10:36:11.298 > OK
-10:36:11.298 > 
-10:36:11.298 > Incomplete GPS data
-10:36:11.300 > Log file bytes stored: 0
-10:36:11.301 > Available bytes: 22
-10:36:12.303 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:12.304 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:12.304 > 
-10:36:12.304 > OK
-10:36:12.304 > 
-10:36:12.304 > Incomplete GPS data
-10:36:12.306 > Log file bytes stored: 0
-10:36:12.307 > Available bytes: 22
-10:36:13.310 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:13.310 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:13.310 > 
-10:36:13.310 > OK
-10:36:13.310 > 
-10:36:13.310 > Incomplete GPS data
-10:36:13.312 > Log file bytes stored: 0
-10:36:13.313 > Available bytes: 22
-10:36:14.315 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:14.316 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:14.316 > 
-10:36:14.316 > OK
-10:36:14.316 > 
-10:36:14.316 > Incomplete GPS data
-10:36:14.318 > Log file bytes stored: 0
-10:36:14.319 > Available bytes: 22
-10:36:15.322 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:15.322 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:15.322 > 
-10:36:15.322 > OK
-10:36:15.322 > 
-10:36:15.322 > Incomplete GPS data
-10:36:15.325 > Log file bytes stored: 0
-10:36:15.325 > Available bytes: 22
-10:36:16.327 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:16.327 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:16.327 > 
-10:36:16.327 > OK
-10:36:16.327 > 
-10:36:16.327 > Incomplete GPS data
-10:36:16.330 > Log file bytes stored: 0
-10:36:16.331 > Available bytes: 22
-10:36:17.334 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:17.334 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:17.334 > 
-10:36:17.334 > OK
-10:36:17.334 > 
-10:36:17.334 > Incomplete GPS data
-10:36:17.337 > Log file bytes stored: 0
-10:36:17.337 > Available bytes: 22
-10:36:18.338 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:18.338 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:18.338 > 
-10:36:18.338 > OK
-10:36:18.338 > 
-10:36:18.340 > Incomplete GPS data
-10:36:18.342 > Log file bytes stored: 0
-10:36:18.343 > Available bytes: 22
-10:36:19.345 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:19.345 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:19.345 > 
-10:36:19.345 > OK
-10:36:19.345 > 
-10:36:19.345 > Incomplete GPS data
-10:36:19.347 > Log file bytes stored: 0
-10:36:19.349 > Available bytes: 22
-10:36:20.351 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:20.351 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:20.351 > 
-10:36:20.351 > OK
-10:36:20.351 > 
-10:36:20.351 > Incomplete GPS data
-10:36:20.354 > Log file bytes stored: 0
-10:36:20.355 > Available bytes: 21
-10:36:21.357 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:21.357 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:21.357 > 
-10:36:21.357 > OK
-10:36:21.357 > 
-10:36:21.357 > Incomplete GPS data
-10:36:21.360 > Log file bytes stored: 0
-10:36:21.360 > Available bytes: 22
-10:36:22.362 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:22.363 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:22.363 > 
-10:36:22.363 > OK
-10:36:22.363 > 
-10:36:22.363 > Incomplete GPS data
-10:36:22.366 > Log file bytes stored: 0
-10:36:22.367 > Available bytes: 22
-10:36:23.368 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:23.369 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:23.369 > 
-10:36:23.369 > OK
-10:36:23.369 > 
-10:36:23.369 > Incomplete GPS data
-10:36:23.371 > Log file bytes stored: 0
-10:36:23.372 > Available bytes: 22
-10:36:24.374 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:24.374 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:24.374 > 
-10:36:24.374 > OK
-10:36:24.374 > 
-10:36:24.374 > Incomplete GPS data
-10:36:24.378 > Log file bytes stored: 0
-10:36:24.379 > Available bytes: 21
-10:36:25.381 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:25.381 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:25.381 > 
-10:36:25.381 > OK
-10:36:25.381 > 
-10:36:25.381 > Incomplete GPS data
-10:36:25.383 > Log file bytes stored: 0
-10:36:25.384 > Available bytes: 22
-10:36:26.385 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:26.387 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:26.387 > 
-10:36:26.387 > OK
-10:36:26.387 > 
-10:36:26.387 > Incomplete GPS data
-10:36:26.389 > Log file bytes stored: 0
-10:36:26.390 > Available bytes: 21
-10:36:27.393 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:27.393 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:27.393 > 
-10:36:27.393 > OK
-10:36:27.393 > 
-10:36:27.393 > Incomplete GPS data
-10:36:27.396 > Log file bytes stored: 0
-10:36:27.396 > Available bytes: 3
-10:36:28.400 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:28.401 > +CGNSSINFO: ,,,,,,,,,,,,,,,
-10:36:28.401 > 
-10:36:28.401 > OK
-10:36:28.401 > 
-10:36:28.401 > Incomplete GPS data
-10:36:28.403 > Log file bytes stored: 0
-10:36:28.403 > Available bytes: 0
-10:36:29.414 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:29.414 > +CGNSSINFO: 2,05,00,00,5239.906908,N,00035.065149,W,190425,093630.0,49.1,0.0,,2.1,1.9,1.0
-10:36:29.414 > 
-10:36:29.414 > OK
-10:36:29.414 > 
-10:36:29.417 > Log file bytes stored: 0
-10:36:29.423 > SD Begin error
-10:36:29.423 > SD Card begin OK: 0
-10:36:29.423 > Available bytes: 69
-10:36:30.426 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:30.426 > +CGNSSINFO: 2,06,00,00,5239.905379,N,00035.063036,W,190425,093631.0,54.3,0.0,,1.7,1.4,1.0
-10:36:30.426 > 
-10:36:30.426 > OK
-10:36:30.426 > 
-10:36:30.429 > Log file bytes stored: 0
-10:36:30.430 > SD Begin error
-10:36:30.430 > SD Card begin OK: 0
-10:36:30.430 > Available bytes: 27
-10:36:31.436 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:31.437 > +CGNSSINFO: 2,06,00,00,5239.905380,N,00035.062893,W,190425,093632.0,55.0,0.0,,1.7,1.4,1.0
-10:36:31.437 > 
-10:36:31.437 > OK
-10:36:31.437 > 
-10:36:31.440 > Log file bytes stored: 0
-10:36:31.440 > SD Begin error
-10:36:31.440 > SD Card begin OK: 0
-10:36:31.440 > Available bytes: 24
-10:36:32.447 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:32.447 > +CGNSSINFO: 2,06,00,00,5239.905124,N,00035.062537,W,190425,093633.0,55.7,0.0,,1.7,1.4,1.0
-10:36:32.447 > 
-10:36:32.447 > OK
-10:36:32.447 > 
-10:36:32.451 > Log file bytes stored: 0
-10:36:32.452 > SD Begin error
-10:36:32.452 > SD Card begin OK: 0
-10:36:32.452 > Available bytes: 23
-10:36:33.459 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:33.459 > +CGNSSINFO: 2,06,00,00,5239.905345,N,00035.062806,W,190425,093634.0,55.2,0.0,,1.7,1.4,1.0
-10:36:33.459 > 
-10:36:33.459 > OK
-10:36:33.459 > 
-10:36:33.462 > Log file bytes stored: 0
-10:36:33.462 > SD Begin error
-10:36:33.462 > SD Card begin OK: 0
-10:36:33.463 > Available bytes: 24
-10:36:34.470 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:34.470 > +CGNSSINFO: 2,06,00,00,5239.905086,N,00035.062514,W,190425,093635.0,55.8,0.0,,1.7,1.4,1.0
-10:36:34.470 > 
-10:36:34.470 > OK
-10:36:34.470 > 
-10:36:34.473 > Log file bytes stored: 0
-10:36:34.473 > SD Begin error
-10:36:34.473 > SD Card begin OK: 0
-10:36:34.473 > Available bytes: 23
-10:36:35.481 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:35.481 > +CGNSSINFO: 2,06,01,00,5239.905109,N,00035.062554,W,190425,093636.0,55.8,0.0,,1.7,1.4,0.9
-10:36:35.481 > 
-10:36:35.481 > OK
-10:36:35.481 > 
-10:36:35.484 > Log file bytes stored: 0
-10:36:35.485 > SD Begin error
-10:36:35.485 > SD Card begin OK: 0
-10:36:35.485 > Available bytes: 24
-10:36:36.491 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:36.491 > +CGNSSINFO: 2,06,01,00,5239.904886,N,00035.062299,W,190425,093637.0,56.4,0.0,,1.7,1.4,0.9
-10:36:36.491 > 
-10:36:36.491 > OK
-10:36:36.491 > 
-10:36:36.494 > Log file bytes stored: 0
-10:36:36.494 > SD Begin error
-10:36:36.494 > SD Card begin OK: 0
-10:36:36.494 > Available bytes: 23
-10:36:37.503 > 2: SIM7600 Buffer: AT+CGNSSINFO
-10:36:37.503 > +CGNSSINFO: 2,06,04,00,5239.904745,N,00035.062093,W,190425,093638.0,57.0,0.0,,1.2,0.9,0.8
-10:36:37.503 > 
-10:36:37.503 > OK
-10:36:37.503 > 
-10:36:37.505 > Log file bytes stored: 0
-10:36:37.506 > SD Begin error
-10:36:37.506 > SD Card begin OK: 0
-10:36:37.506 > Available bytes: 24
