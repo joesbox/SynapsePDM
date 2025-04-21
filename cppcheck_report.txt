@@ -16,58 +16,64 @@ JuicePDM/src/IMU.cpp:64:7: note: err is assigned
 JuicePDM/src/IMU.cpp:75:7: note: err is overwritten
   err = imu.setConfig(gyroConfig);
       ^
-JuicePDM/src/OutputHandler.cpp:75:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
+JuicePDM/src/OutputHandler.cpp:246:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
         float analogMean = 0.0f;
               ^
 JuicePDM/src/SerialComms.cpp:85:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
             chanSize = sizeof(Channels) / NUM_CHANNELS;
                      ^
-JuicePDM/src/Storage.cpp:512:14: style: Local variable 'dateTimeStamp' shadows outer variable [shadowVariable]
-        char dateTimeStamp[32];
-             ^
-JuicePDM/src/Storage.cpp:38:6: note: Shadowed declaration
-char dateTimeStamp[23];
-     ^
-JuicePDM/src/Storage.cpp:512:14: note: Shadow variable
-        char dateTimeStamp[32];
-             ^
-JuicePDM/src/main.cpp:292:23: error: Buffer is accessed out of bounds: Channels[i].ChannelName [bufferAccessOutOfBounds]
-    strcpy(Channels[i].ChannelName, "FAN");
-                      ^
-JuicePDM/src/main.cpp:240:7: style: Condition '!ChannelCRCValid' is always true [knownConditionTrueFalse]
+JuicePDM/src/Storage.cpp:491:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
+    char timeStamp[100];
+         ^
+JuicePDM/src/Storage.cpp:492:10: style: The scope of the variable 'sysLog' can be reduced. [variableScope]
+    char sysLog[150];
+         ^
+JuicePDM/src/Storage.cpp:493:10: style: The scope of the variable 'channelLog' can be reduced. [variableScope]
+    char channelLog[150];
+         ^
+JuicePDM/src/Storage.cpp:494:9: style: The scope of the variable 'writtenBytes' can be reduced. [variableScope]
+    int writtenBytes = 0;
+        ^
+JuicePDM/src/Storage.cpp:494:22: style: Variable 'writtenBytes' is assigned a value that is never used. [unreadVariable]
+    int writtenBytes = 0;
+                     ^
+JuicePDM/src/Storage.cpp:542:18: style: Unused variable: logEntry [unusedVariable]
+            char logEntry[40];
+                 ^
+JuicePDM/src/main.cpp:165:7: style: Condition '!ChannelCRCValid' is always true [knownConditionTrueFalse]
   if (!ChannelCRCValid)
       ^
-JuicePDM/src/main.cpp:239:21: note: Assignment 'ChannelCRCValid=false', assigned value is 0
+JuicePDM/src/main.cpp:164:21: note: Assignment 'ChannelCRCValid=false', assigned value is 0
   ChannelCRCValid = false; // LoadChannelConfig();
                     ^
-JuicePDM/src/main.cpp:240:7: note: Condition '!ChannelCRCValid' is always true
+JuicePDM/src/main.cpp:165:7: note: Condition '!ChannelCRCValid' is always true
   if (!ChannelCRCValid)
       ^
 JuicePDM/src/SerialComms.cpp:51:0: style: The function 'CheckSerial' is never used. [unusedFunction]
 
 ^
+JuicePDM/src/Storage.cpp:368:0: style: The function 'CleanEEPROM' is never used. [unusedFunction]
+
+^
 JuicePDM/src/CANComms.cpp:27:0: style: The function 'InitialiseCAN' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/Storage.cpp:101:0: style: The function 'LoadChannelConfig' is never used. [unusedFunction]
+JuicePDM/src/Storage.cpp:100:0: style: The function 'LoadChannelConfig' is never used. [unusedFunction]
 
 ^
 JuicePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/OutputHandler.cpp:55:0: style: The function 'UpdateOutputs' is never used. [unusedFunction]
-
-^
 JuicePDM/src/CANComms.cpp:34:0: style: The function 'canSniff' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:347:0: style: The function 'loop' is never used. [unusedFunction]
+JuicePDM/src/main.cpp:253:0: style: The function 'loop' is never used. [unusedFunction]
 
 ^
 JuicePDM/src/Battery.cpp:64:0: style: The function 'printBatteryStats' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:210:0: style: The function 'setup' is never used. [unusedFunction]
+JuicePDM/src/main.cpp:136:0: style: The function 'setup' is never used. [unusedFunction]
 
 ^
 nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingInclude]
