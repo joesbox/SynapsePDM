@@ -16,42 +16,48 @@ JuicePDM/src/IMU.cpp:64:7: note: err is assigned
 JuicePDM/src/IMU.cpp:75:7: note: err is overwritten
   err = imu.setConfig(gyroConfig);
       ^
-JuicePDM/src/OutputHandler.cpp:246:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
+JuicePDM/src/OutputHandler.cpp:299:24: warning: Identical inner 'if' condition is always true. [identicalInnerCondition]
+        if (Channels[i].Enabled)
+                       ^
+JuicePDM/src/OutputHandler.cpp:296:22: note: outer condition: Channels[i].Enabled
+      if (Channels[i].Enabled)
+                     ^
+JuicePDM/src/OutputHandler.cpp:299:24: note: identical inner condition: Channels[i].Enabled
+        if (Channels[i].Enabled)
+                       ^
+JuicePDM/src/OutputHandler.cpp:248:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
         float analogMean = 0.0f;
               ^
 JuicePDM/src/SerialComms.cpp:85:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
             chanSize = sizeof(Channels) / NUM_CHANNELS;
                      ^
-JuicePDM/src/Storage.cpp:491:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
+JuicePDM/src/Storage.cpp:492:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
     char timeStamp[100];
          ^
-JuicePDM/src/Storage.cpp:492:10: style: The scope of the variable 'sysLog' can be reduced. [variableScope]
+JuicePDM/src/Storage.cpp:493:10: style: The scope of the variable 'sysLog' can be reduced. [variableScope]
     char sysLog[150];
          ^
-JuicePDM/src/Storage.cpp:493:10: style: The scope of the variable 'channelLog' can be reduced. [variableScope]
+JuicePDM/src/Storage.cpp:494:10: style: The scope of the variable 'channelLog' can be reduced. [variableScope]
     char channelLog[150];
          ^
-JuicePDM/src/Storage.cpp:494:9: style: The scope of the variable 'writtenBytes' can be reduced. [variableScope]
+JuicePDM/src/Storage.cpp:495:9: style: The scope of the variable 'writtenBytes' can be reduced. [variableScope]
     int writtenBytes = 0;
         ^
-JuicePDM/src/Storage.cpp:494:22: style: Variable 'writtenBytes' is assigned a value that is never used. [unreadVariable]
+JuicePDM/src/Storage.cpp:495:22: style: Variable 'writtenBytes' is assigned a value that is never used. [unreadVariable]
     int writtenBytes = 0;
                      ^
-JuicePDM/src/Storage.cpp:542:18: style: Unused variable: logEntry [unusedVariable]
+JuicePDM/src/Storage.cpp:537:18: style: Unused variable: logEntry [unusedVariable]
             char logEntry[40];
                  ^
-JuicePDM/src/main.cpp:165:7: style: Condition '!ChannelCRCValid' is always true [knownConditionTrueFalse]
+JuicePDM/src/main.cpp:200:7: style: Condition '!ChannelCRCValid' is always true [knownConditionTrueFalse]
   if (!ChannelCRCValid)
       ^
-JuicePDM/src/main.cpp:164:21: note: Assignment 'ChannelCRCValid=false', assigned value is 0
+JuicePDM/src/main.cpp:199:21: note: Assignment 'ChannelCRCValid=false', assigned value is 0
   ChannelCRCValid = false; // LoadChannelConfig();
                     ^
-JuicePDM/src/main.cpp:165:7: note: Condition '!ChannelCRCValid' is always true
+JuicePDM/src/main.cpp:200:7: note: Condition '!ChannelCRCValid' is always true
   if (!ChannelCRCValid)
       ^
-JuicePDM/src/SerialComms.cpp:51:0: style: The function 'CheckSerial' is never used. [unusedFunction]
-
-^
 JuicePDM/src/Storage.cpp:368:0: style: The function 'CleanEEPROM' is never used. [unusedFunction]
 
 ^
@@ -67,13 +73,13 @@ JuicePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never u
 JuicePDM/src/CANComms.cpp:34:0: style: The function 'canSniff' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:253:0: style: The function 'loop' is never used. [unusedFunction]
+JuicePDM/src/main.cpp:283:0: style: The function 'loop' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/Battery.cpp:64:0: style: The function 'printBatteryStats' is never used. [unusedFunction]
+JuicePDM/src/Battery.cpp:65:0: style: The function 'printBatteryStats' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:136:0: style: The function 'setup' is never used. [unusedFunction]
+JuicePDM/src/main.cpp:171:0: style: The function 'setup' is never used. [unusedFunction]
 
 ^
 nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingInclude]
