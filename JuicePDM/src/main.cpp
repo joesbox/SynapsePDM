@@ -127,8 +127,43 @@ void Debug()
   Serial.print("Second: ");
   Serial.println(second);
   //printBatteryStats();*/
+
+  const float imuData[] = {accelX, accelY, accelZ, gyroX, gyroY, gyroZ};
+  const char *imuLabels[] = {"Accel X", "Accel Y", "Accel Z", "Rotation X", "Rotation Y", "Rotation Z"};
+  for (int i = 0; i < 6; ++i)
+  {
+    Serial.print(imuLabels[i]);
+    Serial.print(": ");
+    Serial.println(imuData[i], 3);
+  }
+
   Serial.print("Log file bytes stored: ");
   Serial.println(BytesStored);
+  Serial.print("Log lines, freq:");
+  Serial.print(StorageParams.MaxLogLength);
+  Serial.print(", ");
+  Serial.println(StorageParams.LogFrequency);
+  Serial.print("Battery SOC: ");
+  Serial.println(SOC);
+  Serial.print("Analogue raw current: ");
+  for (int i = 0; i < NUM_CHANNELS; i++)
+  {
+    Serial.print(Channels[i].AnalogRaw);
+    Serial.print(", ");
+  }
+
+  Serial.println();
+
+  Serial.print("Analogue calculated current: ");
+  for (int i = 0; i < NUM_CHANNELS; i++)
+  {
+    Serial.print(Channels[i].CurrentValue);
+    Serial.print(", ");
+  }
+
+  Serial.println();
+
+  Serial.println(SystemParams.ErrorFlags, HEX);
 
 #endif
 }
@@ -190,11 +225,6 @@ void setup()
 
   // Display the splash screen for 2 seconds
   splashCounter = millis() + SPLASH_SCREEN_DELAY;
-  for (int i = 0; i < NUM_CHANNELS; i++)
-  {
-    Channels[i].PWMSetDuty = 50;
-    Channels[i].ChanType = DIG_PWM;
-  }
 }
 
 void handlePowerState()
@@ -271,7 +301,8 @@ void loop()
   if (millis() > CommsTimer)
   {
     CommsTimer = millis() + COMMS_INTERVAL;
-    // CheckSerial();
+    CheckSerial();
+    ReadIMU();
   }
 
   if (millis() > BattTimer)
@@ -296,15 +327,18 @@ void loop()
       // GPS time must be updated, use that
       rtc.setDate(day, month, (year % 100));
       rtc.setTime(hour, minute, second);
+      RTCyear = rtc.getYear();
+      RTCmonth = rtc.getMonth();
+      RTCday = rtc.getDay();
+      RTChour = rtc.getHours();
+      RTCminute = rtc.getMinutes();
+      RTCsecond = rtc.getSeconds();
       InitialiseSD();
     }
     else if (RTCSet)
     {
-      // RTC is set. Log SD card data
-      start = millis();
+      // RTC is set. log SD card data
       LogData();
-      Serial.print("Log time: ");
-      Serial.println(millis() - start);
     }
   }
 
@@ -314,10 +348,6 @@ void loop()
     start = millis();
     UpdateSIM7600(GPS);
     Serial.print("GPS time: ");
-    Serial.println(millis() - start);
-    start = millis();
-    ReadIMU();
-    Serial.print("IMU time: ");
     Serial.println(millis() - start);
     start = millis();
     Debug();

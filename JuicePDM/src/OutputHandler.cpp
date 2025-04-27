@@ -216,6 +216,7 @@ void UpdateOutputs()
   // Check the type of channel we're dealing with (digital or PWM) and handle output accordingly
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
+
     switch (Channels[i].ChanType)
     {
     case DIG_PWM:
@@ -236,6 +237,7 @@ void UpdateOutputs()
         }
         updatePWMDutyCycle(i, pwmActual);
 
+        // TODO: Calibrate current readings for the BTS50025
         int sum = 0;
         uint8_t total = 0;
         for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
@@ -250,10 +252,14 @@ void UpdateOutputs()
           Channels[i].AnalogRaw = analogMean;
         }
 
-        // TODO: Calibrate current readings for the BTS50025
+        float isVoltage = (Channels[i].AnalogRaw / ADCres) * V_REF;
+        float amps = (PWM_M * Channels[i].AnalogRaw) + PWM_C;
 
-        float isVoltage = (Channels[i].AnalogRaw / 1024.0) * 3.3;
-        float amps = PTERM1 * pow(isVoltage, 4) + PTERM2 * pow(isVoltage, 3) + PTERM3 * pow(isVoltage, 2) + PTERM4 * isVoltage + PCONST;
+        if (Channels[i].AnalogRaw < 5)
+        {
+          // No current detected, set to 0
+          amps = 0.0;
+        }
 
         // Check for fault condition and current thresholds
         if (isVoltage > FAULT_THRESHOLD)
@@ -284,6 +290,38 @@ void UpdateOutputs()
       {
         updatePWMDutyCycle(i, 0);
         Channels[i].CurrentValue = 0.0;
+      }
+      break;
+    case DIG:
+      if (Channels[i].Enabled)
+      {
+        // Read analog values first
+        if (Channels[i].Enabled)
+        {
+          int sum = 0;
+          uint8_t total = 0;
+          for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
+          {
+            sum += analogRead(Channels[i].CurrentSensePin);
+            total++;
+          }
+          float analogMean = 0.0f;
+          if (total)
+          {
+            analogMean = sum / total;
+            Channels[i].AnalogRaw = analogMean;
+          }
+
+          float milliVolts = (analogMean / (float)ADCres) * V_REF;
+
+          float I_IS = milliVolts / R_IS;
+          Channels[i].CurrentValue = k_ILIS * I_IS;
+        }
+        updatePWMDutyCycle(i, 255);
+      }
+      else
+      {
+        updatePWMDutyCycle(i, 0);
       }
       break;
     default:

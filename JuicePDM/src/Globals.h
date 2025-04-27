@@ -90,7 +90,7 @@
 #define DISPLAY_INTERVAL 50
 #define COMMS_INTERVAL 100
 #define BATTERY_INTERVAL 60000
-#define LOG_INTERVAL 1000
+#define LOG_INTERVAL 100
 #define GPS_INTERVAL 1000
 
 #define DEBUG_INTERVAL 1000
@@ -148,11 +148,11 @@
 // Default wake window for IMU checks
 #define DEFAULT_WW 5000
 
-// Default log frequecy of 1Hz
-#define DEFAULT_LOG_FREQUENCY 1
+// Default log frequecy of 10Hz
+#define DEFAULT_LOG_FREQUENCY 10
 
-// Default number of log lines. 3600 = 1 hour @ 1Hz
-#define DEFAULT_LOG_LINES 3600
+// Default number of log lines. 36000 = 1 hour @ 10Hz
+#define DEFAULT_LOG_LINES 36000
 
 // Number of logs to keep on the SD card
 #define NUMBER_LOGS 10

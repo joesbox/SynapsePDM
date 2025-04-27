@@ -36,16 +36,16 @@
 #include <System.h>
 
 // How many current sense samples to collect to calculate a mean
-#define ANALOG_READ_SAMPLES 10
+#define ANALOG_READ_SAMPLES 100
 
-// Polynomial terms used to calculate current
-#define PTERM1 9.0829
-#define PTERM2 -24.874
-#define PTERM3 26.468
-#define PTERM4 -9.5747
-#define PCONST 1.2549
+#define PWM_M 0.0168F
+#define PWM_C 0.0062F
 
-extern HardwareTimer *channelTimer;
+#define V_REF 3.294F  // Reference voltage for ADC
+#define R_IS 1000.0F  // Sense resistor value in ohms (1kΩ)
+#define ADCres 4095 // 12-bit ADC resolution
+
+#define k_ILIS 18407.72F // Current sense ratio
 
 /// @brief Setup interrupts and analog read timers
 void InitialiseOutputs();

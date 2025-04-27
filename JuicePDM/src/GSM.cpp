@@ -76,7 +76,7 @@ void UpdateSIM7600(SIM7600Commands command)
     {
         bytesRead += Serial1.readBytes(simBuffer + bytesRead, sizeof(simBuffer) - bytesRead - 1);
     }
-    //}*/
+    //}*/    
 
     while (Serial1.available())
     {
@@ -158,7 +158,7 @@ void UpdateSIM7600(SIM7600Commands command)
 
 void parseGPSData(const char *response)
 {
-    response += 11; // Skip "+CGNSSINFO: "
+    response += 27; // Skip "+CGNSSINFO: "
 
     char buffer[100]; // Temporary buffer to modify the input string
     strncpy(buffer, response, sizeof(buffer) - 1);
@@ -177,11 +177,21 @@ void parseGPSData(const char *response)
     if (index < 13) // Ensure enough tokens are parsed
     {
         Serial.println("Incomplete GPS data");
+        GPSFix = false; // No fix
         return;
     }
 
     // Parse values
     int fixStatus = atoi(tokens[0]);
+
+    if (fixStatus == 0)
+    {
+        GPSFix = false; // No fix
+    }
+    else
+    {
+        GPSFix = true; // Valid fix
+    }
 
     // Convert DMM to Decimal Degrees
     auto convertToDecimalDegrees = [](const char *degMin, const char *dir) -> float

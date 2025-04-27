@@ -68,7 +68,7 @@ void CheckSerial()
             byte chanSize = 0;
             byte send = 0;
 
-            send = SERIAL_HEADER & 255;
+            send = SERIAL_HEADER & 0XFF;
             Serial.write(send);
             checkSum += send;
 
@@ -149,7 +149,7 @@ void CheckSerial()
                 }
             }
 
-            send = SERIAL_TRAILER & 255;
+            send = SERIAL_TRAILER & 0xFF;
             checkSum += send;
             Serial.write(send);
 

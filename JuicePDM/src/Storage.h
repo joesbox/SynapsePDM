@@ -34,6 +34,7 @@
 #include <Arduino.h>
 #include <Globals.h>
 #include <ChannelConfig.h>
+#include <Battery.h>
 #include <System.h>
 #include <CRC32.h>
 #include <EEPROM.h>
@@ -46,8 +47,6 @@
 
 // SPI clock speed for the EEPROM
 #define EEPROM_SPI_SPEED 4000000
-
-#define SD_HW_FLOW_CTRL_ENABLE
 
 extern long startMillis;
 extern long endMillis;

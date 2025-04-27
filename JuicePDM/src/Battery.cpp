@@ -37,7 +37,7 @@ void InitialiseBattery()
 {
   pinMode(CHARGE_EN, OUTPUT);
   pinMode(BATT_INT, INPUT);
-  
+
   digitalWrite(CHARGE_EN, LOW); // Active low
 
   batteryStatus = -1;
@@ -59,12 +59,13 @@ void InitialiseBattery()
 
 void ManageBattery()
 {
+  SOC = lipo.soc(); // Read state-of-charge (%)
 }
 
 void printBatteryStats()
 {
   // Read battery stats from the BQ27441-G1A
-  unsigned int soc = lipo.soc();                   // Read state-of-charge (%)
+  unsigned int soc = SOC = lipo.soc();             // Read state-of-charge (%)
   unsigned int volts = lipo.voltage();             // Read battery voltage (mV)
   int current = lipo.current(AVG);                 // Read average current (mA)
   unsigned int fullCapacity = lipo.capacity(FULL); // Read full capacity (mAh)

@@ -46,6 +46,7 @@ long splashCounter;
 static bool prevEnabled[NUM_CHANNELS] = {false};
 static int prevErrorFlags[NUM_CHANNELS] = {0};
 static float prevCurrentValues[NUM_CHANNELS] = {0.0F};
+static bool prevSDOK, prevGPSOK = false;
 
 const int lights[14][4] = {
     {23, 129, 44, 90},
@@ -120,7 +121,7 @@ void InitialiseDisplay()
   tft.setRotation(1);
   tft.setBitmapColor(TFT_WHITE, TFT_BLACK);
   tft.fillScreen(TFT_BLACK);
-  tft.drawBitmap(0, 0, epd_bitmap_synapse_logo, SCREENWIDTH, SCREENHEIGHT, TFT_RED);
+  tft.pushImage(0, 85, 320, 70, (uint16_t *)epd_bitmap_synapse_logo);
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
   tft.loadFont(NotoSansBold15);
   tft.setCursor(275, 140);
@@ -128,6 +129,9 @@ void InitialiseDisplay()
   analogWrite(TFT_BL, 1023);
 
   spix.end();
+
+  prevSDOK = !(SystemParams.ErrorFlags && (1 << SDCARD_ERROR));
+  prevGPSOK = !GPSFix;
 }
 
 void DrawBackground()
@@ -222,6 +226,35 @@ void UpdateDisplay()
       prevCurrentValues[i] = Channels[i].CurrentValue;
     }
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  }
+
+  // Check for SD card status change
+  bool sdError = (SystemParams.ErrorFlags && (1 << SDCARD_ERROR));
+  if (sdError != prevSDOK)
+  {
+    if (sdError)
+    {
+      tft.pushImage(0, 4, 50, 50, (uint16_t *)logiconError);
+    }
+    else
+    {
+      tft.pushImage(0, 4, 50, 50, (uint16_t *)logicon);
+    }
+    prevSDOK = sdError;
+  }
+
+  // Check for GPS status change
+  if (GPSFix != prevGPSOK)
+  {
+    if (GPSFix)
+    {
+      tft.pushImage(50, 4, 50, 50, (uint16_t *)gpsOK);
+    }
+    else
+    {
+      tft.pushImage(50, 4, 50, 50, (uint16_t *)gpsError);
+    }
+    prevGPSOK = GPSFix;
   }
   tft.endWrite();
   spix.end();

@@ -47,7 +47,7 @@ uint32_t lineCount;
 
 M95640R EEPROMext(&SPI_2, CS1);
 
-const char systemHeader[] = "Date,Time,System Temp,System Voltage,System Current,Error Flags,IMU Accel X,IMU Accel Y,IMU Accel Z,IMU Gyro X,IMU Gyro Y,IMU Gyro Z,Lat,Lon,Alt,Speed,Accuracy,";
+const char systemHeader[] = "Date,Time,Backup Battery SoC,System Temp,System Voltage,System Current,Error Flags,IMU Accel X,IMU Accel Y,IMU Accel Z,IMU Gyro X,IMU Gyro Y,IMU Gyro Z,Lat,Lon,Alt,Speed,Accuracy,";
 const char channelHeader[] = "Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,Multi-Channel,Group Number,Channel Error Flags";
 
 long startMillis;
@@ -400,6 +400,7 @@ void InitialiseSD()
         SD.setCMD(PD2);
         SD.setCK(PC12);
         SDCardOK = SD.begin();
+        HAL_NVIC_SetPriority(SDIO_IRQn, 0, 0);
         if (!SDCardOK)
         {
 #ifdef DEBUG
@@ -495,19 +496,14 @@ void LogData()
     if (!(SystemParams.ErrorFlags & UNDERVOLTAGE) && SDCardOK)
     {
         // Timestamp
-        snprintf(timeStamp, sizeof(timeStamp), "%04d-%02d-%02d,%02d:%02d:%02d,", (2000 + RTCyear), RTCmonth, RTCday, RTChour, RTCminute, RTCsecond);
+        snprintf(timeStamp, sizeof(timeStamp), "%04d-%02d-%02d,%02d:%02d:%02d.%04d,", (2000 + RTCyear), RTCmonth, RTCday, RTChour, RTCminute, RTCsecond, millis() % 1000);
         writtenBytes = dataFile.write(timeStamp, strlen(timeStamp));
-        delay(30);
         if (writtenBytes == 0)
         {
             Serial.println("Logging failed on timestamp entry");
-            Serial.println(dataFile.getErrorstate());
-            Serial.println(dataFile.getWriteError());
-            
             Serial.println(HAL_SD_GetError(&uSdHandle));
-
-            while (true)
-                ;
+            // Clear flags for next attempt
+            __HAL_SD_CLEAR_FLAG(&uSdHandle, SDIO_STATIC_FLAGS);
             SDCardOK = false;
             CloseSDFile();
             InitialiseSD();
@@ -516,18 +512,17 @@ void LogData()
         BytesStored += writtenBytes;
 
         // System Parameters Log
-        snprintf(sysLog, sizeof(sysLog), "%d,%.2f,%.2f,%d,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.6f,%.6f,%.2f,%.2f,%.2f,", SystemParams.SystemTemperature, SystemParams.VBatt, SystemParams.SystemCurrent,
+        snprintf(sysLog, sizeof(sysLog), "%d,%d,%.2f,%.2f,%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,", SOC, SystemParams.SystemTemperature, SystemParams.VBatt, SystemParams.SystemCurrent,
                  SystemParams.ErrorFlags, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, lat, lon, alt, speed, accuracy);
         writtenBytes = dataFile.write(sysLog, strlen(sysLog));
-        delay(30);
         if (writtenBytes == 0)
         {
             Serial.println("Logging failed on syslog entry");
             Serial.println(dataFile.getErrorstate());
             Serial.println(dataFile.getWriteError());
             Serial.println(HAL_SD_GetError(&uSdHandle));
-            while (true)
-                ;
+            // Clear flags for next attempt
+            __HAL_SD_CLEAR_FLAG(&uSdHandle, SDIO_STATIC_FLAGS);
             SDCardOK = false;
             CloseSDFile();
             InitialiseSD();
@@ -572,7 +567,6 @@ void LogData()
                      Channels[i].ErrorFlags,
                      (i < NUM_CHANNELS - 1) ? "," : "\n");
             writtenBytes = dataFile.write(channelLog, strlen(channelLog));
-            delay(20);
             BytesStored += writtenBytes;
             if (writtenBytes == 0)
             {
@@ -580,10 +574,8 @@ void LogData()
                 Serial.println(dataFile.getErrorstate());
                 Serial.println(dataFile.getWriteError());
                 Serial.println(HAL_SD_GetError(&uSdHandle));
-                while (true)
-                    ;
-                Serial.print("Channel index: ");
-                Serial.println(i);
+                // Clear flags for next attempt
+                __HAL_SD_CLEAR_FLAG(&uSdHandle, SDIO_STATIC_FLAGS);
                 SDCardOK = false;
                 CloseSDFile();
                 InitialiseSD();
@@ -593,12 +585,7 @@ void LogData()
 
         // Periodic SD Flushing
         lineCount++;
-        Serial.print("Line count: ");
-        Serial.println(lineCount);
-        Serial.print("Bytes stored: ");
-        Serial.println(BytesStored);
         dataFile.flush();
-        delay(30);
         if (lineCount == StorageParams.MaxLogLength)
         {
             dataFile.close();
