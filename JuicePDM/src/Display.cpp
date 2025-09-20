@@ -33,6 +33,9 @@
 #define SCREENWIDTH 320
 #define SCREENHEIGHT 240
 
+#define ICON_WIDTH 48
+#define ICON_HEIGHT 48
+
 #define CHANNEL_GREY 0xC5C6C5
 #include "graphic.h"
 
@@ -46,7 +49,8 @@ long splashCounter;
 static bool prevEnabled[NUM_CHANNELS] = {false};
 static int prevErrorFlags[NUM_CHANNELS] = {0};
 static float prevCurrentValues[NUM_CHANNELS] = {0.0F};
-static bool prevSDOK, prevGPSOK = false;
+static bool prevSDOK, prevGPSOK, initIcons = false;
+static int prevBatt, prevMin;
 
 const int lights[14][4] = {
     {23, 129, 44, 90},
@@ -118,7 +122,7 @@ void InitialiseDisplay()
   Serial.print("Enabling DMA: ");
   Serial.println(tft.initDMA());
   spix = tft.getSPIinstance();
-  tft.setRotation(1);
+  tft.setRotation(3);
   tft.setBitmapColor(TFT_WHITE, TFT_BLACK);
   tft.fillScreen(TFT_BLACK);
   tft.pushImage(0, 85, 320, 70, (uint16_t *)epd_bitmap_synapse_logo);
@@ -126,11 +130,10 @@ void InitialiseDisplay()
   tft.loadFont(NotoSansBold15);
   tft.setCursor(275, 140);
   tft.print(FW_VER);
-  analogWrite(TFT_BL, 1023);
 
   spix.end();
 
-  prevSDOK = !(SystemParams.ErrorFlags && (1 << SDCARD_ERROR));
+  prevSDOK = SDCardOK;
   prevGPSOK = !GPSFix;
 }
 
@@ -140,7 +143,7 @@ void DrawBackground()
 
   tft.startWrite();
 
-  tft.fillScreen(TFT_BLACK);
+  tft.fillRect(0, 85, SCREENWIDTH, 100, TFT_BLACK);
 
   tft.drawLine(0, 58, SCREENWIDTH, 58, TFT_DARKGREY);
   tft.drawLine(0, 148, SCREENWIDTH, 148, TFT_DARKGREY);
@@ -170,7 +173,8 @@ void DrawBackground()
     tft.setCursor(chanNameX, channelName[i][1]);
     tft.print(Channels[i].ChannelName);
 
-    tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_DARKGREY);
+    //tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_DARKGREY);
+    tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)greyLED);
   }
 
   tft.endWrite();
@@ -182,21 +186,35 @@ void UpdateDisplay()
 {
   spix.begin();
   tft.startWrite();
+
+  if (!initIcons)
+  {
+    initIcons = true;
+    // Initial icon states
+    tft.pushImage(0, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)logiconError);
+    tft.pushImage(49, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)gpsError);
+    tft.pushImage(271, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)batteryIcon);
+    char timeString[6];
+    snprintf(timeString, sizeof(timeString), "%02d:%02d", RTChour, RTCminute);
+    tft.setCursor(230, 21);
+    tft.print(timeString);
+  }
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
     if (Channels[i].Enabled != prevEnabled[i] || Channels[i].ErrorFlags != prevErrorFlags[i])
     {
       if (Channels[i].Enabled && Channels[i].ErrorFlags == 0)
       {
-        tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_GREEN);
+        tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)greenLED);
       }
       else if (Channels[i].Enabled && Channels[i].ErrorFlags != 0)
       {
-        tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_RED);
+        tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)redLED);
       }
       else
       {
-        tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_DARKGREY);
+        //tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_DARKGREY);
+        tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)greyLED);
       }
 
       // Update previous states
@@ -211,7 +229,7 @@ void UpdateDisplay()
     if (currentValueRounded != prevValueRounded)
     {
       // Clear the previous text
-      tft.fillRect(currentReadingCoordinates[i][0], currentReadingCoordinates[i][1], 35, 15, TFT_BLACK);
+      tft.fillRect(currentReadingCoordinates[i][0] - 10, currentReadingCoordinates[i][1], 45, 15, TFT_BLACK);
 
       // Calculate the width of the text
       int textWidth = tft.textWidth(String(currentValueRounded, 1) + "A");
@@ -229,18 +247,17 @@ void UpdateDisplay()
   }
 
   // Check for SD card status change
-  bool sdError = (SystemParams.ErrorFlags && (1 << SDCARD_ERROR));
-  if (sdError != prevSDOK)
+  if (SDCardOK != prevSDOK)
   {
-    if (sdError)
+    if (!SDCardOK)
     {
-      tft.pushImage(0, 4, 50, 50, (uint16_t *)logiconError);
+      tft.pushImage(0, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)logiconError);
     }
     else
     {
-      tft.pushImage(0, 4, 50, 50, (uint16_t *)logicon);
+      tft.pushImage(0, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)logicon);
     }
-    prevSDOK = sdError;
+    prevSDOK = SDCardOK;
   }
 
   // Check for GPS status change
@@ -248,13 +265,46 @@ void UpdateDisplay()
   {
     if (GPSFix)
     {
-      tft.pushImage(50, 4, 50, 50, (uint16_t *)gpsOK);
+      tft.pushImage(49, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)gpsOK);
     }
     else
     {
-      tft.pushImage(50, 4, 50, 50, (uint16_t *)gpsError);
+      tft.pushImage(49, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)gpsError);
     }
     prevGPSOK = GPSFix;
+  }
+
+  if (prevBatt != SOC)
+  {
+    prevBatt = SOC;
+    tft.pushImage(271, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)batteryIcon);    
+    if (SOC < 100)
+    {
+      tft.setCursor(282, 22);
+    }
+    else
+    {
+      tft.setCursor(278, 22);
+    }
+    tft.unloadFont();
+    tft.loadFont(OpenSans12);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    tft.print(SOC);
+    tft.print("%");
+    tft.unloadFont();
+    tft.loadFont(NotoSansBold15);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  }
+
+  if (prevMin != RTCminute)
+  {
+    char timeString[6];
+    snprintf(timeString, sizeof(timeString), "%02d:%02d", RTChour, RTCminute);
+    tft.fillRect(229, 21, 40, 15, TFT_BLACK);
+    tft.setTextColor(TFT_WHITE, TFT_BLACK);
+    prevMin = RTCminute;
+    tft.setCursor(229, 21);
+    tft.print(timeString);
   }
   tft.endWrite();
   spix.end();

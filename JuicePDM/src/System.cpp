@@ -62,6 +62,7 @@ void InitialiseSystem()
 
     // Set the analogue read resolution
     analogReadResolution(12);
+    analogWriteResolution(10);
 
     WakeSystem();
 
@@ -69,7 +70,7 @@ void InitialiseSystem()
     pinMode(DEBUG_PIN, OUTPUT);
 
     // Spare I/O as inputs
-    pinMode(PA8, INPUT);    
+    pinMode(PA8, INPUT);
     pinMode(PC13, INPUT);
     pinMode(PD10, INPUT);
     pinMode(PD10, INPUT);
@@ -93,16 +94,23 @@ void InitialiseSystem()
     Wire.setSCL(PB6);
     Wire.setSDA(PB7);
     Wire.begin();
+
 }
 
 void InitialiseSystemData()
 {
-   // Initialise default system data
-   SystemParams.CANResEnabled = true;
-   SystemParams.CANAddress = ECU_ADDR;
-   SystemParams.IMUwakeWindow = DEFAULT_WW;
+    // Initialise default system data
+    SystemParams.CANResEnabled = 1;
+    SystemParams.ChannelDataCANID = CHAN_CAN_ID;
+    SystemParams.SystemDataCANID = SYS_CAN_ID;
+    SystemParams.ConfigDataCANID = CONF_CAN_ID;
+    SystemParams.IMUwakeWindow = DEFAULT_WW;    
+    SystemParams.SystemCurrentLimit = SYSTEM_CURRENT_MAX;
+    SystemParams.AllowData = 1;
+    SystemParams.AllowGPS = 1;
+    SystemParams.SpeedUnitPref = 1;
+    SystemParams.DistanceUnitPref = 1;
 }
-
 
 void UpdateSystem()
 {
@@ -170,7 +178,7 @@ void UpdateSystem()
         SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~SDCARD_ERROR;
     }
 
-    // Check 
+    // Check
 }
 
 void SleepSystem()

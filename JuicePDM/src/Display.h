@@ -35,6 +35,8 @@
 #include <TFT_eSPI.h>
 #include <synapse.h>
 #include <NotoSansBold15.h>
+#include <OpenSans12.h>
+
 #include <icons.h>
 
 #define USE_DMA_TO_TFT

@@ -32,6 +32,7 @@
 
 int8_t batteryStatus;
 int SOC;
+int SOH;
 
 void InitialiseBattery()
 {
@@ -60,6 +61,25 @@ void InitialiseBattery()
 void ManageBattery()
 {
   SOC = lipo.soc(); // Read state-of-charge (%)
+  SOH = lipo.soh();  // Read state-of-health (%)
+
+  if (SOC > 100)
+  {
+    SOC = 100; // Cap SOC at 100%
+  }
+  else if (SOC < 0)
+  {
+    SOC = 0; // Cap SOC at 0%
+  }
+
+  if (SOH > 100)
+  {
+    SOH = 100; // Cap SOH at 100%
+  }
+  else if (SOH < 0)
+  {
+    SOH = 0; // Cap SOH at 0%
+  }
 }
 
 void printBatteryStats()

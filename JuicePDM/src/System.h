@@ -42,33 +42,23 @@
 #define LL_ADC_RESOLUTION LL_ADC_RESOLUTION_12B
 #define ADC_RANGE 4096
 
-enum SpeedUnits
-{
-  MPH = 0, // Miles per hour
-  KPH,     // Kilometres per hour
-};
-
-enum DistanceUnits
-{
-  Metric = 0, // Metres
-  Imperial,   // Feet
-};
-
 /// @brief System parameters structure
 struct __attribute__((packed)) SystemParameters
 {
-  int32_t SystemTemperature;      // Internal system (STM32 processor) temperature
-  uint8_t CANResEnabled;          // CAN bus termination resistor enabled
-  float VBatt;                    // Battery supply voltage
-  float SystemCurrent;            // Total current draw for all enabled channels
-  uint16_t ErrorFlags;            // Bitmask for system error flags
-  int CANAddress;                 // CAN Bus address
-  uint32_t IMUwakeWindow;         // Wake window for the IMU to determine if something needs to be done or go back to sleep
-  SpeedUnits SpeedUnitPref;       // Speed units.
-  DistanceUnits DistanceUnitPref; // Distance units.
-  bool AllowData;                 // Allow mobile data
-  bool AllowGPS;                  // Allow GPS
-  bool GPSFastBaud;               // Fast baud has been configured for the SIM module
+  int32_t SystemTemperature;  // Internal system (STM32 processor) temperature
+  uint8_t CANResEnabled;      // CAN bus termination resistor enabled. 0 = disabled, 1 = enabled
+  float VBatt;                // Battery supply voltage
+  float SystemCurrent;        // Total current draw for all enabled channels
+  uint8_t SystemCurrentLimit; // System current limit in amps
+  uint16_t ErrorFlags;        // Bitmask for system error flags
+  uint16_t ChannelDataCANID;  // Channel data CAN ID (transmit)
+  uint16_t SystemDataCANID;   // System data CAN ID (transmit)
+  uint16_t ConfigDataCANID;   // Configuration data CAN ID (receive)
+  uint32_t IMUwakeWindow;     // Wake window for the IMU to determine if something needs to be done or go back to sleep
+  uint8_t SpeedUnitPref;      // Speed units. 0 = KPH, 1 = MPH
+  uint8_t DistanceUnitPref;   // Distance units. 0 = Metric (m), 1 = Imperial (ft)
+  uint8_t AllowData;          // Allow mobile data
+  uint8_t AllowGPS;           // Allow GPS
 };
 
 /// @brief System parameters

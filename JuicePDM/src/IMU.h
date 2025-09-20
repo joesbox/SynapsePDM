@@ -31,8 +31,6 @@
 #ifndef IMU_H
 #define IMU_H
 
-#define DEBUG
-
 /// @brief Initialise the IMU
 void InitialiseIMU();
 

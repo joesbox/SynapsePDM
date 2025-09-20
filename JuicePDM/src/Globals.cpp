@@ -40,6 +40,8 @@ uint32_t CommsTimer;
 uint32_t BattTimer;
 uint32_t LogTimer;
 uint32_t GPSTimer;
+uint32_t BLTimer;
+int blLevel = 0;
 
 uint8_t RTCyear;
 uint8_t RTCmonth;
@@ -47,6 +49,9 @@ uint8_t RTCday;
 uint8_t RTChour;
 uint8_t RTCminute;
 uint8_t RTCsecond;
+
+bool enabledFlags[NUM_CHANNELS] = {false};
+unsigned long enabledTimers[NUM_CHANNELS] = {0};
 
 // SPI 2
 SPIClass SPI_2(PICO, POCI, SCK2);
@@ -67,12 +72,19 @@ void InitialiseChannelData()
     else
     {
       Channels[i].InputControlPin = ANAchannelInputPins[i - NUM_DI_CHANNELS];
-    }    
+    }
     Channels[i].CurrentLimitHigh = CURRENT_MAX;
     Channels[i].CurrentThresholdHigh = CURRENT_MAX;
     Channels[i].CurrentThresholdLow = 0.0;
     pinMode(Channels[i].OutputControlPin, OUTPUT);
     digitalWrite(Channels[i].OutputControlPin, LOW);
+    Channels[i].ActiveHigh = true;
+    Channels[i].RunOn = false;
+    Channels[i].RunOnTime = 0;
+    Channels[i].MultiChannel = false;
+    Channels[i].Retry = true;
+    Channels[i].RetryCount = 3;
+    Channels[i].InrushDelay = INRUSH_DELAY;
   }
 
   // Initialise analogue inputs to default values
@@ -81,7 +93,15 @@ void InitialiseChannelData()
     AnalogueIns[i].InputPin = ANAchannelInputPins[i];
     AnalogueIns[i].PullDownPin = ANAchannelInputPullDowns[i];
     AnalogueIns[i].PullUpPin = ANAchannelInputPullUps[i];
-    AnalogueIns[i].PullDownEnable = false;
+    AnalogueIns[i].PullDownEnable = true;
     AnalogueIns[i].PullUpEnable = false;
-  } 
+    AnalogueIns[i].IsDigital = true;
+    AnalogueIns[i].IsThreshold = false;
+    AnalogueIns[i].OnThreshold = 2.5;  // Mid point
+    AnalogueIns[i].OffThreshold = 2.0; // Allows for some hysteresis
+    AnalogueIns[i].ScaleMin = 0.0;     // 0V
+    AnalogueIns[i].ScaleMax = 5.0;     // 5V
+    AnalogueIns[i].PWMMin = 0.0;       // 0%
+    AnalogueIns[i].PWMMax = 100.0;     // 100%
+  }
 }

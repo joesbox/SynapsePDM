@@ -128,14 +128,14 @@ void Debug()
   Serial.println(second);
   //printBatteryStats();*/
 
-  const float imuData[] = {accelX, accelY, accelZ, gyroX, gyroY, gyroZ};
+  /*const float imuData[] = {accelX, accelY, accelZ, gyroX, gyroY, gyroZ};
   const char *imuLabels[] = {"Accel X", "Accel Y", "Accel Z", "Rotation X", "Rotation Y", "Rotation Z"};
   for (int i = 0; i < 6; ++i)
   {
     Serial.print(imuLabels[i]);
     Serial.print(": ");
     Serial.println(imuData[i], 3);
-  }
+  }*/
 
   Serial.print("Log file bytes stored: ");
   Serial.println(BytesStored);
@@ -162,6 +162,7 @@ void Debug()
   }
 
   Serial.println();
+  Serial.print("Error flags: ");
 
   Serial.println(SystemParams.ErrorFlags, HEX);
 
@@ -170,9 +171,6 @@ void Debug()
 
 void setup()
 {
-  Serial.begin(115200);
-  while (!Serial)
-    ;
   InitialiseSystem();
   InitialiseGSM(false);
   analogWrite(TFT_BL, 0);
@@ -196,7 +194,7 @@ void setup()
   }
 
   // Load channel data
-  ChannelCRCValid = false; // LoadChannelConfig();
+  ChannelCRCValid = false;//LoadChannelConfig();
   if (!ChannelCRCValid)
   {
     // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.
@@ -278,11 +276,20 @@ void handlePowerState()
   }
 }
 
-uint32_t start;
-
 void loop()
 {
-
+  if (millis() > BLTimer)
+  {
+    BLTimer = millis() + BL_FADE_INTRVAL;
+    if (blLevel < 1023)
+    {
+      analogWrite(TFT_BL, blLevel++);
+      if (blLevel > 1023)
+      {
+        blLevel = 1023;
+      }
+    }
+  }
   if (millis() > DisplayTimer)
   {
     DisplayTimer = millis() + DISPLAY_INTERVAL;
@@ -300,8 +307,7 @@ void loop()
 
   if (millis() > CommsTimer)
   {
-    CommsTimer = millis() + COMMS_INTERVAL;
-    CheckSerial();
+    CommsTimer = millis() + COMMS_INTERVAL;    
     ReadIMU();
   }
 
@@ -345,14 +351,8 @@ void loop()
   if (millis() > GPSTimer)
   {
     GPSTimer = millis() + GPS_INTERVAL;
-    start = millis();
     UpdateSIM7600(GPS);
-    Serial.print("GPS time: ");
-    Serial.println(millis() - start);
-    start = millis();
     Debug();
-    Serial.print("Debug time: ");
-    Serial.println(millis() - start);
   }
 
   if (millis() > splashCounter && !backgroundDrawn)
@@ -360,4 +360,5 @@ void loop()
     DrawBackground();
   }
   handlePowerState();
+  CheckSerial();
 }

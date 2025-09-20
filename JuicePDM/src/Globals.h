@@ -68,7 +68,7 @@
 // BTS50010-1LUA max turn on delay is 190µs. Default PWM frequency is 200Hz (5000µs period). Therefore, min. PWM duty is limited to about 10% (500µs, 190µs turn-on delay + analog read)
 #define MIN_DUTY 10
 
-// IS current fault threshold voltage. Aobve this threshold, the channel is either open circuit, short circuit or over temperature
+// IS current fault threshold voltage. Above this threshold, the channel is either open circuit, short circuit or over temperature
 #define FAULT_THRESHOLD 2.00
 
 // Microsecond representation of a CPU tick
@@ -77,14 +77,17 @@
 // Maximum per-channel current supported by hardware. No channel can exceed this limit.
 #define CURRENT_MAX 17.0
 
+// Channel inrush delay (milliseconds)
+#define INRUSH_DELAY 500
+
+// Maximum inrush delay (milliseconds). This has to be balanced with what the wiring harness can support
+#define INRUSH_MAX 2000
+
 // Sytem current max (total). Should never reach this as each channel is independantly monitored
-#define SYSTEM_CURRENT_MAX 78.0
+#define SYSTEM_CURRENT_MAX 240
 
 // Default current sense ratio as specified by the BTS50010 datasheet
 #define DEFAULT_DK_VALUE 38000
-
-// Maximum log file size in bytes
-#define MAX_LOGFILE_SIZE 100000
 
 // Main task timer intervals (milliseconds)
 #define DISPLAY_INTERVAL 50
@@ -92,6 +95,7 @@
 #define BATTERY_INTERVAL 60000
 #define LOG_INTERVAL 100
 #define GPS_INTERVAL 1000
+#define BL_FADE_INTRVAL 0
 
 #define DEBUG_INTERVAL 1000
 
@@ -102,7 +106,7 @@
 #define ANALOG_READ_DEBUG_PIN 20
 
 // Debug flag
-#define DEBUG
+// #define DEBUG
 #define DEBUG_PIN PA15
 
 // Battery measurement analog input pin
@@ -121,11 +125,11 @@
 #define SYSTEM_TEMP_LIMIT 80.0
 
 // System error bitmasks
-#define OVERCURRENT 0x01
-#define OVERTEMP 0x02
-#define UNDERVOLTAGE 0x04
-#define CRC_CHECK_FAILED 0x08
-#define SDCARD_ERROR 0x10
+#define OVERCURRENT 0x0001
+#define OVERTEMP 0x0002
+#define UNDERVOLTAGE 0x0004
+#define CRC_CHECK_FAILED 0x0008
+#define SDCARD_ERROR 0x0010
 
 // Channel error bitmasks
 #define CHN_OVERCURRENT_RANGE 0x01
@@ -134,9 +138,12 @@
 #define OVERTEMP_GNDSHORT 0x08
 #define WATCHDOG_TIMEOUT 0x10
 #define IS_FAULT 0x20
+#define RETRY_LOCKOUT 0x40
 
-// ECU CAN address
-#define ECU_ADDR 0x800
+// ECU CAN addresses
+#define CHAN_CAN_ID 0x800
+#define SYS_CAN_ID 0x801
+#define CONF_CAN_ID 0x802
 
 // Ignition input (KL15)
 #define IGN_INPUT PE2
@@ -197,6 +204,9 @@
 #define SIM_RST PC7
 #define SIM_FLIGHT PB8
 
+extern bool enabledFlags[NUM_CHANNELS];
+extern unsigned long enabledTimers[NUM_CHANNELS];
+
 // SPI 2
 extern SPIClass SPI_2;
 
@@ -208,6 +218,14 @@ struct __attribute__((packed)) AnalogueInputs
   uint8_t PullDownPin; // Pull-down enable pin
   bool PullUpEnable;   // Pull-up enable flag
   bool PullDownEnable; // Pull-down enable flag
+  bool IsDigital;      // True if the input is to be treated as a digital input
+  bool IsThreshold;    // True if the input is to be treated as a thresholded input or PWM input (false = scaled PWM). Only applies to analogue inputs
+  float OnThreshold;   // On threshold (Voltage)
+  float OffThreshold;  // Off threshold (Voltage)
+  float ScaleMin;      // Minimum scale value (Used for PWM scaled inputs)
+  float ScaleMax;      // Maximum scale value (Used for PWM scaled inputs)
+  uint8_t PWMMin;      // Minimum PWM value (0-100%)
+  uint8_t PWMMax;        // Maximum PWM value (0-100%)
 };
 
 // Channel digital input pins (defaults)
@@ -235,6 +253,8 @@ extern uint32_t CommsTimer;
 extern uint32_t BattTimer;
 extern uint32_t LogTimer;
 extern uint32_t GPSTimer;
+extern uint32_t BLTimer;
+extern int blLevel;
 
 // HSD Output channels
 extern ChannelConfig Channels[NUM_CHANNELS];

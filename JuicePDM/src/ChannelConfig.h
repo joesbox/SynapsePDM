@@ -40,7 +40,7 @@ enum ChannelType
 struct __attribute__((packed)) ChannelConfig
 {
   ChannelType ChanType;       // Channel type
-  uint8_t PWMSetDuty;         // Current duty set percentage
+  uint8_t PWMSetDuty;         // Current duty set percentage (0 to 100)
   uint8_t Enabled;            // Channel enabled flag
   char ChannelName[3];        // Channel name
   volatile int AnalogRaw;     // Raw analog value. Used for calibration
@@ -50,12 +50,13 @@ struct __attribute__((packed)) ChannelConfig
   float CurrentThresholdLow;  // Turn off threshold low (open circuit detection)
   uint8_t Retry;              // Retry after current threshold reached
   uint8_t RetryCount;         // Number of retries
-  float RetryDelay;           // Retry delay in seconds
-  uint8_t MultiChannel;       // Grouped with other channels. Allows higher current loads
+  float InrushDelay;          // Inrush delay in milliseconds
+  bool MultiChannel;          // Grouped with other channels. Allows higher current loads
   uint8_t GroupNumber;        // Group membership number
   int OutputControlPin;       // Digital uC control pin
   uint8_t CurrentSensePin;    // Current sense input pin
   uint8_t InputControlPin;    // Input control pin
+  bool ActiveHigh;            // True if input is active high
   bool RunOn;                 // Run-on after ignition off flag
   int RunOnTime;              // Run on time (in milliseconds)
   uint8_t ErrorFlags;         // Bitmask for channel error flags

@@ -52,6 +52,8 @@ enum SIM7600Commands
 /// @brief Initialise GSM/GPS
 void InitialiseGSM(bool enableData);
 
+/// @brief Trigger SIM7600 module update
+/// @param command Command to execute
 void UpdateSIM7600(SIM7600Commands command);
 
 /// @brief Parse GPS response data

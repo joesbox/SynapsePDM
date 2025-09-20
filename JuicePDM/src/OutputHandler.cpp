@@ -55,6 +55,18 @@ uint analogValues[NUM_CHANNELS][ANALOG_READ_SAMPLES];
 // Channel number used to identify associated channel
 int channelNum;
 
+// Track if retries are pending
+bool retriesPending[NUM_CHANNELS] = {false};
+
+// Retry timers
+unsigned long retryTimers[NUM_CHANNELS] = {0};
+
+// Channel lock status
+bool channelLocked[NUM_CHANNELS] = {false};
+
+// per-channel counters
+uint8_t retryCount[NUM_CHANNELS] = {0};
+
 /// @brief Handle output control
 void InitialiseOutputs()
 {
@@ -216,7 +228,6 @@ void UpdateOutputs()
   // Check the type of channel we're dealing with (digital or PWM) and handle output accordingly
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-
     switch (Channels[i].ChanType)
     {
     case DIG_PWM:
@@ -281,7 +292,10 @@ void UpdateOutputs()
         else
         {
           // No conditions found. Clear flag
-          Channels[i].ErrorFlags = 0;
+          if (!channelLocked[i])
+          {
+            Channels[i].ErrorFlags = 0;
+          }
         }
 
         Channels[i].CurrentValue = amps;
@@ -295,33 +309,124 @@ void UpdateOutputs()
     case DIG:
       if (Channels[i].Enabled)
       {
+        static uint8_t trySampleCount[NUM_CHANNELS] = {0};
+        static float tryCurrentSum[NUM_CHANNELS] = {0.0f};
+
         // Read analog values first
-        if (Channels[i].Enabled)
+        int sum = 0;
+        uint8_t total = 0;
+        for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
         {
-          int sum = 0;
-          uint8_t total = 0;
-          for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
-          {
-            sum += analogRead(Channels[i].CurrentSensePin);
-            total++;
-          }
-          float analogMean = 0.0f;
-          if (total)
-          {
-            analogMean = sum / total;
-            Channels[i].AnalogRaw = analogMean;
-          }
-
-          float milliVolts = (analogMean / (float)ADCres) * V_REF;
-
-          float I_IS = milliVolts / R_IS;
-          Channels[i].CurrentValue = k_ILIS * I_IS;
+          sum += analogRead(Channels[i].CurrentSensePin);
+          total++;
         }
-        updatePWMDutyCycle(i, 255);
+        float analogMean = 0.0f;
+        if (total)
+        {
+          analogMean = sum / total;
+          Channels[i].AnalogRaw = analogMean;
+        }
+
+        float milliVolts = (analogMean / (float)ADCres) * V_REF;
+
+        float I_IS = milliVolts / R_IS;
+        Channels[i].CurrentValue = k_ILIS * I_IS;
+
+        if (Channels[i].AnalogRaw < 5)
+        {
+          // No current detected, set to 0
+          Channels[i].CurrentValue = 0.0;
+        }
+
+        // Inrush delay expired. Now start evaluating current samples
+        if (millis() - enabledTimers[i] > (unsigned long)(Channels[i].InrushDelay))
+        {
+          // Add to rolling sum
+          tryCurrentSum[i] += Channels[i].CurrentValue;
+          trySampleCount[i]++;
+
+          // Only evaluate once every 3 calls (~150ms)
+          if (trySampleCount[i] >= 3)
+          {
+            float avgCurrent = tryCurrentSum[i] / trySampleCount[i];
+            trySampleCount[i] = 0;
+            tryCurrentSum[i] = 0.0f;
+
+            // --- Fault checks using avgCurrent ---
+            if (!channelLocked[i])
+            {
+              Channels[i].ErrorFlags = 0; // reset before checks
+            }
+
+            if (avgCurrent > Channels[i].CurrentThresholdHigh)
+            {
+              Channels[i].ErrorFlags |= CHN_OVERCURRENT_RANGE;
+            }
+            else if (avgCurrent < Channels[i].CurrentThresholdLow)
+            {
+              Channels[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
+            }
+            else if (avgCurrent > Channels[i].CurrentLimitHigh)
+            {
+              Channels[i].ErrorFlags |= CHN_OVERCURRENT_LIMIT;
+            }
+
+            // --- Retry / lockout handling ---
+            if (Channels[i].ErrorFlags == 0)
+            {
+              // Only re-enable if not permanently locked
+              if (!channelLocked[i])
+              {
+                updatePWMDutyCycle(i, 255);
+              }
+              else
+              {
+                updatePWMDutyCycle(i, 0); // Keep it off if locked
+              }
+              retriesPending[i] = false;
+            }
+            else
+            {
+              if (!channelLocked[i])
+              {
+                retryCount[i]++;
+                updatePWMDutyCycle(i, 0); // turn off this try
+
+                if (retryCount[i] > Channels[i].RetryCount)
+                {
+                  channelLocked[i] = true;
+                  Channels[i].ErrorFlags |= RETRY_LOCKOUT;
+                  updatePWMDutyCycle(i, 0);
+                }
+              }
+              else
+              {
+                updatePWMDutyCycle(i, 0); // locked
+              }
+            }
+          }
+        }
+        else
+        {
+          // Collecting samples: only keep channel ON if not permanently locked
+          if (!channelLocked[i])
+          {
+            updatePWMDutyCycle(i, 255); // keep channel ON so current can stabilise
+          }
+          else
+          {
+            updatePWMDutyCycle(i, 0); // keep locked channels OFF
+          }
+        }
       }
       else
       {
         updatePWMDutyCycle(i, 0);
+        // Reset retry state
+        retriesPending[i] = false;
+        retryCount[i] = 0;
+        channelLocked[i] = false;
+        Channels[i].CurrentValue = 0.0;
       }
       break;
     default:
@@ -339,5 +444,8 @@ void OutputsOff()
     updatePWMDutyCycle(i, 0);
     Channels[i].CurrentValue = 0.0;
     Channels[i].ErrorFlags = 0;
+    retriesPending[i] = false;
+    retryCount[i] = 0;
+    channelLocked[i] = false;
   }
 }

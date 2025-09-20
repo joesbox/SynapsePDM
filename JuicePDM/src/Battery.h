@@ -46,6 +46,9 @@ const uint16_t TAPER_CURRENT = 100;
 /// @brief Battery state of charge (%)
 extern int SOC;
 
+/// @brief Battery state of health (%)
+extern int SOH;
+
 /// @brief Initialises battery SOC reading
 void InitialiseBattery();
 

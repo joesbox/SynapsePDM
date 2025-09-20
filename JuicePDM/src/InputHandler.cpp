@@ -62,6 +62,16 @@ void HandleInputs()
         case DIG:     
         case DIG_PWM:   
             Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
+
+            // Used for inrush delay timing
+            if (enabledFlags[i] != Channels[i].Enabled)
+            {
+                enabledFlags[i] = Channels[i].Enabled;
+                if (Channels[i].Enabled)
+                {
+                    enabledTimers[i] = millis();
+                }
+            }
             break;
         default:
             break;

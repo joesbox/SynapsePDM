@@ -59,8 +59,9 @@ void InitialiseGSM(bool enableData)
     delay(100);
     Serial1.begin(BAUD_RATE);
     SIM7600State = 0;
-
+#ifdef DEBUG
     Serial.println("Initializing SIM7600G...");
+#endif
 }
 
 void UpdateSIM7600(SIM7600Commands command)
@@ -70,13 +71,6 @@ void UpdateSIM7600(SIM7600Commands command)
     size_t bytesRead = 0;
 
     unsigned long startTime = millis();
-    /*// while (millis() - startTime < 250)
-    //{ // Wait up to 500 millis
-    while (Serial1.available() && bytesRead < sizeof(simBuffer) - 1)
-    {
-        bytesRead += Serial1.readBytes(simBuffer + bytesRead, sizeof(simBuffer) - bytesRead - 1);
-    }
-    //}*/    
 
     while (Serial1.available())
     {
@@ -85,10 +79,12 @@ void UpdateSIM7600(SIM7600Commands command)
             simBuffer[bytesRead++] = Serial1.read();
         }
     }
-    Serial.print("GpS buffer: ");
+#ifdef DEBUG
+    Serial.print("GPS buffer: ");
     Serial.println(simBuffer);
     Serial.print("Read GPS bytes time: ");
     Serial.println(millis() - startTime);
+#endif
 
     switch (SIM7600State)
     {
@@ -176,7 +172,9 @@ void parseGPSData(const char *response)
 
     if (index < 13) // Ensure enough tokens are parsed
     {
+#ifdef DEBUG
         Serial.println("Incomplete GPS data");
+#endif
         GPSFix = false; // No fix
         return;
     }
