@@ -94,7 +94,6 @@ void InitialiseSystem()
     Wire.setSCL(PB6);
     Wire.setSDA(PB7);
     Wire.begin();
-
 }
 
 void InitialiseSystemData()
@@ -104,7 +103,7 @@ void InitialiseSystemData()
     SystemParams.ChannelDataCANID = CHAN_CAN_ID;
     SystemParams.SystemDataCANID = SYS_CAN_ID;
     SystemParams.ConfigDataCANID = CONF_CAN_ID;
-    SystemParams.IMUwakeWindow = DEFAULT_WW;    
+    SystemParams.IMUwakeWindow = DEFAULT_WW;
     SystemParams.SystemCurrentLimit = SYSTEM_CURRENT_MAX;
     SystemParams.AllowData = 1;
     SystemParams.AllowGPS = 1;
@@ -178,7 +177,18 @@ void UpdateSystem()
         SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~SDCARD_ERROR;
     }
 
-    // Check
+    // Check SD card status
+    switch (connectionStatus)
+    {
+    case 0:
+    case 1:
+        // Disconnected or connected successfully
+        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~PC_COMMS_CHECKSUM_ERROR;
+        break;
+    case 2:
+        SystemParams.ErrorFlags |= PC_COMMS_CHECKSUM_ERROR;
+        break;
+    }
 }
 
 void SleepSystem()

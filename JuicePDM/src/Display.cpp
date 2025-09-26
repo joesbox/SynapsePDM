@@ -50,7 +50,9 @@ static bool prevEnabled[NUM_CHANNELS] = {false};
 static int prevErrorFlags[NUM_CHANNELS] = {0};
 static float prevCurrentValues[NUM_CHANNELS] = {0.0F};
 static bool prevSDOK, prevGPSOK, initIcons = false;
-static int prevBatt, prevMin;
+static uint8_t previousConnectionStatus = 0;
+static int prevBatt, prevMin = 0;
+static uint16_t systemErrorFlags = 0;
 
 const int lights[14][4] = {
     {23, 129, 44, 90},
@@ -173,7 +175,7 @@ void DrawBackground()
     tft.setCursor(chanNameX, channelName[i][1]);
     tft.print(Channels[i].ChannelName);
 
-    //tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_DARKGREY);
+    // tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_DARKGREY);
     tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)greyLED);
   }
 
@@ -194,6 +196,10 @@ void UpdateDisplay()
     tft.pushImage(0, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)logiconError);
     tft.pushImage(49, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)gpsError);
     tft.pushImage(271, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)batteryIcon);
+    tft.pushImage(180, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_error);
+    tft.setCursor(120, 21);
+    tft.fillRect(120, 21, 50, 15, TFT_BLACK);
+    tft.print(SystemParams.ErrorFlags, HEX);
     char timeString[6];
     snprintf(timeString, sizeof(timeString), "%02d:%02d", RTChour, RTCminute);
     tft.setCursor(230, 21);
@@ -213,7 +219,7 @@ void UpdateDisplay()
       }
       else
       {
-        //tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_DARKGREY);
+        // tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_DARKGREY);
         tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)greyLED);
       }
 
@@ -274,10 +280,40 @@ void UpdateDisplay()
     prevGPSOK = GPSFix;
   }
 
+  // Check for PC connection status change
+  if (connectionStatus != previousConnectionStatus)
+  {
+    if (connectionStatus == 1)
+    {
+      tft.pushImage(180, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_ok);
+    }
+    else
+    {
+      tft.pushImage(180, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_error);
+    }
+    previousConnectionStatus = connectionStatus;
+  }
+
+  tft.setCursor(120, 21);
+  tft.fillRect(120, 21, 50, 15, TFT_BLACK);
+  tft.print(connectionStatus);
+  tft.setCursor(120, 35);
+  tft.fillRect(120, 35, 50, 15, TFT_BLACK);
+  tft.print(recBytesRead);
+
+  /*// Display system error flags
+  if (SystemParams.ErrorFlags != systemErrorFlags)
+  {
+    systemErrorFlags = SystemParams.ErrorFlags;
+    tft.setCursor(120, 21);
+    tft.fillRect(120, 21, 50, 15, TFT_BLACK);
+    tft.print(SystemParams.ErrorFlags, HEX);
+  }*/
+
   if (prevBatt != SOC)
   {
     prevBatt = SOC;
-    tft.pushImage(271, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)batteryIcon);    
+    tft.pushImage(271, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)batteryIcon);
     if (SOC < 100)
     {
       tft.setCursor(282, 22);

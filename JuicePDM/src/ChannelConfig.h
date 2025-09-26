@@ -48,9 +48,8 @@ struct __attribute__((packed)) ChannelConfig
   float CurrentLimitHigh;     // Absolute current limit high
   float CurrentThresholdHigh; // Turn off threshold high
   float CurrentThresholdLow;  // Turn off threshold low (open circuit detection)
-  uint8_t Retry;              // Retry after current threshold reached
   uint8_t RetryCount;         // Number of retries
-  float InrushDelay;          // Inrush delay in milliseconds
+  uint32_t InrushDelay;       // Inrush delay in milliseconds
   bool MultiChannel;          // Grouped with other channels. Allows higher current loads
   uint8_t GroupNumber;        // Group membership number
   int OutputControlPin;       // Digital uC control pin

@@ -35,6 +35,9 @@
 #include <Globals.h>
 #include <Storage.h>
 
+// Expected number of bytes in a config packet
+#define NUM_CONFIG_BYTES 499
+
 /// @brief Setup serial port
 void InitialiseSerial();
 
@@ -56,6 +59,7 @@ const byte COMMAND_ID_CONFIM = 'c';
 const byte COMMAND_ID_REQUEST = 'r';
 const byte COMMAND_ID_NEWCONFIG = 'n';
 const byte COMMAND_ID_SEND = 's';
+const byte COMMAND_ID_SENDING = 't';
 const byte COMMAND_ID_CHECKSUM_FAIL = 'f';
 const byte COMMAND_ID_SAVECHANGES = 'S';
 const byte COMMAND_ID_FW_VER = 'v';
@@ -63,9 +67,6 @@ const byte COMMAND_ID_BUILD_DATE = 'd';
 
 /// @brief Config storage union
 extern ChannelConfigUnion SerialChannelData;
-
-/// @brief CRC32 calculation for serial comms
-extern CRC32 crcSerial;
 
 #endif
 

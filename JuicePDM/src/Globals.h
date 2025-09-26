@@ -130,6 +130,7 @@
 #define UNDERVOLTAGE 0x0004
 #define CRC_CHECK_FAILED 0x0008
 #define SDCARD_ERROR 0x0010
+#define PC_COMMS_CHECKSUM_ERROR 0x0020
 
 // Channel error bitmasks
 #define CHN_OVERCURRENT_RANGE 0x01
@@ -204,11 +205,20 @@
 #define SIM_RST PC7
 #define SIM_FLIGHT PB8
 
+#define COMMS_TIMEOUT 30000
+
+/// @brief Output enabled flags
 extern bool enabledFlags[NUM_CHANNELS];
+
+/// @brief Output enabled timers
 extern unsigned long enabledTimers[NUM_CHANNELS];
 
 // SPI 2
 extern SPIClass SPI_2;
+
+/// @brief PC connection status. 0 = disconnected, 1 = connected, 2 = Checksum fail
+extern uint8_t connectionStatus;
+extern int recBytesRead;
 
 /// @brief Analogue input config structure
 struct __attribute__((packed)) AnalogueInputs

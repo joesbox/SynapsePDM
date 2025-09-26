@@ -56,6 +56,10 @@ unsigned long enabledTimers[NUM_CHANNELS] = {0};
 // SPI 2
 SPIClass SPI_2(PICO, POCI, SCK2);
 
+uint8_t connectionStatus = 0;
+
+int recBytesRead = 0;
+
 void InitialiseChannelData()
 {
   // Initialise channels to default values, ensure they are initially off
@@ -81,8 +85,7 @@ void InitialiseChannelData()
     Channels[i].ActiveHigh = true;
     Channels[i].RunOn = false;
     Channels[i].RunOnTime = 0;
-    Channels[i].MultiChannel = false;
-    Channels[i].Retry = true;
+    Channels[i].MultiChannel = false;    
     Channels[i].RetryCount = 3;
     Channels[i].InrushDelay = INRUSH_DELAY;
   }

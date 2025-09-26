@@ -30,10 +30,17 @@
 #include "SerialComms.h"
 
 ChannelConfigUnion SerialChannelData;
+byte configBuffer[1000] = {0};
+
+bool receivingConfig = false;
+
+uint32_t lastComms = 0;
+
+unsigned int readBufIdx = 0;
 
 void InitialiseSerial()
 {
-    Serial.begin(921600, SERIAL_8E2); // 921600 baud, 8 data bits, even parity, 2 stop bits
+    Serial.begin(9600, SERIAL_8E2); // 921600 baud, 8 data bits, even parity, 2 stop bits
 
 #ifdef DEBUG
     while (!Serial)
@@ -50,20 +57,30 @@ void SleepComms()
 
 void CheckSerial()
 {
-    if (Serial.available())
+    if (connectionStatus > 0 && (millis() - lastComms > COMMS_TIMEOUT))
     {
+        connectionStatus = 0; // Timeout - reset connection
+        receivingConfig = false;
+        readBufIdx = 0;
+        recBytesRead = 0;
+    }
+    if (Serial.available() && !receivingConfig)
+    {
+        lastComms = millis();
         byte nextByte = Serial.read();
         switch (nextByte)
         {
         case COMMAND_ID_BEGIN:
             Serial.write(COMMAND_ID_CONFIM);
+            connectionStatus = 1;
             break;
 
         case COMMAND_ID_REQUEST:
         {
-            // Send serial data packet and update CRC as we go            
+            // Send serial data packet and update CRC as we go
             uint32_t checkSum = 0;
             byte fourBytePacket[4];
+            byte threeBytePacket[3];
             byte twoBytePacket[2];
             byte chanSize = 0;
             byte send = 0;
@@ -135,9 +152,6 @@ void CheckSerial()
                 Serial.write(Channels[i].MultiChannel);
                 checkSum += Channels[i].MultiChannel;
 
-                Serial.write(Channels[i].Retry);
-                checkSum += Channels[i].Retry;
-
                 Serial.write(Channels[i].RetryCount);
                 checkSum += Channels[i].RetryCount;
 
@@ -146,6 +160,13 @@ void CheckSerial()
                 {
                     Serial.write(fourBytePacket[j]);
                     checkSum += fourBytePacket[j];
+                }
+
+                memcpy(&threeBytePacket, &Channels[i].ChannelName, sizeof(Channels[i].ChannelName));
+                for (uint j = 0; j < sizeof(threeBytePacket); j++)
+                {
+                    Serial.write(threeBytePacket[j]);
+                    checkSum += threeBytePacket[j];
                 }
             }
 
@@ -299,13 +320,16 @@ void CheckSerial()
         }
         case COMMAND_ID_NEWCONFIG:
         {
-            unsigned int i = 0;
+            Serial.write(COMMAND_ID_CONFIM);
+            connectionStatus = 2;
+            /*unsigned int i = 0;
             uint32_t recvChecksum = 0;
-            while (!Serial.available())
+            while (Serial.available())
             {
                 if (i <= sizeof(SystemConfigUnion))
                 {
                     SerialChannelData.dataBytes[i] = Serial.read();
+                    recvChecksum += SerialChannelData.dataBytes[i];
                     i++;
                 }
                 else
@@ -333,7 +357,6 @@ void CheckSerial()
                     Channels[j].Enabled = SerialChannelData.data[j].Enabled;
                     Channels[j].GroupNumber = SerialChannelData.data[j].GroupNumber;
                     Channels[j].InputControlPin = SerialChannelData.data[j].InputControlPin;
-                    Channels[j].Retry = SerialChannelData.data[j].Retry;
                     Channels[j].RetryCount = SerialChannelData.data[j].RetryCount;
                     Channels[j].InrushDelay = SerialChannelData.data[j].InrushDelay;
 
@@ -368,10 +391,18 @@ void CheckSerial()
             else
             {
                 Serial.write(COMMAND_ID_CHECKSUM_FAIL);
-            }
+            }*/
+            break;
         }
-        break;
 
+        case COMMAND_ID_SENDING:
+        {
+            connectionStatus = 3;
+            receivingConfig = true;
+            readBufIdx = 0;
+            recBytesRead = 0;
+            break;
+        }
         case COMMAND_ID_SAVECHANGES:
             SaveChannelConfig();
             break;
@@ -383,6 +414,67 @@ void CheckSerial()
         case COMMAND_ID_BUILD_DATE:
             Serial.write(BUILD_DATE);
             break;
+        }
+    }
+    else
+    {
+        if (receivingConfig)
+        {
+            uint32_t calcChecksum = 0;
+            // Read incoming config data
+            while (Serial.available())
+            {
+                if (readBufIdx < 1000)
+                {
+                    connectionStatus = 4; // Receiving config data
+                    configBuffer[readBufIdx] = Serial.read();
+                    readBufIdx++;
+                    recBytesRead = readBufIdx;
+                }
+                else
+                {
+                    Serial.read(); // Overflow - discard byte                    
+                }
+            }
+
+            // Sum the data to calculate checksum
+            for (int i = 0; i < readBufIdx - 4; i++)
+            {
+                calcChecksum += configBuffer[i];
+            }
+
+            if (recBytesRead == NUM_CONFIG_BYTES)
+            {
+                connectionStatus = 5; // Config data received
+                // Check header && trailer before calculating checksum
+                if ((configBuffer[0] == (SERIAL_HEADER & 0XFF)) && (configBuffer[1] == (SERIAL_HEADER >> 8)) &&
+                    (configBuffer[readBufIdx - 6] == (SERIAL_TRAILER & 0xFF)) && (configBuffer[readBufIdx - 5] == (SERIAL_TRAILER >> 8)))
+                {
+                    connectionStatus = 6; // Header and trailer valid
+                    // Calculate stored config bytes CRC
+                    uint32_t checksum = 0;
+                    checksum |= configBuffer[readBufIdx - 3] & 0xFF;
+                    checksum |= configBuffer[readBufIdx - 2] << 8 & 0xFF00;
+                    checksum |= configBuffer[readBufIdx - 1] << 16 & 0xFF0000;
+                    checksum |= configBuffer[readBufIdx] << 24 & 0xFF000000;
+
+                    // Checksum valid?
+                    if (checksum == calcChecksum)
+                    {
+                        connectionStatus = 7; // Checksum pass
+                    }
+                    else
+                    {
+                        Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                        connectionStatus = 8; // Checksum fail
+                    }
+                    Serial.write(COMMAND_ID_CONFIM);
+                }
+                else
+                {
+                    Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                }
+            }
         }
     }
 }
