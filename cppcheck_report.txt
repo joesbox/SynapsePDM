@@ -22,7 +22,7 @@ JuicePDM/src/OutputHandler.cpp:259:15: style: The scope of the variable 'analogM
 JuicePDM/src/OutputHandler.cpp:312:24: style: The scope of the variable 'trySampleCount' can be reduced. [variableScope]
         static uint8_t trySampleCount[NUM_CHANNELS] = {0};
                        ^
-JuicePDM/src/SerialComms.cpp:85:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
+JuicePDM/src/SerialComms.cpp:102:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
             chanSize = sizeof(Channels) / NUM_CHANNELS;
                      ^
 JuicePDM/src/Storage.cpp:492:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
