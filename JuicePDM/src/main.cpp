@@ -194,7 +194,7 @@ void setup()
   }
 
   // Load channel data
-  ChannelCRCValid = false;//LoadChannelConfig();
+  ChannelCRCValid = LoadChannelConfig();
   if (!ChannelCRCValid)
   {
     // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.

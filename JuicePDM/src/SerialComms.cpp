@@ -74,7 +74,12 @@ void CheckSerial()
             Serial.write(COMMAND_ID_CONFIM);
             connectionStatus = 1;
             break;
-
+        
+        case COMMAND_ID_SKIP:
+            Serial.write(COMMAND_ID_CONFIM);
+            connectionStatus = 1;
+            break;
+            
         case COMMAND_ID_REQUEST:
         {
             // Send serial data packet and update CRC as we go
@@ -320,93 +325,211 @@ void CheckSerial()
         }
         case COMMAND_ID_NEWCONFIG:
         {
-            Serial.write(COMMAND_ID_CONFIM);
             connectionStatus = 2;
-            /*unsigned int i = 0;
-            uint32_t recvChecksum = 0;
+            // New config incoming, read all bytes into buffer
+            uint32_t calcChecksum = 0;
+            bool validPacket = false;
+            delay(10); // Wait for data to start arriving
+
             while (Serial.available())
             {
-                if (i <= sizeof(SystemConfigUnion))
+                if (readBufIdx < 1000)
                 {
-                    SerialChannelData.dataBytes[i] = Serial.read();
-                    recvChecksum += SerialChannelData.dataBytes[i];
-                    i++;
+                    connectionStatus = 3; // Receiving config data
+                    configBuffer[readBufIdx] = Serial.read();
+                    readBufIdx++;
+                    recBytesRead = readBufIdx;
                 }
                 else
                 {
-                    recvChecksum <<= 8;
-                    recvChecksum |= Serial.read();
+                    Serial.read(); // Overflow - discard byte
                 }
             }
 
-            // Calculate stored config bytes CRC
-            uint32_t checksum = CRC32::calculate(SerialChannelData.dataBytes, sizeof(ChannelConfigUnion));
-
-            // Respond with pass or fail. Copy the new config over if the checksum has passed.
-            if (checksum == recvChecksum)
+            // Check header and trailer
+            if ((configBuffer[0] == (SERIAL_HEADER & 0XFF)) && (configBuffer[1] == (SERIAL_HEADER >> 8)) &&
+                (configBuffer[readBufIdx - 6] == (SERIAL_TRAILER & 0xFF)) && (configBuffer[readBufIdx - 5] == (SERIAL_TRAILER >> 8)))
             {
-                // Copy relevant channel data
-                for (int j = 0; j < NUM_CHANNELS; j++)
-                {
-                    Channels[j].ChanType = SerialChannelData.data[j].ChanType;
-                    Channels[j].OutputControlPin = SerialChannelData.data[j].OutputControlPin;
-                    Channels[j].CurrentLimitHigh = SerialChannelData.data[j].CurrentLimitHigh;
-                    Channels[j].CurrentSensePin = SerialChannelData.data[j].CurrentSensePin;
-                    Channels[j].CurrentThresholdHigh = SerialChannelData.data[j].CurrentThresholdHigh;
-                    Channels[j].CurrentThresholdLow = SerialChannelData.data[j].CurrentThresholdLow;
-                    Channels[j].Enabled = SerialChannelData.data[j].Enabled;
-                    Channels[j].GroupNumber = SerialChannelData.data[j].GroupNumber;
-                    Channels[j].InputControlPin = SerialChannelData.data[j].InputControlPin;
-                    Channels[j].RetryCount = SerialChannelData.data[j].RetryCount;
-                    Channels[j].InrushDelay = SerialChannelData.data[j].InrushDelay;
+                connectionStatus = 3;
+                validPacket = true;
 
-                    // Limit checking
-                    if (Channels[j].CurrentLimitHigh > CURRENT_MAX)
-                    {
-                        Channels[j].CurrentLimitHigh = CURRENT_MAX;
-                    }
-                    if (Channels[j].CurrentThresholdHigh > CURRENT_MAX)
-                    {
-                        Channels[j].CurrentThresholdHigh = CURRENT_MAX;
-                    }
-                    if (Channels[j].CurrentThresholdLow < 0.0)
-                    {
-                        Channels[j].CurrentThresholdLow = 0.0;
-                    }
-                    if (Channels[j].InrushDelay > INRUSH_MAX)
-                    {
-                        Channels[j].InrushDelay = INRUSH_MAX;
-                    }
-                    if (Channels[j].InrushDelay < 0.0)
-                    {
-                        Channels[j].InrushDelay = 0.0;
-                    }
+                for (int i = 0; i < readBufIdx - 4; i++)
+                {
+                    calcChecksum += configBuffer[i];
                 }
 
-                // Set the system parameters
-                // SystemParams.CANResEnabled = SerialConfigData.data.sysParams.CANResEnabled;
+                uint32_t checksum = 0;
+                checksum |= configBuffer[readBufIdx - 4];
+                checksum |= configBuffer[readBufIdx - 3] << 8;
+                checksum |= configBuffer[readBufIdx - 2] << 16;
+                checksum |= configBuffer[readBufIdx - 1] << 24;
 
+                // Checksum valid?
+                if (checksum == calcChecksum)
+                {
+                    connectionStatus = 4;
+                    validPacket = true;
+
+                    // Copy the new config over
+                    switch (configBuffer[CONFIG_TYPE_INDEX])
+                    {
+                    case CONFIG_DATA_CHANNELS:
+                        connectionStatus = 4;
+                        switch (configBuffer[CONFIG_PARAMETER_INDEX])
+                        {
+                        case 0: // Channel type
+                            Channels[configBuffer[CONFIG_DATA_INDEX]].ChanType = (ChannelType)configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 1: // Current limit high
+                            memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentLimitHigh, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentLimitHigh));
+                            if (Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentLimitHigh > CURRENT_MAX)
+                            {
+                                Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentLimitHigh = CURRENT_MAX;
+                            }
+                            break;
+                        case 2: // Current threshold high
+                            memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdHigh, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdHigh));
+                            if (Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdHigh > CURRENT_MAX)
+                            {
+                                Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdHigh = CURRENT_MAX;
+                            }
+                            break;
+                        case 3: // Current threshold low
+                            memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdLow, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdLow));
+                            if (Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdLow < 0.0)
+                            {
+                                Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdLow = 0.0;
+                            }
+                            break;
+                        case 4: // Enabled
+                            Channels[configBuffer[CONFIG_DATA_INDEX]].Enabled = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 5: // Group number
+                            Channels[configBuffer[CONFIG_DATA_INDEX]].GroupNumber = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 6: // Input control pin
+                            Channels[configBuffer[CONFIG_DATA_INDEX]].InputControlPin = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 7: // Multi channel
+                            Channels[configBuffer[CONFIG_DATA_INDEX]].MultiChannel = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 8: // Retry count
+                            Channels[configBuffer[CONFIG_DATA_INDEX]].RetryCount = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 9: // Inrush delay
+                            memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].InrushDelay, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].InrushDelay));
+                            if (Channels[configBuffer[CONFIG_DATA_INDEX]].InrushDelay > INRUSH_MAX)
+                            {
+                                Channels[configBuffer[CONFIG_DATA_INDEX]].InrushDelay = INRUSH_MAX;
+                            }
+                            if (Channels[configBuffer[CONFIG_DATA_INDEX]].InrushDelay < 0.0)
+                            {
+                                Channels[configBuffer[CONFIG_DATA_INDEX]].InrushDelay = 0.0;
+                            }
+                            break;
+                        case 10: // Channel name
+                            memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].ChannelName, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].ChannelName));
+                            break;
+                        case 11: // Run on
+                            Channels[configBuffer[CONFIG_DATA_INDEX]].RunOn = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 12: // Run on time
+                            memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime));
+                            if (Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime < 0)
+                            {
+                                Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime = 0;
+                            }
+                            break;
+                        case 13: // Name
+                            memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].ChannelName, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].ChannelName));
+                            break;
+
+                        default:
+                            // Channel parameter out of range. Ignore packet
+                            validPacket = false;
+                            break;
+                        }
+
+                        break;
+                    case CONFIG_DATA_ANALOGUE:
+                        connectionStatus = 5;
+
+                        break;
+                    case CONFIG_DATA_DIGITAL:
+                        connectionStatus = 6;
+
+                        break;
+                    case CONFIG_DATA_SYSTEM:
+                        connectionStatus = 7;
+
+                        break;
+
+                    default:
+                        // Config type out of range. Ignore packet
+                        validPacket = false;
+                        break;
+                    }
+                }
+                else // Checksum fail
+                {
+                    validPacket = false;
+                    connectionStatus = 8;
+                }
+            }
+            else // Header or trailer fail
+            {
+                validPacket = false;
+                connectionStatus = 9;
+            }
+
+            if (validPacket)
+            {
                 Serial.write(COMMAND_ID_CONFIM);
+                connectionStatus = 10;
             }
             else
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
-            }*/
+                Serial.write(COMMAND_ID_CHECKSUM_FAIL);                
+            }
+            
             break;
         }
 
-        case COMMAND_ID_SENDING:
-        {
-            connectionStatus = 3;
-            receivingConfig = true;
-            readBufIdx = 0;
-            recBytesRead = 0;
-            break;
-        }
         case COMMAND_ID_SAVECHANGES:
+        {
             SaveChannelConfig();
-            break;
+            SaveSystemConfig();
 
+            bool allSaved = true;
+
+            /*allSaved &= LoadChannelConfig();
+            allSaved &= LoadSystemConfig();
+            allSaved &= LoadStorageConfig();*/
+
+            if (LoadChannelConfig())
+            {
+                allSaved &= true;
+            }
+            else
+            {
+                allSaved &= false;
+                connectionStatus = 11;            
+            }
+
+            if (LoadSystemConfig())
+            {
+                allSaved &= true;
+            }
+            else
+            {
+                allSaved &= false;
+                connectionStatus = 12;            
+            }
+
+            Serial.write(allSaved ? COMMAND_ID_CONFIM
+                                  : COMMAND_ID_CHECKSUM_FAIL);
+            break;
+        }
         case COMMAND_ID_FW_VER:
             Serial.write(FW_VER);
             break;
@@ -418,7 +541,7 @@ void CheckSerial()
     }
     else
     {
-        if (receivingConfig)
+        /*if (receivingConfig)
         {
             uint32_t calcChecksum = 0;
             // Read incoming config data
@@ -433,7 +556,7 @@ void CheckSerial()
                 }
                 else
                 {
-                    Serial.read(); // Overflow - discard byte                    
+                    Serial.read(); // Overflow - discard byte
                 }
             }
 
@@ -475,6 +598,6 @@ void CheckSerial()
                     Serial.write(COMMAND_ID_CHECKSUM_FAIL);
                 }
             }
-        }
+        }*/
     }
 }

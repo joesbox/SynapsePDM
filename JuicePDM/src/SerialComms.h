@@ -58,12 +58,30 @@ const byte COMMAND_ID_BEGIN = 'b';
 const byte COMMAND_ID_CONFIM = 'c';
 const byte COMMAND_ID_REQUEST = 'r';
 const byte COMMAND_ID_NEWCONFIG = 'n';
+const byte COMMAND_ID_SKIP = 'k';
 const byte COMMAND_ID_SEND = 's';
-const byte COMMAND_ID_SENDING = 't';
 const byte COMMAND_ID_CHECKSUM_FAIL = 'f';
 const byte COMMAND_ID_SAVECHANGES = 'S';
 const byte COMMAND_ID_FW_VER = 'v';
 const byte COMMAND_ID_BUILD_DATE = 'd';
+
+/// @brief Config type index, channel, input or system
+const byte CONFIG_TYPE_INDEX = 2;
+
+/// @brief Config parameter index, which type of parameter. E.g. for channels, what channel type
+const byte CONFIG_PARAMETER_INDEX = 3;
+
+/// @brief Config data index, index into channels, analogue inputs, digital inputs. Ignored for system config
+const byte CONFIG_DATA_INDEX = 4;
+
+/// @brief Config data start index, first byte of actual config data
+const byte CONFIG_DATA_START_INDEX = 5;
+
+const byte CONFIG_DATA_CHANNELS = 0;
+const byte CONFIG_DATA_ANALOGUE = 1;
+const byte CONFIG_DATA_DIGITAL = 2;
+const byte CONFIG_DATA_SYSTEM = 3;
+
 
 /// @brief Config storage union
 extern ChannelConfigUnion SerialChannelData;
