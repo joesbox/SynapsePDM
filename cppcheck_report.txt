@@ -22,7 +22,28 @@ JuicePDM/src/OutputHandler.cpp:259:15: style: The scope of the variable 'analogM
 JuicePDM/src/OutputHandler.cpp:312:24: style: The scope of the variable 'trySampleCount' can be reduced. [variableScope]
         static uint8_t trySampleCount[NUM_CHANNELS] = {0};
                        ^
-JuicePDM/src/SerialComms.cpp:102:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
+JuicePDM/src/SerialComms.cpp:370:38: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
+                    connectionStatus = 4;
+                                     ^
+JuicePDM/src/SerialComms.cpp:353:34: note: connectionStatus is assigned
+                connectionStatus = 3;
+                                 ^
+JuicePDM/src/SerialComms.cpp:370:38: note: connectionStatus is overwritten
+                    connectionStatus = 4;
+                                     ^
+JuicePDM/src/SerialComms.cpp:371:33: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
+                    validPacket = true;
+                                ^
+JuicePDM/src/SerialComms.cpp:354:29: note: validPacket is assigned
+                validPacket = true;
+                            ^
+JuicePDM/src/SerialComms.cpp:371:33: note: validPacket is overwritten
+                    validPacket = true;
+                                ^
+JuicePDM/src/SerialComms.cpp:330:22: style: The scope of the variable 'calcChecksum' can be reduced. [variableScope]
+            uint32_t calcChecksum = 0;
+                     ^
+JuicePDM/src/SerialComms.cpp:107:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
             chanSize = sizeof(Channels) / NUM_CHANNELS;
                      ^
 JuicePDM/src/Storage.cpp:492:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
@@ -43,22 +64,10 @@ JuicePDM/src/Storage.cpp:495:22: style: Variable 'writtenBytes' is assigned a va
 JuicePDM/src/Storage.cpp:537:18: style: Unused variable: logEntry [unusedVariable]
             char logEntry[40];
                  ^
-JuicePDM/src/main.cpp:198:7: style: Condition '!ChannelCRCValid' is always true [knownConditionTrueFalse]
-  if (!ChannelCRCValid)
-      ^
-JuicePDM/src/main.cpp:197:21: note: Assignment 'ChannelCRCValid=false', assigned value is 0
-  ChannelCRCValid = false;//LoadChannelConfig();
-                    ^
-JuicePDM/src/main.cpp:198:7: note: Condition '!ChannelCRCValid' is always true
-  if (!ChannelCRCValid)
-      ^
 JuicePDM/src/Storage.cpp:368:0: style: The function 'CleanEEPROM' is never used. [unusedFunction]
 
 ^
 JuicePDM/src/CANComms.cpp:27:0: style: The function 'InitialiseCAN' is never used. [unusedFunction]
-
-^
-JuicePDM/src/Storage.cpp:100:0: style: The function 'LoadChannelConfig' is never used. [unusedFunction]
 
 ^
 JuicePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never used. [unusedFunction]
