@@ -1,31 +1,24 @@
 /*  ConfigStorage.cpp Functions and variables for EEPROM storage and SD data logging.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
-    This work is licensed under the Creative Commons
-    Attribution-NonCommercial-ShareAlike 4.0 International License.
-    To view a copy of this license, visit
-    https://creativecommons.org/licenses/by-nc-sa/4.0/ or send a
-    letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
 
-    You are free to:
-    - Share: Copy and redistribute the material in any medium or format.
-    - Adapt: Remix, transform, and build upon the material.
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
 
-    Under the following terms:
-    - Attribution: You must give appropriate credit, provide a link to the license,
-      and indicate if changes were made. You may do so in any reasonable manner,
-      but not in any way that suggests the licensor endorses you or your use.
-    - NonCommercial: You may not use the material for commercial purposes.
-    - ShareAlike: If you remix, transform, or build upon the material,
-      you must distribute your contributions under the same license as the original.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    THE SOFTWARE.
 
-    DISCLAIMER: This software is provided "as is," without warranty of any kind,
-    express or implied, including but not limited to the warranties of
-    merchantability, fitness for a particular purpose, and noninfringement.
-    In no event shall the authors or copyright holders be liable for any claim,
-    damages, or other liability, whether in an action of contract, tort, or otherwise,
-    arising from, out of, or in connection with the software or the use or
-    other dealings in the software.
 */
 
 #include "Storage.h"
