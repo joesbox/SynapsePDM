@@ -76,6 +76,16 @@ void InitialiseOutputs()
   analogCounter = 0;
 }
 
+void SleepOutputs()
+{
+  __HAL_RCC_GPIOG_CLK_SLEEP_ENABLE();
+  __HAL_RCC_GPIOF_CLK_SLEEP_ENABLE();
+  __HAL_RCC_DMA1_CLK_SLEEP_ENABLE();
+  __HAL_RCC_DMA2_CLK_SLEEP_ENABLE();
+  __HAL_RCC_TIM8_CLK_SLEEP_ENABLE();
+  __HAL_RCC_TIM1_CLK_SLEEP_ENABLE();  
+}
+
 void setupGPIO()
 {
   __HAL_RCC_GPIOG_CLK_ENABLE();

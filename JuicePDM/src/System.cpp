@@ -34,11 +34,13 @@ bool RTCSet;
 
 void IgnitionWake()
 {
+    SystemClock_Config();
     PowerState = IGNITION_WAKE;
 }
 
 void IMUWake()
 {
+    SystemClock_Config();
     PowerState = IMU_WAKE;
     Serial.println("IMU INT");
 }
@@ -46,7 +48,7 @@ void IMUWake()
 void InitialiseSystem()
 {
     // Start the low power features. Attach sleep mode interrupts
-    LowPower.begin();
+    LowPower.begin();    
     LowPower.attachInterruptWakeup(IGN_INPUT, IgnitionWake, RISING, DEEP_SLEEP_MODE);
     LowPower.attachInterruptWakeup(IMU_INT1, IMUWake, RISING, DEEP_SLEEP_MODE);
 
@@ -63,17 +65,17 @@ void InitialiseSystem()
     pinMode(DEBUG_PIN, OUTPUT);
 
     // Spare I/O as inputs
-    pinMode(PA8, INPUT);
-    pinMode(PC13, INPUT);
-    pinMode(PD10, INPUT);
-    pinMode(PD10, INPUT);
-    pinMode(PD11, INPUT);
-    pinMode(PD12, INPUT);
-    pinMode(PD13, INPUT);
-    pinMode(PD15, INPUT);
-    pinMode(PE6, INPUT);
-    pinMode(PG7, INPUT);
-    pinMode(PG8, INPUT);
+    pinMode(PA8, INPUT_ANALOG);
+    pinMode(PC13, INPUT_ANALOG);
+    pinMode(PD10, INPUT_ANALOG);
+    pinMode(PD10, INPUT_ANALOG);
+    pinMode(PD11, INPUT_ANALOG);
+    pinMode(PD12, INPUT_ANALOG);
+    pinMode(PD13, INPUT_ANALOG);
+    pinMode(PD15, INPUT_ANALOG);
+    pinMode(PE6, INPUT_ANALOG);
+    pinMode(PG7, INPUT_ANALOG);
+    pinMode(PG8, INPUT_ANALOG);
 
     // SPI
     pinMode(CS1, OUTPUT);
@@ -185,14 +187,16 @@ void UpdateSystem()
 }
 
 void SleepSystem()
-{
+{     
     // Power down peripherals
+    pinMode(PWR_EN_5V, OUTPUT);
+    pinMode(PWR_EN_3V3, OUTPUT);
     digitalWrite(PWR_EN_5V, LOW);
     digitalWrite(PWR_EN_3V3, LOW);
 }
 
 void WakeSystem()
-{
+{    
     // Power up peripherals
     pinMode(PWR_EN_5V, OUTPUT);
     pinMode(PWR_EN_3V3, OUTPUT);

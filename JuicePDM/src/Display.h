@@ -33,14 +33,17 @@
 
 #define USE_DMA_TO_TFT
 
-/// @brief Flag to denote if the background has been drawn
-extern bool backgroundDrawn;
-
 /// @brief Counter for splash screen delay
 extern long splashCounter;
 
 /// @brief Initialise LCD
 void InitialiseDisplay();
+
+/// @brief Start LCD
+void StartDisplay();
+
+/// @brief Stop LCD
+void StopDisplay();
 
 /// @brief Draw the initial background
 void DrawBackground();

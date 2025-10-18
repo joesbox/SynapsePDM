@@ -50,14 +50,14 @@ struct __attribute__((packed)) ChannelConfig
   float CurrentThresholdLow;  // Turn off threshold low (open circuit detection)
   uint8_t RetryCount;         // Number of retries
   uint32_t InrushDelay;       // Inrush delay in milliseconds
-  bool MultiChannel;          // Grouped with other channels. Allows higher current loads
+  uint8_t MultiChannel;       // Grouped with other channels. Allows higher current loads
   uint8_t GroupNumber;        // Group membership number
   int OutputControlPin;       // Digital uC control pin
   uint8_t CurrentSensePin;    // Current sense input pin
   uint8_t InputControlPin;    // Input control pin
-  bool ActiveHigh;            // True if input is active high
-  bool RunOn;                 // Run-on after ignition off flag
-  int RunOnTime;              // Run on time (in milliseconds)
+  uint8_t ActiveHigh;         // True if input is active high
+  uint8_t RunOn;              // Run-on after ignition off flag
+  uint32_t RunOnTime;         // Run on time (in milliseconds)
   uint8_t ErrorFlags;         // Bitmask for channel error flags
 };
 

@@ -47,7 +47,7 @@ long startMillis;
 long endMillis;
 
 void SaveChannelConfig()
-{
+{    
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
@@ -368,7 +368,7 @@ void CleanEEPROM()
         EEPROMext.EepromWrite(i, 32, dummy);
     }
     EEPROMext.EepromWaitEndWriteOperation();
-    EEPROMext.end();
+    EEPROMext.end();    
     SPI_2.end();
 }
 
@@ -614,4 +614,9 @@ void CloseSDFile()
 void SleepSD()
 {
     CloseSDFile();
+    EEPROMext.end();
+    SPI_2.end();
+    
+    // Disable SPI2 RCC clock to reduce power consumption during sleep
+    __HAL_RCC_SPI2_CLK_DISABLE();
 }

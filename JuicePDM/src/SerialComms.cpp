@@ -33,7 +33,7 @@ unsigned int readBufIdx = 0;
 
 void InitialiseSerial()
 {
-    Serial.begin(9600, SERIAL_8E2); // 921600 baud, 8 data bits, even parity, 2 stop bits
+    Serial.begin(115200, SERIAL_8E2); // 921600 baud, 8 data bits, even parity, 2 stop bits
 
 #ifdef DEBUG
     while (!Serial)
@@ -46,6 +46,7 @@ void InitialiseSerial()
 void SleepComms()
 {
     Serial.end();
+    Serial1.end();
 }
 
 void CheckSerial()
@@ -67,12 +68,12 @@ void CheckSerial()
             Serial.write(COMMAND_ID_CONFIM);
             connectionStatus = 1;
             break;
-        
+
         case COMMAND_ID_SKIP:
             Serial.write(COMMAND_ID_CONFIM);
             connectionStatus = 1;
             break;
-            
+
         case COMMAND_ID_REQUEST:
         {
             // Send serial data packet and update CRC as we go
@@ -165,6 +166,16 @@ void CheckSerial()
                 {
                     Serial.write(threeBytePacket[j]);
                     checkSum += threeBytePacket[j];
+                }
+
+                Serial.write(Channels[i].RunOn);
+                checkSum += Channels[i].RunOn;
+
+                memcpy(&fourBytePacket, &Channels[i].RunOnTime, sizeof(Channels[i].RunOnTime));
+                for (uint j = 0; j < sizeof(fourBytePacket); j++)
+                {
+                    Serial.write(fourBytePacket[j]);
+                    checkSum += fourBytePacket[j];
                 }
             }
 
@@ -433,9 +444,6 @@ void CheckSerial()
                                 Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime = 0;
                             }
                             break;
-                        case 13: // Name
-                            memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].ChannelName, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].ChannelName));
-                            break;
 
                         default:
                             // Channel parameter out of range. Ignore packet
@@ -482,9 +490,9 @@ void CheckSerial()
             }
             else
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);                
+                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
             }
-            
+
             break;
         }
 
@@ -506,7 +514,7 @@ void CheckSerial()
             else
             {
                 allSaved &= false;
-                connectionStatus = 11;            
+                connectionStatus = 11;
             }
 
             if (LoadSystemConfig())
@@ -516,7 +524,12 @@ void CheckSerial()
             else
             {
                 allSaved &= false;
-                connectionStatus = 12;            
+                connectionStatus = 12;
+            }
+
+            if (allSaved)
+            {
+                backgroundDrawn = false; // Force display redraw
             }
 
             Serial.write(allSaved ? COMMAND_ID_CONFIM

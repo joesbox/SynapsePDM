@@ -43,6 +43,9 @@
 /// @brief Setup interrupts and analog read timers
 void InitialiseOutputs();
 
+/// @brief Put outputs to sleep (disable DMA and timers)
+void SleepOutputs();
+
 /// @brief Setup GPIO for outputs. Push-pull, no pullups.
 void setupGPIO();
 

@@ -53,6 +53,8 @@ uint8_t connectionStatus = 0;
 
 int recBytesRead = 0;
 
+bool backgroundDrawn = false;
+
 void InitialiseChannelData()
 {
   // Initialise channels to default values, ensure they are initially off

@@ -18,7 +18,8 @@
         "type_traits": "cpp",
         "utility": "cpp",
         "memory": "cpp",
-        "random": "cpp"
+        "random": "cpp",
+        "cmath": "cpp"
     },
     "cmake.configureOnOpen": false
 }

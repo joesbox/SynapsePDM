@@ -36,7 +36,6 @@ SPIClass &spix = SPI;
 
 TFT_eSPI tft = TFT_eSPI(); // Invoke custom library
 
-bool backgroundDrawn;
 long splashCounter;
 
 static bool prevEnabled[NUM_CHANNELS] = {false};
@@ -113,9 +112,12 @@ const int channelName[14][2] = {
 
 void InitialiseDisplay()
 {
+  digitalWrite(TFT_RST, LOW);
+  delay(20);
+  digitalWrite(TFT_RST, HIGH);
+  delay(120); // give controller time to boot
   tft.begin();
-  Serial.print("Enabling DMA: ");
-  Serial.println(tft.initDMA());
+  tft.initDMA();
   spix = tft.getSPIinstance();
   tft.setRotation(3);
   tft.setBitmapColor(TFT_WHITE, TFT_BLACK);
@@ -130,6 +132,60 @@ void InitialiseDisplay()
 
   prevSDOK = SDCardOK;
   prevGPSOK = !GPSFix;
+}
+
+void StartDisplay()
+{
+  initIcons = false;
+  SPI_2.begin();
+  digitalWrite(TFT_RST, LOW);
+  delay(20);
+  digitalWrite(TFT_RST, HIGH);
+  delay(120); // give controller time to boot
+  tft.begin();
+  tft.initDMA();
+  spix = tft.getSPIinstance();
+  tft.setRotation(3);
+  tft.setBitmapColor(TFT_WHITE, TFT_BLACK);
+  tft.fillScreen(TFT_BLACK);
+  spix.end();
+}
+
+void StopDisplay()
+{
+  // End SPI communication  
+  tft.dmaWait();
+  tft.endWrite();
+
+  if (DMA1_Stream4->CR & DMA_SxCR_EN)
+  {
+    DMA1_Stream4->CR &= ~DMA_SxCR_EN; // disable DMA stream
+    while (DMA1_Stream4->CR & DMA_SxCR_EN)
+    {
+    } // wait for it to actually disable
+  }
+
+  SPI_2.end();
+  spix.end();
+
+  pinMode(PICO, OUTPUT);
+  pinMode(POCI, OUTPUT);
+  pinMode(SCK2, OUTPUT);
+  pinMode(CS1, OUTPUT);
+  pinMode(CS2, OUTPUT);
+  pinMode(TFT_DC, OUTPUT);
+  pinMode(TFT_RST, OUTPUT);
+  pinMode(PB10, OUTPUT);
+  digitalWrite(CS1, LOW);
+  digitalWrite(CS2, LOW);
+  digitalWrite(PICO, LOW);
+  digitalWrite(POCI, LOW);
+  digitalWrite(SCK2, LOW);
+  digitalWrite(TFT_DC, LOW);
+  digitalWrite(TFT_RST, LOW);
+  digitalWrite(PWR_EN_5V, LOW);
+  digitalWrite(PWR_EN_3V3, LOW);
+  digitalWrite(PB10, LOW);
 }
 
 void DrawBackground()

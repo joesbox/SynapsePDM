@@ -225,32 +225,41 @@ void handlePowerState()
   case RUN:
     if (!digitalRead(IGN_INPUT))
     {
-      PowerState = PREPARE_SLEEP;
+      delay(100); // Debounce
+      if (!digitalRead(IGN_INPUT))
+      {
+        PowerState = PREPARE_SLEEP;
+      }
     }
     break;
   case PREPARE_SLEEP:
-#ifdef DEBUG
-    Serial.println("Prepare sleep");
-#endif
     EnableMotionDetect();
     PullResistorSleep();
     SleepSD();
     OutputsOff();
+    SleepOutputs();
     SleepComms();
+    StopDisplay();
     SleepSystem();
     PowerState = SLEEPING;
+    delay(100);
+    HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
     break;
   case SLEEPING:
-    LowPower.deepSleep();
+
     break;
   case IGNITION_WAKE:
     DisableMotionDetect();
     InitialiseSerial();
     WakeSystem();
-    InitialiseDisplay();
+    analogWrite(TFT_BL, 1023);
+    //InitialiseDisplay();
+    StartDisplay();
+    DrawBackground();
     PowerState = RUN;
     break;
   case IMU_WAKE:
+    SystemClock_Config();
     DisableMotionDetect();
     WakeSystem();
     imuWWtimer = millis() + SystemParams.IMUwakeWindow;
@@ -291,7 +300,9 @@ void loop()
 
     // Read input channel status
     HandleInputs();
-    if (backgroundDrawn)
+
+    // If we're heading for sleep, don't update the display. Something with the DMA seems to keeep the SPI bus active. Drastically increases sleep current.
+    if (backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
     {
       UpdateDisplay();
     }
@@ -300,7 +311,7 @@ void loop()
 
   if (millis() > CommsTimer)
   {
-    CommsTimer = millis() + COMMS_INTERVAL;    
+    CommsTimer = millis() + COMMS_INTERVAL;
     ReadIMU();
   }
 
@@ -348,7 +359,7 @@ void loop()
     Debug();
   }
 
-  if (millis() > splashCounter && !backgroundDrawn)
+  if (millis() > splashCounter && !backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
   {
     DrawBackground();
   }

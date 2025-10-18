@@ -82,7 +82,7 @@ void PullResistorSleep()
 {
     for (int i = 0; i < NUM_ANA_CHANNELS; i++)
     {
-        digitalWrite(AnalogueIns[i].PullDownPin, LOW);
-        digitalWrite(AnalogueIns[i].PullUpPin, LOW);
+        pinMode(AnalogueIns[i].PullDownPin, INPUT_ANALOG);
+        pinMode(AnalogueIns[i].PullUpPin, INPUT_ANALOG);
     }
 }

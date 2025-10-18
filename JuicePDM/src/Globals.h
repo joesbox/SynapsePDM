@@ -129,10 +129,10 @@
 #define CHN_OVERCURRENT_RANGE 0x01
 #define CHN_OVERCURRENT_LIMIT 0x02
 #define CHN_UNDERCURRENT_RANGE 0x04
-#define OVERTEMP_GNDSHORT 0x08
-#define WATCHDOG_TIMEOUT 0x10
-#define IS_FAULT 0x20
-#define RETRY_LOCKOUT 0x40
+//#define OVERTEMP_GNDSHORT 0x08
+//#define WATCHDOG_TIMEOUT 0x10
+#define IS_FAULT 0x08
+#define RETRY_LOCKOUT 0x10
 
 // ECU CAN addresses
 #define CHAN_CAN_ID 0x800
@@ -189,8 +189,9 @@
 #define CS2 PB11
 
 // LCD pins
-// #define TFT_RST PD8
-// #define TFT_DC PD9
+//#define TFT_RST PD8
+//#define TFT_DC PD9
+//#define TFT_CS PB11
 #define TFT_BL PB10
 
 // GSM Module Pins
@@ -212,6 +213,9 @@ extern SPIClass SPI_2;
 /// @brief PC connection status. 0 = disconnected, 1 = connected, 2 = Checksum fail
 extern uint8_t connectionStatus;
 extern int recBytesRead;
+
+/// @brief Flag to denote if the background has been drawn
+extern bool backgroundDrawn;
 
 /// @brief Analogue input config structure
 struct __attribute__((packed)) AnalogueInputs
