@@ -52,8 +52,17 @@ void HandleInputs()
         switch (Channels[i].ChanType)
         {
         case DIG:     
-        case DIG_PWM:   
-            Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
+        case DIG_PWM:              
+
+            // Override takes precedence over input control pin
+            if (Channels[i].Override)
+            {
+                Channels[i].Enabled = true;
+            }
+            else
+            {
+                Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
+            }
 
             // Used for inrush delay timing
             if (enabledFlags[i] != Channels[i].Enabled)

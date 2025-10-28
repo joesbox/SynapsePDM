@@ -71,8 +71,7 @@ void InitialiseChannelData()
     else
     {
       Channels[i].InputControlPin = ANAchannelInputPins[i - NUM_DI_CHANNELS];
-    }
-    Channels[i].CurrentLimitHigh = CURRENT_MAX;
+    }    
     Channels[i].CurrentThresholdHigh = CURRENT_MAX;
     Channels[i].CurrentThresholdLow = 0.0;
     pinMode(Channels[i].OutputControlPin, OUTPUT);
@@ -83,6 +82,7 @@ void InitialiseChannelData()
     Channels[i].MultiChannel = false;    
     Channels[i].RetryCount = 3;
     Channels[i].InrushDelay = INRUSH_DELAY;
+    Channels[i].Override = false;
   }
 
   // Initialise analogue inputs to default values

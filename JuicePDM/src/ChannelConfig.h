@@ -44,8 +44,7 @@ struct __attribute__((packed)) ChannelConfig
   uint8_t Enabled;            // Channel enabled flag
   char ChannelName[3];        // Channel name
   volatile int AnalogRaw;     // Raw analog value. Used for calibration
-  float CurrentValue;         // Active current value
-  float CurrentLimitHigh;     // Absolute current limit high
+  float CurrentValue;         // Active current value  
   float CurrentThresholdHigh; // Turn off threshold high
   float CurrentThresholdLow;  // Turn off threshold low (open circuit detection)
   uint8_t RetryCount;         // Number of retries
@@ -59,6 +58,7 @@ struct __attribute__((packed)) ChannelConfig
   uint8_t RunOn;              // Run-on after ignition off flag
   uint32_t RunOnTime;         // Run on time (in milliseconds)
   uint8_t ErrorFlags;         // Bitmask for channel error flags
+  uint8_t Override;           // Override flag
 };
 
 #endif

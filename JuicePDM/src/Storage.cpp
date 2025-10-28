@@ -56,7 +56,7 @@ void SaveChannelConfig()
 
     // Copy current channel info to storage structure
     memcpy(&ChannelConfigData.data, &Channels, sizeof(Channels));
-
+    
     // Calculate stored config bytes CRC
     uint32_t checksum = CRC32::calculate(ChannelConfigData.dataBytes, sizeof(Channels));
 

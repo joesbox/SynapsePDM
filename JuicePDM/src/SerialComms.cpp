@@ -105,12 +105,8 @@ void CheckSerial()
                 Serial.write((byte)Channels[i].ChanType);
                 checkSum += (byte)Channels[i].ChanType;
 
-                memcpy(&fourBytePacket, &Channels[i].CurrentLimitHigh, sizeof(Channels[i].CurrentLimitHigh));
-                for (uint j = 0; j < sizeof(fourBytePacket); j++)
-                {
-                    Serial.write(fourBytePacket[j]);
-                    checkSum += fourBytePacket[j];
-                }
+                Serial.write(Channels[i].Override);
+                checkSum += Channels[i].Override;
 
                 Serial.write(Channels[i].CurrentSensePin);
                 checkSum += Channels[i].CurrentSensePin;
@@ -384,12 +380,8 @@ void CheckSerial()
                         case 0: // Channel type
                             Channels[configBuffer[CONFIG_DATA_INDEX]].ChanType = (ChannelType)configBuffer[CONFIG_DATA_START_INDEX];
                             break;
-                        case 1: // Current limit high
-                            memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentLimitHigh, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentLimitHigh));
-                            if (Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentLimitHigh > CURRENT_MAX)
-                            {
-                                Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentLimitHigh = CURRENT_MAX;
-                            }
+                        case 1: // Override flag
+                            Channels[configBuffer[CONFIG_DATA_INDEX]].Override = configBuffer[CONFIG_DATA_START_INDEX];
                             break;
                         case 2: // Current threshold high
                             memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdHigh, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdHigh));
@@ -484,7 +476,7 @@ void CheckSerial()
             }
 
             if (validPacket)
-            {
+            {                
                 Serial.write(COMMAND_ID_CONFIM);
                 connectionStatus = 10;
             }
@@ -492,6 +484,9 @@ void CheckSerial()
             {
                 Serial.write(COMMAND_ID_CHECKSUM_FAIL);
             }
+
+            readBufIdx = 0;
+            recBytesRead = 0;
 
             break;
         }
@@ -502,10 +497,6 @@ void CheckSerial()
             SaveSystemConfig();
 
             bool allSaved = true;
-
-            /*allSaved &= LoadChannelConfig();
-            allSaved &= LoadSystemConfig();
-            allSaved &= LoadStorageConfig();*/
 
             if (LoadChannelConfig())
             {

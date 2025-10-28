@@ -172,7 +172,17 @@ void UpdateSystem()
         SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~SDCARD_ERROR;
     }
 
-    // Check SD card status
+    // Check GPS fix
+    if (!GPSFix)
+    {
+        SystemParams.ErrorFlags |= GPS_ERROR;
+    }
+    else
+    {
+        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~GPS_ERROR;
+    }
+
+    // Checksum status of PC communications
     switch (connectionStatus)
     {
     case 0:

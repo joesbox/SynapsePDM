@@ -288,10 +288,6 @@ void UpdateOutputs()
         {
           Channels[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
         }
-        else if (amps > Channels[i].CurrentLimitHigh)
-        {
-          Channels[i].ErrorFlags |= CHN_OVERCURRENT_LIMIT;
-        }
         else
         {
           // No conditions found. Clear flag
@@ -368,10 +364,6 @@ void UpdateOutputs()
             else if (avgCurrent < Channels[i].CurrentThresholdLow)
             {
               Channels[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
-            }
-            else if (avgCurrent > Channels[i].CurrentLimitHigh)
-            {
-              Channels[i].ErrorFlags |= CHN_OVERCURRENT_LIMIT;
             }
 
             // --- Retry / lockout handling ---
