@@ -16,34 +16,37 @@ JuicePDM/src/IMU.cpp:57:7: note: err is assigned
 JuicePDM/src/IMU.cpp:68:7: note: err is overwritten
   err = imu.setConfig(gyroConfig);
       ^
-JuicePDM/src/OutputHandler.cpp:252:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
+JuicePDM/src/OutputHandler.cpp:262:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
         float analogMean = 0.0f;
               ^
-JuicePDM/src/OutputHandler.cpp:305:24: style: The scope of the variable 'trySampleCount' can be reduced. [variableScope]
+JuicePDM/src/OutputHandler.cpp:315:24: style: The scope of the variable 'trySampleCount' can be reduced. [variableScope]
         static uint8_t trySampleCount[NUM_CHANNELS] = {0};
                        ^
-JuicePDM/src/SerialComms.cpp:363:38: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
+JuicePDM/src/SerialComms.cpp:374:38: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
                     connectionStatus = 4;
                                      ^
-JuicePDM/src/SerialComms.cpp:346:34: note: connectionStatus is assigned
+JuicePDM/src/SerialComms.cpp:357:34: note: connectionStatus is assigned
                 connectionStatus = 3;
                                  ^
-JuicePDM/src/SerialComms.cpp:363:38: note: connectionStatus is overwritten
+JuicePDM/src/SerialComms.cpp:374:38: note: connectionStatus is overwritten
                     connectionStatus = 4;
                                      ^
-JuicePDM/src/SerialComms.cpp:364:33: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
+JuicePDM/src/SerialComms.cpp:375:33: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
                     validPacket = true;
                                 ^
-JuicePDM/src/SerialComms.cpp:347:29: note: validPacket is assigned
+JuicePDM/src/SerialComms.cpp:358:29: note: validPacket is assigned
                 validPacket = true;
                             ^
-JuicePDM/src/SerialComms.cpp:364:33: note: validPacket is overwritten
+JuicePDM/src/SerialComms.cpp:375:33: note: validPacket is overwritten
                     validPacket = true;
                                 ^
-JuicePDM/src/SerialComms.cpp:323:22: style: The scope of the variable 'calcChecksum' can be reduced. [variableScope]
+JuicePDM/src/SerialComms.cpp:334:22: style: The scope of the variable 'calcChecksum' can be reduced. [variableScope]
             uint32_t calcChecksum = 0;
                      ^
-JuicePDM/src/SerialComms.cpp:100:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
+JuicePDM/src/SerialComms.cpp:442:85: style: Checking if unsigned expression 'Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime' is less than zero. [unsignedLessThanZero]
+                            if (Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime < 0)
+                                                                                    ^
+JuicePDM/src/SerialComms.cpp:101:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
             chanSize = sizeof(Channels) / NUM_CHANNELS;
                      ^
 JuicePDM/src/Storage.cpp:485:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
@@ -76,7 +79,7 @@ JuicePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never u
 JuicePDM/src/CANComms.cpp:34:0: style: The function 'canSniff' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:272:0: style: The function 'loop' is never used. [unusedFunction]
+JuicePDM/src/main.cpp:281:0: style: The function 'loop' is never used. [unusedFunction]
 
 ^
 JuicePDM/src/Battery.cpp:78:0: style: The function 'printBatteryStats' is never used. [unusedFunction]
