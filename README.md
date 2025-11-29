@@ -1,5 +1,5 @@
 # SynapsePDM
-### CAN Enabled Automotive Power Distribution Module. See the [Joe Blogs Wiki](https://wiki.joeblogs.uk/e/en/home/Automotive/SynapsePDM) for more info.
+### CAN Enabled Automotive Power Distribution Module. See https://wiki.joeblogs.uk/ for more info.
 
 #### Features (WIP):
 + 14 High Side Driver output channels configurable as PWM (200Hz) or digital with soft-start/soft-stop capability.
@@ -17,3 +17,10 @@
 
 ## License
 This work is licensed under a GPL-3.0 license.
+
+### Disclaimer 
+This hardware and software are experimental, may have bugs, and are not guaranteed to be reliable.
+
+Please don’t use this in safety-critical systems.
+
+Use it at your own risk.
