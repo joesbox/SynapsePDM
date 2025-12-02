@@ -82,6 +82,9 @@ extern uint8_t PowerState;
 /// @brief Flag to denote RTC has been set
 extern bool RTCSet;
 
+/// @brief Flag to latch display backlight initialisation
+extern bool DisplayBacklightInitialised;
+
 /// @brief Wake up call back for the ignition input pin
 void IgnitionWake();
 

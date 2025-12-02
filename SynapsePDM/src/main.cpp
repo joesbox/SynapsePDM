@@ -23,8 +23,17 @@
     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     THE SOFTWARE.
 
+    ! UPDATE FW VERSION DEFINED IN GLOBALS.H !
 
     Version history:
+    Date              Version       Description
+    ----              -------       ------------------------------------------------------------
+    2025-12-02        v0.2          Fixes:
+                                    - Added clearing of channel error flags before storage.
+                                    - Clear channel error flags on disable.
+                                    - Ensure channel name is null-terminated before display.
+                                    - Overrides cleared on serial timeout and save to EEPROM.
+                                    - Decreased serial timeout to 5 seconds.
     2025-03-09        v0.1          Initial beta release.
 */
 
@@ -166,7 +175,8 @@ void setup()
 {
   InitialiseSystem();
   InitialiseGSM(false);
-  analogWrite(TFT_BL, 0);
+  pinMode(TFT_BL, OUTPUT);
+  digitalWrite(TFT_BL, LOW);  
   rtc.setClockSource(STM32RTC::LSE_CLOCK);
   rtc.begin();
   InitialiseSerial();
@@ -216,6 +226,7 @@ void setup()
 
   // Display the splash screen for 2 seconds
   splashCounter = millis() + SPLASH_SCREEN_DELAY;
+  digitalWrite(TFT_BL, HIGH);
 }
 
 void handlePowerState()
@@ -253,7 +264,6 @@ void handlePowerState()
     InitialiseSerial();
     WakeSystem();
     analogWrite(TFT_BL, 1023);
-    //InitialiseDisplay();
     StartDisplay();
     DrawBackground();
     PowerState = RUN;
@@ -280,18 +290,27 @@ void handlePowerState()
 
 void loop()
 {
-  if (millis() > BLTimer)
+  /*if (!DisplayBacklightInitialised)
   {
-    BLTimer = millis() + BL_FADE_INTRVAL;
-    if (blLevel < 1023)
+    if (millis() > BLTimer)
     {
-      analogWrite(TFT_BL, blLevel++);
-      if (blLevel > 1023)
+      BLTimer = millis() + BL_FADE_INTRVAL;
+      if (blLevel <= 1023)
       {
-        blLevel = 1023;
+        analogWrite(TFT_BL, blLevel++);
+        if (blLevel > 1023)
+        {
+          blLevel = 1023;
+          DisplayBacklightInitialised = true;
+        }
       }
     }
   }
+  else
+  {
+    analogWrite(TFT_BL, 1023);
+  }*/
+  
   if (millis() > DisplayTimer)
   {
     DisplayTimer = millis() + DISPLAY_INTERVAL;

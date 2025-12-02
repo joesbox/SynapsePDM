@@ -33,7 +33,7 @@ unsigned int readBufIdx = 0;
 
 void InitialiseSerial()
 {
-    Serial.begin(115200, SERIAL_8E2); // 921600 baud, 8 data bits, even parity, 2 stop bits
+    Serial.begin(115200, SERIAL_8E2); // 115200 baud, 8 data bits, even parity, 2 stop bits
 
 #ifdef DEBUG
     while (!Serial)
@@ -57,6 +57,10 @@ void CheckSerial()
         receivingConfig = false;
         readBufIdx = 0;
         recBytesRead = 0;
+        for (int i = 0; i < NUM_CHANNELS; i++)
+        {
+            Channels[i].Override = false; // Clear any overrides
+        }
     }
     if (Serial.available() && !receivingConfig)
     {
@@ -476,7 +480,7 @@ void CheckSerial()
             }
 
             if (validPacket)
-            {                
+            {
                 Serial.write(COMMAND_ID_CONFIM);
                 connectionStatus = 10;
             }
@@ -535,66 +539,5 @@ void CheckSerial()
             Serial.write(BUILD_DATE);
             break;
         }
-    }
-    else
-    {
-        /*if (receivingConfig)
-        {
-            uint32_t calcChecksum = 0;
-            // Read incoming config data
-            while (Serial.available())
-            {
-                if (readBufIdx < 1000)
-                {
-                    connectionStatus = 4; // Receiving config data
-                    configBuffer[readBufIdx] = Serial.read();
-                    readBufIdx++;
-                    recBytesRead = readBufIdx;
-                }
-                else
-                {
-                    Serial.read(); // Overflow - discard byte
-                }
-            }
-
-            // Sum the data to calculate checksum
-            for (int i = 0; i < readBufIdx - 4; i++)
-            {
-                calcChecksum += configBuffer[i];
-            }
-
-            if (recBytesRead == NUM_CONFIG_BYTES)
-            {
-                connectionStatus = 5; // Config data received
-                // Check header && trailer before calculating checksum
-                if ((configBuffer[0] == (SERIAL_HEADER & 0XFF)) && (configBuffer[1] == (SERIAL_HEADER >> 8)) &&
-                    (configBuffer[readBufIdx - 6] == (SERIAL_TRAILER & 0xFF)) && (configBuffer[readBufIdx - 5] == (SERIAL_TRAILER >> 8)))
-                {
-                    connectionStatus = 6; // Header and trailer valid
-                    // Calculate stored config bytes CRC
-                    uint32_t checksum = 0;
-                    checksum |= configBuffer[readBufIdx - 3] & 0xFF;
-                    checksum |= configBuffer[readBufIdx - 2] << 8 & 0xFF00;
-                    checksum |= configBuffer[readBufIdx - 1] << 16 & 0xFF0000;
-                    checksum |= configBuffer[readBufIdx] << 24 & 0xFF000000;
-
-                    // Checksum valid?
-                    if (checksum == calcChecksum)
-                    {
-                        connectionStatus = 7; // Checksum pass
-                    }
-                    else
-                    {
-                        Serial.write(COMMAND_ID_CHECKSUM_FAIL);
-                        connectionStatus = 8; // Checksum fail
-                    }
-                    Serial.write(COMMAND_ID_CONFIM);
-                }
-                else
-                {
-                    Serial.write(COMMAND_ID_CHECKSUM_FAIL);
-                }
-            }
-        }*/
     }
 }

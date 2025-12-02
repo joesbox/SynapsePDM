@@ -35,7 +35,7 @@
 #include <Storage.h>
 
 // Firmware version
-#define FW_VER "v0.1"
+#define FW_VER "v0.2"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -197,7 +197,7 @@
 #define SIM_RST PC7
 #define SIM_FLIGHT PB8
 
-#define COMMS_TIMEOUT 30000
+#define COMMS_TIMEOUT 5000
 
 /// @brief Output enabled flags
 extern bool enabledFlags[NUM_CHANNELS];

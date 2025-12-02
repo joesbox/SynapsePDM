@@ -153,7 +153,7 @@ void StartDisplay()
 
 void StopDisplay()
 {
-  // End SPI communication  
+  // End SPI communication
   tft.dmaWait();
   tft.endWrite();
 
@@ -221,8 +221,13 @@ void DrawBackground()
     int chanNameWidth = tft.textWidth(Channels[i].ChannelName);
     int chanNameX = channelName[i][0] + (5 - chanNameWidth) / 2;
 
+    // Ensure channel name is null-terminated
+    char safeName[4];
+    memcpy(safeName, Channels[i].ChannelName, 3);
+    safeName[3] = '\0';
+
     tft.setCursor(chanNameX, channelName[i][1]);
-    tft.print(Channels[i].ChannelName);
+    tft.print(safeName);
 
     // tft.fillCircle(lights[i][0], lights[i][1], 12, TFT_DARKGREY);
     tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)greyLED);

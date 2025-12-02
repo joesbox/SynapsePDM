@@ -77,6 +77,12 @@ void HandleInputs()
         default:
             break;
         }
+
+        if (!Channels[i].Enabled)
+        {
+            // Clear error flags on disable
+            Channels[i].ErrorFlags = 0; 
+        }
     }
 
     // Check analogue inputs. Set pull-ups/pull-downs

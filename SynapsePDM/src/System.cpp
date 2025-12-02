@@ -31,6 +31,7 @@ bool ChannelCRCValid;
 bool SDCardOK;
 uint8_t PowerState;
 bool RTCSet;
+bool DisplayBacklightInitialised = false;
 
 void IgnitionWake()
 {
@@ -53,11 +54,7 @@ void InitialiseSystem()
     LowPower.attachInterruptWakeup(IMU_INT1, IMUWake, RISING, DEEP_SLEEP_MODE);
 
     // Set power state to run
-    PowerState = RUN;
-
-    // Set the analogue read resolution
-    analogReadResolution(12);
-    analogWriteResolution(10);
+    PowerState = RUN;    
 
     WakeSystem();
 
@@ -207,7 +204,11 @@ void SleepSystem()
 
 void WakeSystem()
 {    
-    // Power up peripherals
+    // Set the analogue read resolution
+    analogReadResolution(12);
+    analogWriteResolution(10);
+
+    // Power up peripherals    
     pinMode(PWR_EN_5V, OUTPUT);
     pinMode(PWR_EN_3V3, OUTPUT);
     digitalWrite(PWR_EN_5V, HIGH);
