@@ -1,5 +1,7 @@
 # SynapsePDM
-### CAN Enabled Automotive Power Distribution Module
+### CAN Enabled Automotive Power Distribution Module. 
+
+See https://wiki.joeblogs.uk/ for more info.
 
 #### Features (WIP):
 + 14 High Side Driver output channels configurable as PWM (200Hz) or digital with soft-start/soft-stop capability.
@@ -20,3 +22,10 @@ This project uses the TFT_eSPI library. The display configuration for which is i
 
 ## License
 This work is licensed under a GPL-3.0 license.
+
+### Disclaimer 
+This hardware and software are experimental, may have bugs, and are not guaranteed to be reliable.
+
+Please don’t use this in safety-critical systems.
+
+Use it at your own risk.

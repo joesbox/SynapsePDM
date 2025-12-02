@@ -1,91 +1,91 @@
-JuicePDM/src/IMU.cpp:57:7: style: Variable 'err' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/IMU.cpp:57:7: style: Variable 'err' is reassigned a value before the old one has been used. [redundantAssignment]
   err = imu.setConfig(accelConfig);
       ^
-JuicePDM/src/IMU.cpp:48:7: note: err is assigned
+SynapsePDM/src/IMU.cpp:48:7: note: err is assigned
   err |= imu.enableFeature(BMI2_ANY_MOTION);
       ^
-JuicePDM/src/IMU.cpp:57:7: note: err is overwritten
+SynapsePDM/src/IMU.cpp:57:7: note: err is overwritten
   err = imu.setConfig(accelConfig);
       ^
-JuicePDM/src/IMU.cpp:68:7: style: Variable 'err' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/IMU.cpp:68:7: style: Variable 'err' is reassigned a value before the old one has been used. [redundantAssignment]
   err = imu.setConfig(gyroConfig);
       ^
-JuicePDM/src/IMU.cpp:57:7: note: err is assigned
+SynapsePDM/src/IMU.cpp:57:7: note: err is assigned
   err = imu.setConfig(accelConfig);
       ^
-JuicePDM/src/IMU.cpp:68:7: note: err is overwritten
+SynapsePDM/src/IMU.cpp:68:7: note: err is overwritten
   err = imu.setConfig(gyroConfig);
       ^
-JuicePDM/src/OutputHandler.cpp:262:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
+SynapsePDM/src/OutputHandler.cpp:262:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
         float analogMean = 0.0f;
               ^
-JuicePDM/src/OutputHandler.cpp:311:24: style: The scope of the variable 'trySampleCount' can be reduced. [variableScope]
+SynapsePDM/src/OutputHandler.cpp:311:24: style: The scope of the variable 'trySampleCount' can be reduced. [variableScope]
         static uint8_t trySampleCount[NUM_CHANNELS] = {0};
                        ^
-JuicePDM/src/SerialComms.cpp:370:38: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/SerialComms.cpp:370:38: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
                     connectionStatus = 4;
                                      ^
-JuicePDM/src/SerialComms.cpp:353:34: note: connectionStatus is assigned
+SynapsePDM/src/SerialComms.cpp:353:34: note: connectionStatus is assigned
                 connectionStatus = 3;
                                  ^
-JuicePDM/src/SerialComms.cpp:370:38: note: connectionStatus is overwritten
+SynapsePDM/src/SerialComms.cpp:370:38: note: connectionStatus is overwritten
                     connectionStatus = 4;
                                      ^
-JuicePDM/src/SerialComms.cpp:371:33: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/SerialComms.cpp:371:33: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
                     validPacket = true;
                                 ^
-JuicePDM/src/SerialComms.cpp:354:29: note: validPacket is assigned
+SynapsePDM/src/SerialComms.cpp:354:29: note: validPacket is assigned
                 validPacket = true;
                             ^
-JuicePDM/src/SerialComms.cpp:371:33: note: validPacket is overwritten
+SynapsePDM/src/SerialComms.cpp:371:33: note: validPacket is overwritten
                     validPacket = true;
                                 ^
-JuicePDM/src/SerialComms.cpp:330:22: style: The scope of the variable 'calcChecksum' can be reduced. [variableScope]
+SynapsePDM/src/SerialComms.cpp:330:22: style: The scope of the variable 'calcChecksum' can be reduced. [variableScope]
             uint32_t calcChecksum = 0;
                      ^
-JuicePDM/src/SerialComms.cpp:434:85: style: Checking if unsigned expression 'Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime' is less than zero. [unsignedLessThanZero]
+SynapsePDM/src/SerialComms.cpp:434:85: style: Checking if unsigned expression 'Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime' is less than zero. [unsignedLessThanZero]
                             if (Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime < 0)
                                                                                     ^
-JuicePDM/src/SerialComms.cpp:101:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
+SynapsePDM/src/SerialComms.cpp:101:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
             chanSize = sizeof(Channels) / NUM_CHANNELS;
                      ^
-JuicePDM/src/Storage.cpp:485:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:485:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
     char timeStamp[100];
          ^
-JuicePDM/src/Storage.cpp:486:10: style: The scope of the variable 'sysLog' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:486:10: style: The scope of the variable 'sysLog' can be reduced. [variableScope]
     char sysLog[150];
          ^
-JuicePDM/src/Storage.cpp:487:10: style: The scope of the variable 'channelLog' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:487:10: style: The scope of the variable 'channelLog' can be reduced. [variableScope]
     char channelLog[150];
          ^
-JuicePDM/src/Storage.cpp:488:9: style: The scope of the variable 'writtenBytes' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:488:9: style: The scope of the variable 'writtenBytes' can be reduced. [variableScope]
     int writtenBytes = 0;
         ^
-JuicePDM/src/Storage.cpp:488:22: style: Variable 'writtenBytes' is assigned a value that is never used. [unreadVariable]
+SynapsePDM/src/Storage.cpp:488:22: style: Variable 'writtenBytes' is assigned a value that is never used. [unreadVariable]
     int writtenBytes = 0;
                      ^
-JuicePDM/src/Storage.cpp:530:18: style: Unused variable: logEntry [unusedVariable]
+SynapsePDM/src/Storage.cpp:530:18: style: Unused variable: logEntry [unusedVariable]
             char logEntry[40];
                  ^
-JuicePDM/src/Storage.cpp:361:0: style: The function 'CleanEEPROM' is never used. [unusedFunction]
+SynapsePDM/src/Storage.cpp:361:0: style: The function 'CleanEEPROM' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/CANComms.cpp:27:0: style: The function 'InitialiseCAN' is never used. [unusedFunction]
+SynapsePDM/src/CANComms.cpp:27:0: style: The function 'InitialiseCAN' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never used. [unusedFunction]
+SynapsePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/CANComms.cpp:34:0: style: The function 'canSniff' is never used. [unusedFunction]
+SynapsePDM/src/CANComms.cpp:34:0: style: The function 'canSniff' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:281:0: style: The function 'loop' is never used. [unusedFunction]
+SynapsePDM/src/main.cpp:281:0: style: The function 'loop' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/Battery.cpp:78:0: style: The function 'printBatteryStats' is never used. [unusedFunction]
+SynapsePDM/src/Battery.cpp:78:0: style: The function 'printBatteryStats' is never used. [unusedFunction]
 
 ^
-JuicePDM/src/main.cpp:165:0: style: The function 'setup' is never used. [unusedFunction]
+SynapsePDM/src/main.cpp:165:0: style: The function 'setup' is never used. [unusedFunction]
 
 ^
 nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingInclude]
