@@ -86,6 +86,9 @@ extern bool UndervoltageLatch;
 /// @brief Storage CRC check failed flag
 extern bool StorageCRCValid;
 
+/// @brief Analogue input config CRC check failed flag
+extern bool AnalogueCRCValid;
+
 /// @brief Saves the channel config data to EEPROM along with a calculated CRC
 void SaveChannelConfig();
 
@@ -106,6 +109,13 @@ void SaveStorageConfig();
 /// @brief Loads the storage config data from EEPROM storage
 /// @return True if the CRC check was successful
 bool LoadStorageConfig();
+
+/// @brief Saves the analogue input config data to EEPROM along with a calculated CRC
+void SaveAnalogueConfig();
+
+/// @brief Loads the analogue input config data from EEPROM storage
+/// @return True if the CRC check was successful
+bool LoadAnalogueConfig();
 
 /// @brief Inititalise storage data to known values
 void InitialiseStorageData();

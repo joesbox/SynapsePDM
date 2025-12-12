@@ -28,12 +28,18 @@
     Version history:
     Date              Version       Description
     ----              -------       ------------------------------------------------------------
+    2025-12-11        v0.3          Fixes:
+                                    - Buffered serial writes.    
+                                    - Analogue input data stored to EEPROM.
+                                    - Update analogue input parameters from Cortex.                                
+                                    - Check input type and pin when evaluating digital inputs.
     2025-12-02        v0.2          Fixes:
                                     - Added clearing of channel error flags before storage.
                                     - Clear channel error flags on disable.
                                     - Ensure channel name is null-terminated before display.
                                     - Overrides cleared on serial timeout and save to EEPROM.
                                     - Decreased serial timeout to 5 seconds.
+                                    - Removed display backlight fade-in logic to prevent wake issues.
     2025-03-09        v0.1          Initial beta release.
 */
 
@@ -180,8 +186,7 @@ void setup()
   rtc.setClockSource(STM32RTC::LSE_CLOCK);
   rtc.begin();
   InitialiseSerial();
-  InitialiseOutputs();
-  InitialiseInputs();
+  InitialiseOutputs();  
   InitialiseStorageData();
   InitialiseDisplay();
   InitialiseChannelData();
@@ -213,6 +218,17 @@ void setup()
     InitialiseStorageData();
     SaveStorageConfig();
   }
+
+  // Load analogue input data
+  AnalogueCRCValid = LoadAnalogueConfig();
+  if (!AnalogueCRCValid)
+  {
+    // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.
+    InitialiseAnalogueData();
+    SaveAnalogueConfig();
+  }
+
+  InitialiseInputs();
 
   // Only initialise the SD card if we've got an accurate RTC
   if (rtc.isTimeSet() && rtc.getYear() > 24)

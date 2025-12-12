@@ -22,10 +22,10 @@
 
 #ifndef SerialComms_H
 #define SerialComms_H
-
 #include <Arduino.h>
 #include <Globals.h>
 #include <Storage.h>
+#include <InputHandler.h>
 
 // Expected number of bytes in a config packet
 #define NUM_CONFIG_BYTES 499
@@ -71,9 +71,8 @@ const byte CONFIG_DATA_START_INDEX = 5;
 
 const byte CONFIG_DATA_CHANNELS = 0;
 const byte CONFIG_DATA_ANALOGUE = 1;
-const byte CONFIG_DATA_DIGITAL = 2;
-const byte CONFIG_DATA_SYSTEM = 3;
-
+const byte CONFIG_DATA_SYSTEM = 2;
+const byte CONFIG_DATA_DIGITAL = 3;
 
 /// @brief Config storage union
 extern ChannelConfigUnion SerialChannelData;

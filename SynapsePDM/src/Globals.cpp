@@ -24,6 +24,7 @@
 #include "Globals.h"
 
 ChannelConfigUnion ChannelConfigData;
+AnalogueConfigUnion AnalogueConfigData;
 ChannelConfig Channels[NUM_CHANNELS];
 AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 
@@ -83,23 +84,26 @@ void InitialiseChannelData()
     Channels[i].RetryCount = 3;
     Channels[i].InrushDelay = INRUSH_DELAY;
     Channels[i].Override = false;
-  }
+  } 
+}
 
+void InitialiseAnalogueData()
+{
   // Initialise analogue inputs to default values
   for (int i = 0; i < NUM_ANA_CHANNELS; i++)
   {
     AnalogueIns[i].InputPin = ANAchannelInputPins[i];
-    AnalogueIns[i].PullDownPin = ANAchannelInputPullDowns[i];
     AnalogueIns[i].PullUpPin = ANAchannelInputPullUps[i];
-    AnalogueIns[i].PullDownEnable = true;
+    AnalogueIns[i].PullDownPin = ANAchannelInputPullDowns[i];
     AnalogueIns[i].PullUpEnable = false;
-    AnalogueIns[i].IsDigital = true;
-    AnalogueIns[i].IsThreshold = false;
-    AnalogueIns[i].OnThreshold = 2.5;  // Mid point
-    AnalogueIns[i].OffThreshold = 2.0; // Allows for some hysteresis
-    AnalogueIns[i].ScaleMin = 0.0;     // 0V
-    AnalogueIns[i].ScaleMax = 5.0;     // 5V
-    AnalogueIns[i].PWMMin = 0.0;       // 0%
-    AnalogueIns[i].PWMMax = 100.0;     // 100%
+    AnalogueIns[i].PullDownEnable = false;
+    AnalogueIns[i].IsDigital = false;
+    AnalogueIns[i].IsThreshold = true;
+    AnalogueIns[i].OnThreshold = 2.5;   // 2.5V on threshold
+    AnalogueIns[i].OffThreshold = 2.0;  // 2.0V off threshold
+    AnalogueIns[i].ScaleMin = 0.0;     // Minimum scale value
+    AnalogueIns[i].ScaleMax = CURRENT_MAX; // Maximum scale value
+    AnalogueIns[i].PWMMin = 0;         // Minimum PWM value
+    AnalogueIns[i].PWMMax = 100;       // Maximum PWM value
   }
 }

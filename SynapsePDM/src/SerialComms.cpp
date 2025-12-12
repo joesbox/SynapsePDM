@@ -25,6 +25,9 @@
 ChannelConfigUnion SerialChannelData;
 byte configBuffer[1000] = {0};
 
+byte statusBuffer[1000] = {0};
+int statusIndex = 0;
+
 bool receivingConfig = false;
 
 uint32_t lastComms = 0;
@@ -33,7 +36,7 @@ unsigned int readBufIdx = 0;
 
 void InitialiseSerial()
 {
-    Serial.begin(115200, SERIAL_8E2); // 115200 baud, 8 data bits, even parity, 2 stop bits
+    Serial.begin(921600); // 921600 baud. Doesn't matter on USB CDC. Good to match the PC side though.
 
 #ifdef DEBUG
     while (!Serial)
@@ -51,7 +54,7 @@ void SleepComms()
 
 void CheckSerial()
 {
-    if (connectionStatus > 0 && (millis() - lastComms > COMMS_TIMEOUT))
+    if ((millis() - lastComms > COMMS_TIMEOUT))
     {
         connectionStatus = 0; // Timeout - reset connection
         receivingConfig = false;
@@ -87,141 +90,143 @@ void CheckSerial()
             byte twoBytePacket[2];
             byte chanSize = 0;
             byte send = 0;
+            statusIndex = 0;    
+            memset(statusBuffer, 0, sizeof(statusBuffer));        
 
             send = SERIAL_HEADER & 0XFF;
-            Serial.write(send);
+            statusBuffer[statusIndex++] = send;
             checkSum += send;
 
             send = SERIAL_HEADER >> 8;
-            Serial.write(send);
+            statusBuffer[statusIndex++] = send;
             checkSum += send;
 
-            Serial.write(COMMAND_ID_REQUEST);
+            statusBuffer[statusIndex++] = COMMAND_ID_REQUEST;
             checkSum += COMMAND_ID_REQUEST;
 
-            Serial.write(NUM_CHANNELS);
+            statusBuffer[statusIndex++] = NUM_CHANNELS;
             checkSum += NUM_CHANNELS;
 
             chanSize = sizeof(Channels) / NUM_CHANNELS;
 
             for (int i = 0; i < NUM_CHANNELS; i++)
             {
-                Serial.write((byte)Channels[i].ChanType);
+                statusBuffer[statusIndex++] = (byte)Channels[i].ChanType;
                 checkSum += (byte)Channels[i].ChanType;
 
-                Serial.write(Channels[i].Override);
+                statusBuffer[statusIndex++] = Channels[i].Override;
                 checkSum += Channels[i].Override;
 
-                Serial.write(Channels[i].CurrentSensePin);
+                statusBuffer[statusIndex++] = Channels[i].CurrentSensePin;
                 checkSum += Channels[i].CurrentSensePin;
 
                 memcpy(&fourBytePacket, &Channels[i].CurrentThresholdHigh, sizeof(Channels[i].CurrentThresholdHigh));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
-                    Serial.write(fourBytePacket[j]);
+                    statusBuffer[statusIndex++] = fourBytePacket[j];
                     checkSum += fourBytePacket[j];
                 }
 
                 memcpy(&fourBytePacket, &Channels[i].CurrentThresholdLow, sizeof(Channels[i].CurrentThresholdLow));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
-                    Serial.write(fourBytePacket[j]);
+                    statusBuffer[statusIndex++] = fourBytePacket[j];
                     checkSum += fourBytePacket[j];
                 }
 
                 memcpy(&fourBytePacket, &Channels[i].CurrentValue, sizeof(Channels[i].CurrentValue));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
-                    Serial.write(fourBytePacket[j]);
+                    statusBuffer[statusIndex++] = fourBytePacket[j];
                     checkSum += fourBytePacket[j];
                 }
 
-                Serial.write(Channels[i].Enabled);
+                statusBuffer[statusIndex++] = Channels[i].Enabled;
                 checkSum += Channels[i].Enabled;
 
-                Serial.write(Channels[i].ErrorFlags);
+                statusBuffer[statusIndex++] = Channels[i].ErrorFlags;
                 checkSum += Channels[i].ErrorFlags;
 
-                Serial.write(Channels[i].GroupNumber);
+                statusBuffer[statusIndex++] = Channels[i].GroupNumber;
                 checkSum += Channels[i].GroupNumber;
 
-                Serial.write(Channels[i].InputControlPin);
+                statusBuffer[statusIndex++] = Channels[i].InputControlPin;
                 checkSum += Channels[i].InputControlPin;
 
-                Serial.write(Channels[i].MultiChannel);
+                statusBuffer[statusIndex++] = Channels[i].MultiChannel;
                 checkSum += Channels[i].MultiChannel;
 
-                Serial.write(Channels[i].RetryCount);
+                statusBuffer[statusIndex++] = Channels[i].RetryCount;
                 checkSum += Channels[i].RetryCount;
 
                 memcpy(&fourBytePacket, &Channels[i].InrushDelay, sizeof(Channels[i].InrushDelay));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
-                    Serial.write(fourBytePacket[j]);
+                    statusBuffer[statusIndex++] = fourBytePacket[j];
                     checkSum += fourBytePacket[j];
                 }
 
                 memcpy(&threeBytePacket, &Channels[i].ChannelName, sizeof(Channels[i].ChannelName));
                 for (uint j = 0; j < sizeof(threeBytePacket); j++)
                 {
-                    Serial.write(threeBytePacket[j]);
+                    statusBuffer[statusIndex++] = threeBytePacket[j];
                     checkSum += threeBytePacket[j];
                 }
 
-                Serial.write(Channels[i].RunOn);
+                statusBuffer[statusIndex++] = Channels[i].RunOn;
                 checkSum += Channels[i].RunOn;
 
                 memcpy(&fourBytePacket, &Channels[i].RunOnTime, sizeof(Channels[i].RunOnTime));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
-                    Serial.write(fourBytePacket[j]);
+                    statusBuffer[statusIndex++] = fourBytePacket[j];
                     checkSum += fourBytePacket[j];
                 }
             }
 
-            Serial.write(NUM_ANA_CHANNELS);
+            statusBuffer[statusIndex++] = NUM_ANA_CHANNELS;
             checkSum += NUM_ANA_CHANNELS;
 
             for (int i = 0; i < NUM_ANA_CHANNELS; i++)
             {
-                Serial.write(AnalogueIns[i].PullUpEnable);
+                statusBuffer[statusIndex++] = AnalogueIns[i].PullUpEnable;
                 checkSum += AnalogueIns[i].PullUpEnable;
-                Serial.write(AnalogueIns[i].PullDownEnable);
+                statusBuffer[statusIndex++] = AnalogueIns[i].PullDownEnable;
                 checkSum += AnalogueIns[i].PullDownEnable;
-                Serial.write(AnalogueIns[i].IsDigital);
+                statusBuffer[statusIndex++] = AnalogueIns[i].IsDigital;
                 checkSum += AnalogueIns[i].IsDigital;
                 memcpy(&fourBytePacket, &AnalogueIns[i].OnThreshold, sizeof(AnalogueIns[i].OnThreshold));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
-                    Serial.write(fourBytePacket[j]);
+                    statusBuffer[statusIndex++] = fourBytePacket[j];
                     checkSum += fourBytePacket[j];
                 }
 
                 memcpy(&fourBytePacket, &AnalogueIns[i].OffThreshold, sizeof(AnalogueIns[i].OffThreshold));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
-                    Serial.write(fourBytePacket[j]);
+                    statusBuffer[statusIndex++] = fourBytePacket[j];
                     checkSum += fourBytePacket[j];
                 }
 
                 memcpy(&fourBytePacket, &AnalogueIns[i].ScaleMin, sizeof(AnalogueIns[i].ScaleMin));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
-                    Serial.write(fourBytePacket[j]);
+                    statusBuffer[statusIndex++] = fourBytePacket[j];
                     checkSum += fourBytePacket[j];
                 }
 
                 memcpy(&fourBytePacket, &AnalogueIns[i].ScaleMax, sizeof(AnalogueIns[i].ScaleMax));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
-                    Serial.write(fourBytePacket[j]);
+                    statusBuffer[statusIndex++] = fourBytePacket[j];
                     checkSum += fourBytePacket[j];
                 }
 
-                Serial.write(AnalogueIns[i].PWMMin);
+                statusBuffer[statusIndex++] = AnalogueIns[i].PWMMin;
                 checkSum += AnalogueIns[i].PWMMin;
 
-                Serial.write(AnalogueIns[i].PWMMax);
+                statusBuffer[statusIndex++] = AnalogueIns[i].PWMMax;
                 checkSum += AnalogueIns[i].PWMMax;
             }
 
@@ -229,101 +234,107 @@ void CheckSerial()
             memcpy(&fourBytePacket, &SystemParams.SystemTemperature, sizeof(SystemParams.SystemTemperature));
             for (uint j = 0; j < sizeof(fourBytePacket); j++)
             {
-                Serial.write(fourBytePacket[j]);
+                statusBuffer[statusIndex++] = fourBytePacket[j];
                 checkSum += fourBytePacket[j];
             }
 
-            Serial.write(SystemParams.CANResEnabled);
+            statusBuffer[statusIndex++] = SystemParams.CANResEnabled;
             checkSum += SystemParams.CANResEnabled;
 
             memcpy(&fourBytePacket, &SystemParams.VBatt, sizeof(SystemParams.VBatt));
             for (uint j = 0; j < sizeof(fourBytePacket); j++)
             {
-                Serial.write(fourBytePacket[j]);
+                statusBuffer[statusIndex++] = fourBytePacket[j];
                 checkSum += fourBytePacket[j];
             }
 
             memcpy(&fourBytePacket, &SystemParams.SystemCurrent, sizeof(SystemParams.SystemCurrent));
             for (uint j = 0; j < sizeof(fourBytePacket); j++)
             {
-                Serial.write(fourBytePacket[j]);
+                statusBuffer[statusIndex++] = fourBytePacket[j];
                 checkSum += fourBytePacket[j];
             }
 
-            Serial.write(SystemParams.SystemCurrentLimit);
+            statusBuffer[statusIndex++] = SystemParams.SystemCurrentLimit;
             checkSum += SystemParams.SystemCurrentLimit;
 
             memcpy(&twoBytePacket, &SystemParams.ErrorFlags, sizeof(SystemParams.ErrorFlags));
             for (uint j = 0; j < sizeof(twoBytePacket); j++)
             {
-                Serial.write(twoBytePacket[j]);
+                statusBuffer[statusIndex++] = twoBytePacket[j];
                 checkSum += twoBytePacket[j];
             }
 
             memcpy(&twoBytePacket, &SystemParams.ChannelDataCANID, sizeof(SystemParams.ChannelDataCANID));
             for (uint j = 0; j < sizeof(twoBytePacket); j++)
             {
-                Serial.write(twoBytePacket[j]);
+                statusBuffer[statusIndex++] = twoBytePacket[j];
                 checkSum += twoBytePacket[j];
             }
 
             memcpy(&twoBytePacket, &SystemParams.SystemDataCANID, sizeof(SystemParams.SystemDataCANID));
             for (uint j = 0; j < sizeof(twoBytePacket); j++)
             {
-                Serial.write(twoBytePacket[j]);
+                statusBuffer[statusIndex++] = twoBytePacket[j];
                 checkSum += twoBytePacket[j];
             }
 
             memcpy(&twoBytePacket, &SystemParams.ConfigDataCANID, sizeof(SystemParams.ConfigDataCANID));
             for (uint j = 0; j < sizeof(twoBytePacket); j++)
             {
-                Serial.write(twoBytePacket[j]);
+                statusBuffer[statusIndex++] = twoBytePacket[j];
                 checkSum += twoBytePacket[j];
             }
 
             memcpy(&fourBytePacket, &SystemParams.IMUwakeWindow, sizeof(SystemParams.IMUwakeWindow));
             for (uint j = 0; j < sizeof(fourBytePacket); j++)
             {
-                Serial.write(fourBytePacket[j]);
+                statusBuffer[statusIndex++] = fourBytePacket[j];
                 checkSum += fourBytePacket[j];
             }
 
-            Serial.write(SystemParams.SpeedUnitPref);
+            statusBuffer[statusIndex++] = SystemParams.SpeedUnitPref;
             checkSum += SystemParams.SpeedUnitPref;
 
-            Serial.write(SystemParams.DistanceUnitPref);
+            statusBuffer[statusIndex++] = SystemParams.DistanceUnitPref;
             checkSum += SystemParams.DistanceUnitPref;
 
-            Serial.write(SystemParams.AllowData);
+            statusBuffer[statusIndex++] = SystemParams.AllowData;
             checkSum += SystemParams.AllowData;
 
-            Serial.write(SystemParams.AllowGPS);
+            statusBuffer[statusIndex++] = SystemParams.AllowGPS;
             checkSum += SystemParams.AllowGPS;
 
             memcpy(&fourBytePacket, &SOC, sizeof(SOC));
             for (uint j = 0; j < sizeof(fourBytePacket); j++)
             {
-                Serial.write(fourBytePacket[j]);
+                statusBuffer[statusIndex++] = fourBytePacket[j];
                 checkSum += fourBytePacket[j];
             }
 
             memcpy(&fourBytePacket, &SOH, sizeof(SOH));
             for (uint j = 0; j < sizeof(fourBytePacket); j++)
             {
-                Serial.write(fourBytePacket[j]);
+                statusBuffer[statusIndex++] = fourBytePacket[j];
                 checkSum += fourBytePacket[j];
             }
 
             send = SERIAL_TRAILER & 0xFF;
             checkSum += send;
-            Serial.write(send);
+            statusBuffer[statusIndex++] = send;
 
             send = SERIAL_TRAILER >> 8;
             checkSum += send;
-            Serial.write(send);
+            statusBuffer[statusIndex++] = send;
 
             // Send the checksum
-            Serial.write((uint8_t *)&checkSum, sizeof(checkSum));
+            memcpy(&fourBytePacket, &checkSum, sizeof(checkSum));
+            for (uint j = 0; j < sizeof(fourBytePacket); j++)
+            {
+                statusBuffer[statusIndex++] = fourBytePacket[j];
+            }
+
+            Serial.write(statusBuffer, statusIndex);
 
             break;
         }
@@ -449,15 +460,55 @@ void CheckSerial()
 
                         break;
                     case CONFIG_DATA_ANALOGUE:
+                        switch (configBuffer[CONFIG_PARAMETER_INDEX])
+                        {
+                        case 0: // Pull-up enable
+                            AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].PullUpEnable = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 1: // Pull-down enable
+                            AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].PullDownEnable = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 2: // Is digital
+                            AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].IsDigital = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 3: // Is threshold
+                            AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].IsThreshold = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 4: // On threshold
+                            memcpy(&AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].OnThreshold, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].OnThreshold));
+                            break;
+                        case 5: // Off threshold
+                            memcpy(&AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].OffThreshold, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].OffThreshold));
+                            break;
+                        case 6: // Scale min
+                            memcpy(&AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].ScaleMin, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].ScaleMin));
+                            break;
+                        case 7: // Scale max
+                            memcpy(&AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].ScaleMax, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].ScaleMax));
+                            break;
+                        case 8: // PWM min
+                            AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].PWMMin = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 9: // PWM max
+                            AnalogueIns[configBuffer[CONFIG_DATA_INDEX]].PWMMax = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        default:
+                            // Analogue parameter out of range. Ignore packet
+                            validPacket = false;
+                            break;
+                        }
+
                         connectionStatus = 5;
 
                         break;
-                    case CONFIG_DATA_DIGITAL:
-                        connectionStatus = 6;
 
-                        break;
                     case CONFIG_DATA_SYSTEM:
                         connectionStatus = 7;
+
+                        break;
+
+                    case CONFIG_DATA_DIGITAL:
+                        connectionStatus = 6;
 
                         break;
 
@@ -499,6 +550,7 @@ void CheckSerial()
         {
             SaveChannelConfig();
             SaveSystemConfig();
+            SaveAnalogueConfig();
 
             bool allSaved = true;
 
@@ -520,6 +572,17 @@ void CheckSerial()
             {
                 allSaved &= false;
                 connectionStatus = 12;
+            }
+
+            if (LoadAnalogueConfig())
+            {
+                allSaved &= true;
+                InitialiseInputs();                
+            }
+            else
+            {
+                allSaved &= false;
+                connectionStatus = 13;
             }
 
             if (allSaved)

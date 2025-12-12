@@ -35,7 +35,7 @@
 #include <Storage.h>
 
 // Firmware version
-#define FW_VER "v0.2"
+#define FW_VER "v0.3"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -274,8 +274,17 @@ union ChannelConfigUnion
   byte dataBytes[sizeof(Channels)];
 };
 
+union AnalogueConfigUnion
+{
+  AnalogueInputs data[NUM_ANA_CHANNELS];
+  byte dataBytes[sizeof(AnalogueIns)];
+};
+
 /// @brief Config storage union for channel data
 extern ChannelConfigUnion ChannelConfigData;
+
+/// @brief Config storage union for analogue input data
+extern AnalogueConfigUnion AnalogueConfigData;
 
 extern uint8_t RTCyear;
 extern uint8_t RTCmonth;
@@ -289,5 +298,8 @@ void InitialiseChannelData();
 
 /// @brief Initialise system data to known
 void InitialiseSystemData();
+
+/// @brief Initialise analogue input data to known defaults
+void InitialiseAnalogueData();
 
 #endif

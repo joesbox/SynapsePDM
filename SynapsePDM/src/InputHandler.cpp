@@ -41,6 +41,33 @@ void InitialiseInputs()
 
         pinMode(AnalogueIns[i].PullDownPin, OUTPUT);
         pinMode(AnalogueIns[i].PullUpPin, OUTPUT);
+
+        if (AnalogueIns[i].PullDownEnable)
+        {
+            digitalWrite(AnalogueIns[i].PullDownPin, HIGH);
+        }
+        else
+        {
+            digitalWrite(AnalogueIns[i].PullDownPin, LOW);
+        }
+
+        if (AnalogueIns[i].PullUpEnable)
+        {
+            digitalWrite(AnalogueIns[i].PullUpPin, HIGH);
+        }
+        else
+        {
+            digitalWrite(AnalogueIns[i].PullUpPin, LOW);
+        }
+
+        if (AnalogueIns[i].IsDigital)
+        {
+            pinMode(AnalogueIns[i].InputPin, INPUT);
+        }
+        else
+        {
+            pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
+        }
     }
 }
 
@@ -49,10 +76,36 @@ void HandleInputs()
     // Check channel type and enable for active level
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
+        // Find the input pin index first and what type it is
+        int inputPin = -1;
+        bool inputIsDigital = false;
+
+        for (int j = 0; j < NUM_DI_CHANNELS; j++)
+        {
+            if (Channels[i].InputControlPin == DIchannelInputPins[j])
+            {
+                inputPin = j;
+                inputIsDigital = true;
+                break;
+            }
+        }
+
+        if (inputPin == -1)
+        {
+            for (int j = 0; j < NUM_ANA_CHANNELS; j++)
+            {
+                if (Channels[i].InputControlPin == ANAchannelInputPins[j])
+                {
+                    inputPin = j;
+                    inputIsDigital = false;
+                    break;
+                }
+            }
+        }
         switch (Channels[i].ChanType)
         {
-        case DIG:     
-        case DIG_PWM:              
+        case DIG:
+        case DIG_PWM:
 
             // Override takes precedence over input control pin
             if (Channels[i].Override)
@@ -61,7 +114,27 @@ void HandleInputs()
             }
             else
             {
-                Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
+                if (inputIsDigital)
+                {
+                    Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
+                }
+                else
+                {
+                    // Analogue input used as digital
+                    if (AnalogueIns[inputPin].IsDigital)
+                    {
+                        if (AnalogueIns[inputPin].PullUpEnable)
+                        {
+                            // Active low
+                            Channels[i].Enabled = !digitalRead(AnalogueIns[inputPin].InputPin);
+                        }
+                        else
+                        {
+                            // Active high
+                            Channels[i].Enabled = digitalRead(AnalogueIns[inputPin].InputPin);
+                        }
+                    }
+                }
             }
 
             // Used for inrush delay timing
@@ -81,7 +154,7 @@ void HandleInputs()
         if (!Channels[i].Enabled)
         {
             // Clear error flags on disable
-            Channels[i].ErrorFlags = 0; 
+            Channels[i].ErrorFlags = 0;
         }
     }
 

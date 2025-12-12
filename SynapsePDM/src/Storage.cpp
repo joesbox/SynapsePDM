@@ -33,6 +33,7 @@ char dateTimeStamp[23];
 uint32_t BytesStored;
 bool UndervoltageLatch;
 bool StorageCRCValid;
+bool AnalogueCRCValid;
 
 CircularBuffer<String, 10> logs;
 
@@ -47,7 +48,7 @@ long startMillis;
 long endMillis;
 
 void SaveChannelConfig()
-{    
+{
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
@@ -61,9 +62,9 @@ void SaveChannelConfig()
     {
         // Ensure error flags are cleared before storage
         ChannelConfigData.data[i].ErrorFlags = 0;
-        ChannelConfigData.data[i].Override = false;        
+        ChannelConfigData.data[i].Override = false;
     }
-    
+
     // Calculate stored config bytes CRC
     uint32_t checksum = CRC32::calculate(ChannelConfigData.dataBytes, sizeof(Channels));
 
@@ -365,6 +366,107 @@ bool LoadStorageConfig()
     return validCRC;
 }
 
+void SaveAnalogueConfig()
+{
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+
+    // Reset EEPROM index, analogue config comes straight after storage info
+    EEPROMindex = sizeof(ChannelConfigData.data) + sizeof(uint32_t) + sizeof(SystemConfigData.data) + sizeof(uint32_t) +
+                  sizeof(StorageConfigData.data) + sizeof(uint32_t);
+
+    // Copy current analogue input info to storage structure
+    memcpy(&AnalogueConfigData.data, &AnalogueIns, sizeof(AnalogueIns));
+
+    // Calculate stored config bytes CRC
+    uint32_t checksum = CRC32::calculate(AnalogueConfigData.dataBytes, sizeof(AnalogueIns));
+
+    // Store data and CRC value
+    uint8_t int32Buf[4];
+    int32Buf[0] = (checksum >> 24) & 0xFF;
+    int32Buf[1] = (checksum >> 16) & 0xFF;
+    int32Buf[2] = (checksum >> 8) & 0xFF;
+    int32Buf[3] = checksum & 0xFF;
+
+    // Store data
+    for (unsigned int i = 0; i < sizeof(AnalogueConfigData.dataBytes); i++)
+    {
+        EEPROMext.EepromWrite(EEPROMindex, 1, &AnalogueConfigData.dataBytes[i]);
+        EEPROMindex++;
+    }
+
+#ifdef DEBUG
+    Serial.print("Analogue Checksum written: ");
+    Serial.print(checksum, HEX);
+    Serial.print(", at index: ");
+    Serial.println(EEPROMindex);
+    Serial.print("EEPROM status register: ");
+    Serial.println(EEPROMext.EepromStatus());
+#endif
+
+    EEPROMext.EepromWrite(EEPROMindex, sizeof(checksum), int32Buf);
+    EEPROMext.EepromWaitEndWriteOperation();
+
+    // Reset EEPROM index
+    EEPROMindex = 0;
+    EEPROMext.end();
+    SPI_2.end();
+}
+
+bool LoadAnalogueConfig()
+{
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+    // Set valid CRC flag to false
+    bool validCRC = false;
+
+    // Reset EEPROM index, analogue config comes straight after storage info
+    EEPROMindex = sizeof(ChannelConfigData.data) + sizeof(uint32_t) + sizeof(SystemConfigData.data) + sizeof(uint32_t) +
+                  sizeof(StorageConfigData.data) + sizeof(uint32_t);
+
+    // Reset CRC result
+    uint32_t result = 0;
+
+    uint8_t int32Buf[4];
+
+    for (unsigned int i = 0; i < sizeof(AnalogueConfigData.dataBytes); i++)
+    {
+        EEPROMext.EepromRead(EEPROMindex, 1, &AnalogueConfigData.dataBytes[i]);
+        EEPROMindex++;
+    }
+    EEPROMext.EepromRead(EEPROMindex, sizeof(result), int32Buf);
+
+    result = (int32_t(int32Buf[0]) << 24) |
+             (int32_t(int32Buf[1]) << 16) |
+             (int32_t(int32Buf[2]) << 8) |
+             int32_t(int32Buf[3]);
+#ifdef DEBUG
+    Serial.print("Analogue Checksum read: ");
+    Serial.print(result, HEX);
+    Serial.print(", at index: ");
+    Serial.println(EEPROMindex);
+    Serial.print("EEPROM status register: ");
+    Serial.println(EEPROMext.EepromStatus());
+#endif
+    // Calculate read config bytes CRC
+    uint32_t checksum = CRC32::calculate(AnalogueConfigData.dataBytes, sizeof(AnalogueIns));
+
+    // Check stored CRC vs calculated CRC
+    if (result == checksum)
+    {
+        validCRC = true;
+        // Copy analogue input info
+        memcpy(&AnalogueIns, &AnalogueConfigData.data, sizeof(AnalogueIns));
+    }
+
+    // Reset EEPROM index
+    EEPROMindex = 0;
+    EEPROMext.end();
+    SPI_2.end();
+
+    return validCRC;
+}
+
 void CleanEEPROM()
 {
     SPI_2.begin();
@@ -375,7 +477,7 @@ void CleanEEPROM()
         EEPROMext.EepromWrite(i, 32, dummy);
     }
     EEPROMext.EepromWaitEndWriteOperation();
-    EEPROMext.end();    
+    EEPROMext.end();
     SPI_2.end();
 }
 
@@ -623,7 +725,7 @@ void SleepSD()
     CloseSDFile();
     EEPROMext.end();
     SPI_2.end();
-    
+
     // Disable SPI2 RCC clock to reduce power consumption during sleep
     __HAL_RCC_SPI2_CLK_DISABLE();
 }

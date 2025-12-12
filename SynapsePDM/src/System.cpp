@@ -26,6 +26,8 @@
 SystemConfigUnion SystemConfigData;
 SystemParameters SystemParams;
 
+#define CDC_TRANSMIT_QUEUE_BUFFER_PACKET_NUMBER 20
+
 bool SystemCRCValid;
 bool ChannelCRCValid;
 bool SDCardOK;
