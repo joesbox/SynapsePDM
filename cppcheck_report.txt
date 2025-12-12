@@ -22,52 +22,52 @@ SynapsePDM/src/OutputHandler.cpp:262:15: style: The scope of the variable 'analo
 SynapsePDM/src/OutputHandler.cpp:311:24: style: The scope of the variable 'trySampleCount' can be reduced. [variableScope]
         static uint8_t trySampleCount[NUM_CHANNELS] = {0};
                        ^
-SynapsePDM/src/SerialComms.cpp:374:38: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/SerialComms.cpp:385:38: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
                     connectionStatus = 4;
                                      ^
-SynapsePDM/src/SerialComms.cpp:357:34: note: connectionStatus is assigned
+SynapsePDM/src/SerialComms.cpp:368:34: note: connectionStatus is assigned
                 connectionStatus = 3;
                                  ^
-SynapsePDM/src/SerialComms.cpp:374:38: note: connectionStatus is overwritten
+SynapsePDM/src/SerialComms.cpp:385:38: note: connectionStatus is overwritten
                     connectionStatus = 4;
                                      ^
-SynapsePDM/src/SerialComms.cpp:375:33: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/SerialComms.cpp:386:33: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
                     validPacket = true;
                                 ^
-SynapsePDM/src/SerialComms.cpp:358:29: note: validPacket is assigned
+SynapsePDM/src/SerialComms.cpp:369:29: note: validPacket is assigned
                 validPacket = true;
                             ^
-SynapsePDM/src/SerialComms.cpp:375:33: note: validPacket is overwritten
+SynapsePDM/src/SerialComms.cpp:386:33: note: validPacket is overwritten
                     validPacket = true;
                                 ^
-SynapsePDM/src/SerialComms.cpp:334:22: style: The scope of the variable 'calcChecksum' can be reduced. [variableScope]
+SynapsePDM/src/SerialComms.cpp:345:22: style: The scope of the variable 'calcChecksum' can be reduced. [variableScope]
             uint32_t calcChecksum = 0;
                      ^
-SynapsePDM/src/SerialComms.cpp:438:85: style: Checking if unsigned expression 'Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime' is less than zero. [unsignedLessThanZero]
+SynapsePDM/src/SerialComms.cpp:449:85: style: Checking if unsigned expression 'Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime' is less than zero. [unsignedLessThanZero]
                             if (Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime < 0)
                                                                                     ^
-SynapsePDM/src/SerialComms.cpp:105:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
+SynapsePDM/src/SerialComms.cpp:110:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
             chanSize = sizeof(Channels) / NUM_CHANNELS;
                      ^
-SynapsePDM/src/Storage.cpp:492:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:594:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
     char timeStamp[100];
          ^
-SynapsePDM/src/Storage.cpp:493:10: style: The scope of the variable 'sysLog' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:595:10: style: The scope of the variable 'sysLog' can be reduced. [variableScope]
     char sysLog[150];
          ^
-SynapsePDM/src/Storage.cpp:494:10: style: The scope of the variable 'channelLog' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:596:10: style: The scope of the variable 'channelLog' can be reduced. [variableScope]
     char channelLog[150];
          ^
-SynapsePDM/src/Storage.cpp:495:9: style: The scope of the variable 'writtenBytes' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:597:9: style: The scope of the variable 'writtenBytes' can be reduced. [variableScope]
     int writtenBytes = 0;
         ^
-SynapsePDM/src/Storage.cpp:495:22: style: Variable 'writtenBytes' is assigned a value that is never used. [unreadVariable]
+SynapsePDM/src/Storage.cpp:597:22: style: Variable 'writtenBytes' is assigned a value that is never used. [unreadVariable]
     int writtenBytes = 0;
                      ^
-SynapsePDM/src/Storage.cpp:537:18: style: Unused variable: logEntry [unusedVariable]
+SynapsePDM/src/Storage.cpp:639:18: style: Unused variable: logEntry [unusedVariable]
             char logEntry[40];
                  ^
-SynapsePDM/src/Storage.cpp:368:0: style: The function 'CleanEEPROM' is never used. [unusedFunction]
+SynapsePDM/src/Storage.cpp:470:0: style: The function 'CleanEEPROM' is never used. [unusedFunction]
 
 ^
 SynapsePDM/src/CANComms.cpp:27:0: style: The function 'InitialiseCAN' is never used. [unusedFunction]
@@ -79,13 +79,13 @@ SynapsePDM/src/CANComms.cpp:44:0: style: The function 'SendCANMessages' is never
 SynapsePDM/src/CANComms.cpp:34:0: style: The function 'canSniff' is never used. [unusedFunction]
 
 ^
-SynapsePDM/src/main.cpp:291:0: style: The function 'loop' is never used. [unusedFunction]
+SynapsePDM/src/main.cpp:307:0: style: The function 'loop' is never used. [unusedFunction]
 
 ^
 SynapsePDM/src/Battery.cpp:78:0: style: The function 'printBatteryStats' is never used. [unusedFunction]
 
 ^
-SynapsePDM/src/main.cpp:174:0: style: The function 'setup' is never used. [unusedFunction]
+SynapsePDM/src/main.cpp:180:0: style: The function 'setup' is never used. [unusedFunction]
 
 ^
 nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingInclude]
