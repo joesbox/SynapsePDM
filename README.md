@@ -8,7 +8,7 @@ See https://wiki.joeblogs.uk/ for more info.
 + Up to 17A output per channel. Channels can be paired to increase current output.
 + Configurable load current and channel diagnostics.
 + Colour LCD interface.
-+ 8 digital inputs, active high, active low, one-time pulse or simple on/off.
++ 8 digital inputs.
 + 8 configurable 5V analogue/digital inputs with switchable pull-up or pull-down resistors.
 + CAN channel control and diagnostics.
 + SD card logging.
