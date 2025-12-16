@@ -51,12 +51,12 @@ void IMUWake()
 void InitialiseSystem()
 {
     // Start the low power features. Attach sleep mode interrupts
-    LowPower.begin();    
+    LowPower.begin();
     LowPower.attachInterruptWakeup(IGN_INPUT, IgnitionWake, RISING, DEEP_SLEEP_MODE);
     LowPower.attachInterruptWakeup(IMU_INT1, IMUWake, RISING, DEEP_SLEEP_MODE);
 
     // Set power state to run
-    PowerState = RUN;    
+    PowerState = RUN;
 
     WakeSystem();
 
@@ -75,6 +75,11 @@ void InitialiseSystem()
     pinMode(PE6, INPUT_ANALOG);
     pinMode(PG7, INPUT_ANALOG);
     pinMode(PG8, INPUT_ANALOG);
+
+    pinMode(CHARGE_EN, OUTPUT);
+    pinMode(BATT_INT, INPUT);
+
+    digitalWrite(CHARGE_EN, HIGH); // Active low
 
     // SPI
     pinMode(CS1, OUTPUT);
@@ -196,7 +201,7 @@ void UpdateSystem()
 }
 
 void SleepSystem()
-{     
+{
     // Power down peripherals
     pinMode(PWR_EN_5V, OUTPUT);
     pinMode(PWR_EN_3V3, OUTPUT);
@@ -205,12 +210,12 @@ void SleepSystem()
 }
 
 void WakeSystem()
-{    
+{
     // Set the analogue read resolution
     analogReadResolution(12);
     analogWriteResolution(10);
 
-    // Power up peripherals    
+    // Power up peripherals
     pinMode(PWR_EN_5V, OUTPUT);
     pinMode(PWR_EN_3V3, OUTPUT);
     digitalWrite(PWR_EN_5V, HIGH);

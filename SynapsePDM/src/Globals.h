@@ -35,7 +35,7 @@
 #include <Storage.h>
 
 // Firmware version
-#define FW_VER "v0.3"
+#define FW_VER "v0.4"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -85,7 +85,6 @@
 // Main task timer intervals (milliseconds)
 #define DISPLAY_INTERVAL 50
 #define COMMS_INTERVAL 100
-#define BATTERY_INTERVAL 60000
 #define LOG_INTERVAL 100
 #define GPS_INTERVAL 1000
 #define BL_FADE_INTRVAL 0

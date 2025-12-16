@@ -30,7 +30,6 @@
 #define ICON_HEIGHT 48
 
 #define CHANNEL_GREY 0xC5C6C5
-#include "graphic.h"
 
 SPIClass &spix = SPI;
 
@@ -43,7 +42,7 @@ static int prevErrorFlags[NUM_CHANNELS] = {0};
 static float prevCurrentValues[NUM_CHANNELS] = {0.0F};
 static bool prevSDOK, prevGPSOK, initIcons = false;
 static uint8_t previousConnectionStatus = 0;
-static int prevBatt, prevMin = 0;
+static int prevMin = 0;
 static uint16_t systemErrorFlags = 0;
 
 const int lights[14][4] = {
@@ -249,14 +248,13 @@ void UpdateDisplay()
     // Initial icon states
     tft.pushImage(0, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)logiconError);
     tft.pushImage(49, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)gpsError);
-    tft.pushImage(271, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)batteryIcon);
-    tft.pushImage(180, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_error);
+    tft.pushImage(220, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_error);
     tft.setCursor(120, 21);
     tft.fillRect(120, 21, 50, 15, TFT_BLACK);
     tft.print(SystemParams.ErrorFlags, HEX);
     char timeString[6];
     snprintf(timeString, sizeof(timeString), "%02d:%02d", RTChour, RTCminute);
-    tft.setCursor(230, 21);
+    tft.setCursor(271, 21);
     tft.print(timeString);
   }
   for (int i = 0; i < NUM_CHANNELS; i++)
@@ -339,11 +337,11 @@ void UpdateDisplay()
   {
     if (connectionStatus == 1)
     {
-      tft.pushImage(180, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_ok);
+      tft.pushImage(220, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_ok);
     }
     else
     {
-      tft.pushImage(180, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_error);
+      tft.pushImage(220, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_error);
     }
     previousConnectionStatus = connectionStatus;
   }
@@ -364,36 +362,14 @@ void UpdateDisplay()
     tft.print(SystemParams.ErrorFlags, HEX);
   }*/
 
-  if (prevBatt != SOC)
-  {
-    prevBatt = SOC;
-    tft.pushImage(271, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)batteryIcon);
-    if (SOC < 100)
-    {
-      tft.setCursor(282, 22);
-    }
-    else
-    {
-      tft.setCursor(278, 22);
-    }
-    tft.unloadFont();
-    tft.loadFont(OpenSans12);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    tft.print(SOC);
-    tft.print("%");
-    tft.unloadFont();
-    tft.loadFont(NotoSansBold15);
-    tft.setTextColor(TFT_WHITE, TFT_BLACK);
-  }
-
   if (prevMin != RTCminute)
   {
     char timeString[6];
     snprintf(timeString, sizeof(timeString), "%02d:%02d", RTChour, RTCminute);
-    tft.fillRect(229, 21, 40, 15, TFT_BLACK);
+    tft.fillRect(271, 21, 40, 15, TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
     prevMin = RTCminute;
-    tft.setCursor(229, 21);
+    tft.setCursor(271, 21);
     tft.print(timeString);
   }
   tft.endWrite();

@@ -614,7 +614,7 @@ void LogData()
         BytesStored += writtenBytes;
 
         // System Parameters Log
-        snprintf(sysLog, sizeof(sysLog), "%d,%d,%.2f,%.2f,%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,", SOC, SystemParams.SystemTemperature, SystemParams.VBatt, SystemParams.SystemCurrent,
+        snprintf(sysLog, sizeof(sysLog), "%d,%.2f,%.2f,%d,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.6f,%.6f,%.2f,%.2f,%.2f,", SystemParams.SystemTemperature, SystemParams.VBatt, SystemParams.SystemCurrent,
                  SystemParams.ErrorFlags, accelX, accelY, accelZ, gyroX, gyroY, gyroZ, lat, lon, alt, speed, accuracy);
         writtenBytes = dataFile.write(sysLog, strlen(sysLog));
         if (writtenBytes == 0)

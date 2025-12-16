@@ -305,20 +305,6 @@ void CheckSerial()
             statusBuffer[statusIndex++] = SystemParams.AllowGPS;
             checkSum += SystemParams.AllowGPS;
 
-            memcpy(&fourBytePacket, &SOC, sizeof(SOC));
-            for (uint j = 0; j < sizeof(fourBytePacket); j++)
-            {
-                statusBuffer[statusIndex++] = fourBytePacket[j];
-                checkSum += fourBytePacket[j];
-            }
-
-            memcpy(&fourBytePacket, &SOH, sizeof(SOH));
-            for (uint j = 0; j < sizeof(fourBytePacket); j++)
-            {
-                statusBuffer[statusIndex++] = fourBytePacket[j];
-                checkSum += fourBytePacket[j];
-            }
-
             send = SERIAL_TRAILER & 0xFF;
             checkSum += send;
             statusBuffer[statusIndex++] = send;

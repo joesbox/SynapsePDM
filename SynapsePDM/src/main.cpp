@@ -28,6 +28,9 @@
     Version history:
     Date              Version       Description
     ----              -------       ------------------------------------------------------------
+    2025-12-16        v0.4          - Removed battery management functionality.
+                                    - Removed battery measurement from display.
+                                    - Removed battery measurement from logging.
     2025-12-11        v0.3          Fixes:
                                     - Buffered serial writes.    
                                     - Analogue input data stored to EEPROM.
@@ -54,7 +57,6 @@
 #include <SerialComms.h>
 #include <GSM.h>
 #include <Display.h>
-#include <Battery.h>
 
 STM32RTC &rtc = STM32RTC::getInstance();
 
@@ -190,7 +192,6 @@ void setup()
   InitialiseStorageData();
   InitialiseDisplay();
   InitialiseChannelData();
-  InitialiseBattery();
 
   // Load system data
   SystemCRCValid = LoadSystemConfig();
@@ -348,12 +349,6 @@ void loop()
   {
     CommsTimer = millis() + COMMS_INTERVAL;
     ReadIMU();
-  }
-
-  if (millis() > BattTimer)
-  {
-    BattTimer = millis() + BATTERY_INTERVAL;
-    ManageBattery();
   }
 
   if (millis() > LogTimer)

@@ -27,7 +27,6 @@
 #include <Arduino.h>
 #include <Globals.h>
 #include <ChannelConfig.h>
-#include <Battery.h>
 #include <System.h>
 #include <CRC32.h>
 #include <EEPROM.h>

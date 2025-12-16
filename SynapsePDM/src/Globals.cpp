@@ -31,7 +31,6 @@ AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 uint32_t imuWWtimer;
 uint32_t DisplayTimer;
 uint32_t CommsTimer;
-uint32_t BattTimer;
 uint32_t LogTimer;
 uint32_t GPSTimer;
 uint32_t BLTimer;
