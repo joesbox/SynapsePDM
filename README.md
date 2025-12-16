@@ -13,7 +13,6 @@ See https://wiki.joeblogs.uk/ for more info.
 + CAN channel control and diagnostics.
 + SD card logging.
 + Configuration and monitoring via USB.
-+ LiPO Battery-backup with charging and state-of-charge management IC.
 + 6-DOF on-board IMU.
 + SIM card slot for tracking and telemetry.
 
