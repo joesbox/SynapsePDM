@@ -49,6 +49,7 @@ struct __attribute__((packed)) StorageParameters
   char LogFileNames[10][24]; // List of currently stored log files
   uint32_t MaxLogLength;     // Max number of log lines
   uint8_t LogFrequency;      // Log frequency in Hz.
+  uint8_t Reserved[32];      // Reserved for future use
 };
 
 /// @brief Storage parameters

@@ -78,12 +78,19 @@ void InitialiseOutputs()
 
 void SleepOutputs()
 {
-  __HAL_RCC_GPIOG_CLK_SLEEP_ENABLE();
-  __HAL_RCC_GPIOF_CLK_SLEEP_ENABLE();
-  __HAL_RCC_DMA1_CLK_SLEEP_ENABLE();
-  __HAL_RCC_DMA2_CLK_SLEEP_ENABLE();
-  __HAL_RCC_TIM8_CLK_SLEEP_ENABLE();
-  __HAL_RCC_TIM1_CLK_SLEEP_ENABLE();  
+  __HAL_RCC_GPIOA_CLK_SLEEP_DISABLE();
+  __HAL_RCC_GPIOB_CLK_SLEEP_DISABLE();
+  __HAL_RCC_GPIOC_CLK_SLEEP_DISABLE();
+  __HAL_RCC_GPIOD_CLK_SLEEP_DISABLE();
+  __HAL_RCC_GPIOE_CLK_SLEEP_DISABLE();
+  __HAL_RCC_GPIOF_CLK_SLEEP_DISABLE();
+  __HAL_RCC_GPIOG_CLK_SLEEP_DISABLE();
+
+  __HAL_RCC_DMA1_CLK_SLEEP_DISABLE();
+  __HAL_RCC_DMA2_CLK_SLEEP_DISABLE();
+
+  __HAL_RCC_TIM1_CLK_SLEEP_DISABLE();
+  __HAL_RCC_TIM8_CLK_SLEEP_DISABLE();
 }
 
 void setupGPIO()
@@ -237,7 +244,7 @@ void UpdateOutputs()
       if (Channels[i].Enabled)
       {
         // Calculate the adjusted PWM for volage/average power
-        float squared = (VBATT_NOMINAL / SystemParams.VBatt) * (VBATT_NOMINAL / SystemParams.VBatt);
+        float squared = (VBATT_NOMINAL / SystemRuntimeParams.VBatt) * (VBATT_NOMINAL / SystemRuntimeParams.VBatt);
         int pwmActual = round(Channels[i].PWMSetDuty * squared);
 
         // PWM range check
@@ -263,13 +270,13 @@ void UpdateOutputs()
         if (total)
         {
           analogMean = sum / total;
-          Channels[i].AnalogRaw = analogMean;
+          ChannelRuntime[i].AnalogRaw = analogMean;
         }
 
-        float isVoltage = (Channels[i].AnalogRaw / ADCres) * V_REF;
-        float amps = (PWM_M * Channels[i].AnalogRaw) + PWM_C;
+        float isVoltage = (ChannelRuntime[i].AnalogRaw / ADCres) * V_REF;
+        float amps = (PWM_M * ChannelRuntime[i].AnalogRaw) + PWM_C;
 
-        if (Channels[i].AnalogRaw < 5)
+        if (ChannelRuntime[i].AnalogRaw < 5)
         {
           // No current detected, set to 0
           amps = 0.0;
@@ -278,31 +285,31 @@ void UpdateOutputs()
         // Check for fault condition and current thresholds
         if (isVoltage > FAULT_THRESHOLD)
         {
-          Channels[i].ErrorFlags |= IS_FAULT;
+          ChannelRuntime[i].ErrorFlags |= IS_FAULT;
         }
         else if (amps > Channels[i].CurrentThresholdHigh)
         {
-          Channels[i].ErrorFlags |= CHN_OVERCURRENT_RANGE;
+          ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT_RANGE;
         }
         else if (amps < Channels[i].CurrentThresholdLow)
         {
-          Channels[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
+          ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
         }
         else
         {
           // No conditions found. Clear flag
           if (!channelLocked[i])
           {
-            Channels[i].ErrorFlags = 0;
+            ChannelRuntime[i].ErrorFlags = 0;
           }
         }
 
-        Channels[i].CurrentValue = amps;
+        ChannelRuntime[i].CurrentValue = amps;
       }
       else
       {
         updatePWMDutyCycle(i, 0);
-        Channels[i].CurrentValue = 0.0;
+        ChannelRuntime[i].CurrentValue = 0.0;
       }
       break;
     case DIG:
@@ -323,25 +330,25 @@ void UpdateOutputs()
         if (total)
         {
           analogMean = sum / total;
-          Channels[i].AnalogRaw = analogMean;
+          ChannelRuntime[i].AnalogRaw = analogMean;
         }
 
         float milliVolts = (analogMean / (float)ADCres) * V_REF;
 
         float I_IS = milliVolts / R_IS;
-        Channels[i].CurrentValue = k_ILIS * I_IS;
+        ChannelRuntime[i].CurrentValue = k_ILIS * I_IS;
 
-        if (Channels[i].AnalogRaw < 5)
+        if (ChannelRuntime[i].AnalogRaw < 5)
         {
           // No current detected, set to 0
-          Channels[i].CurrentValue = 0.0;
+          ChannelRuntime[i].CurrentValue = 0.0;
         }
 
         // Inrush delay expired. Now start evaluating current samples
         if (millis() - enabledTimers[i] > (unsigned long)(Channels[i].InrushDelay))
         {
           // Add to rolling sum
-          tryCurrentSum[i] += Channels[i].CurrentValue;
+          tryCurrentSum[i] += ChannelRuntime[i].CurrentValue;
           trySampleCount[i]++;
 
           // Only evaluate once every 3 calls (~150ms)
@@ -354,20 +361,20 @@ void UpdateOutputs()
             // --- Fault checks using avgCurrent ---
             if (!channelLocked[i])
             {
-              Channels[i].ErrorFlags = 0; // reset before checks
+              ChannelRuntime[i].ErrorFlags = 0; // reset before checks
             }
 
             if (avgCurrent > Channels[i].CurrentThresholdHigh)
             {
-              Channels[i].ErrorFlags |= CHN_OVERCURRENT_RANGE;
+              ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT_RANGE;
             }
             else if (avgCurrent < Channels[i].CurrentThresholdLow)
             {
-              Channels[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
+              ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
             }
 
             // --- Retry / lockout handling ---
-            if (Channels[i].ErrorFlags == 0)
+            if (ChannelRuntime[i].ErrorFlags == 0)
             {
               // Only re-enable if not permanently locked
               if (!channelLocked[i])
@@ -390,7 +397,7 @@ void UpdateOutputs()
                 if (retryCount[i] > Channels[i].RetryCount)
                 {
                   channelLocked[i] = true;
-                  Channels[i].ErrorFlags |= RETRY_LOCKOUT;
+                  ChannelRuntime[i].ErrorFlags |= RETRY_LOCKOUT;
                   updatePWMDutyCycle(i, 0);
                 }
               }
@@ -421,12 +428,12 @@ void UpdateOutputs()
         retriesPending[i] = false;
         retryCount[i] = 0;
         channelLocked[i] = false;
-        Channels[i].CurrentValue = 0.0;
+        ChannelRuntime[i].CurrentValue = 0.0;
       }
       break;
     default:
       updatePWMDutyCycle(i, 0);
-      Channels[i].CurrentValue = 0.0;
+      ChannelRuntime[i].CurrentValue = 0.0;
       break;
     }
   }
@@ -437,8 +444,8 @@ void OutputsOff()
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
     updatePWMDutyCycle(i, 0);
-    Channels[i].CurrentValue = 0.0;
-    Channels[i].ErrorFlags = 0;
+    ChannelRuntime[i].CurrentValue = 0.0;
+    ChannelRuntime[i].ErrorFlags = 0;
     retriesPending[i] = false;
     retryCount[i] = 0;
     channelLocked[i] = false;

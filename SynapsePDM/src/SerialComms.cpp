@@ -57,23 +57,24 @@ void CheckSerial()
     if ((millis() - lastComms > COMMS_TIMEOUT))
     {
         connectionStatus = 0; // Timeout - reset connection
+        pcCommsOK = false;
         receivingConfig = false;
         readBufIdx = 0;
         recBytesRead = 0;
         for (int i = 0; i < NUM_CHANNELS; i++)
         {
-            Channels[i].Override = false; // Clear any overrides
+            ChannelRuntime[i].Override = false; // Clear any overrides
         }
     }
     if (Serial.available() && !receivingConfig)
     {
+        pcCommsOK = true;
         lastComms = millis();
         byte nextByte = Serial.read();
         switch (nextByte)
         {
         case COMMAND_ID_BEGIN:
-            Serial.write(COMMAND_ID_CONFIM);
-            connectionStatus = 1;
+            Serial.write(COMMAND_ID_CONFIM);            
             break;
 
         case COMMAND_ID_SKIP:
@@ -90,8 +91,8 @@ void CheckSerial()
             byte twoBytePacket[2];
             byte chanSize = 0;
             byte send = 0;
-            statusIndex = 0;    
-            memset(statusBuffer, 0, sizeof(statusBuffer));        
+            statusIndex = 0;
+            memset(statusBuffer, 0, sizeof(statusBuffer));
 
             send = SERIAL_HEADER & 0XFF;
             statusBuffer[statusIndex++] = send;
@@ -114,8 +115,8 @@ void CheckSerial()
                 statusBuffer[statusIndex++] = (byte)Channels[i].ChanType;
                 checkSum += (byte)Channels[i].ChanType;
 
-                statusBuffer[statusIndex++] = Channels[i].Override;
-                checkSum += Channels[i].Override;
+                statusBuffer[statusIndex++] = ChannelRuntime[i].Override;
+                checkSum += ChannelRuntime[i].Override;
 
                 statusBuffer[statusIndex++] = Channels[i].CurrentSensePin;
                 checkSum += Channels[i].CurrentSensePin;
@@ -134,7 +135,7 @@ void CheckSerial()
                     checkSum += fourBytePacket[j];
                 }
 
-                memcpy(&fourBytePacket, &Channels[i].CurrentValue, sizeof(Channels[i].CurrentValue));
+                memcpy(&fourBytePacket, &ChannelRuntime[i].CurrentValue, sizeof(ChannelRuntime[i].CurrentValue));
                 for (uint j = 0; j < sizeof(fourBytePacket); j++)
                 {
                     statusBuffer[statusIndex++] = fourBytePacket[j];
@@ -144,8 +145,8 @@ void CheckSerial()
                 statusBuffer[statusIndex++] = Channels[i].Enabled;
                 checkSum += Channels[i].Enabled;
 
-                statusBuffer[statusIndex++] = Channels[i].ErrorFlags;
-                checkSum += Channels[i].ErrorFlags;
+                statusBuffer[statusIndex++] = ChannelRuntime[i].ErrorFlags;
+                checkSum += ChannelRuntime[i].ErrorFlags;
 
                 statusBuffer[statusIndex++] = Channels[i].GroupNumber;
                 checkSum += Channels[i].GroupNumber;
@@ -231,7 +232,7 @@ void CheckSerial()
             }
 
             // Send system parameters
-            memcpy(&fourBytePacket, &SystemParams.SystemTemperature, sizeof(SystemParams.SystemTemperature));
+            memcpy(&fourBytePacket, &SystemRuntimeParams.SystemTemperature, sizeof(SystemRuntimeParams.SystemTemperature));
             for (uint j = 0; j < sizeof(fourBytePacket); j++)
             {
                 statusBuffer[statusIndex++] = fourBytePacket[j];
@@ -241,14 +242,14 @@ void CheckSerial()
             statusBuffer[statusIndex++] = SystemParams.CANResEnabled;
             checkSum += SystemParams.CANResEnabled;
 
-            memcpy(&fourBytePacket, &SystemParams.VBatt, sizeof(SystemParams.VBatt));
+            memcpy(&fourBytePacket, &SystemRuntimeParams.VBatt, sizeof(SystemRuntimeParams.VBatt));
             for (uint j = 0; j < sizeof(fourBytePacket); j++)
             {
                 statusBuffer[statusIndex++] = fourBytePacket[j];
                 checkSum += fourBytePacket[j];
             }
 
-            memcpy(&fourBytePacket, &SystemParams.SystemCurrent, sizeof(SystemParams.SystemCurrent));
+            memcpy(&fourBytePacket, &SystemRuntimeParams.SystemCurrent, sizeof(SystemRuntimeParams.SystemCurrent));
             for (uint j = 0; j < sizeof(fourBytePacket); j++)
             {
                 statusBuffer[statusIndex++] = fourBytePacket[j];
@@ -258,7 +259,7 @@ void CheckSerial()
             statusBuffer[statusIndex++] = SystemParams.SystemCurrentLimit;
             checkSum += SystemParams.SystemCurrentLimit;
 
-            memcpy(&twoBytePacket, &SystemParams.ErrorFlags, sizeof(SystemParams.ErrorFlags));
+            memcpy(&twoBytePacket, &SystemRuntimeParams.ErrorFlags, sizeof(SystemRuntimeParams.ErrorFlags));
             for (uint j = 0; j < sizeof(twoBytePacket); j++)
             {
                 statusBuffer[statusIndex++] = twoBytePacket[j];
@@ -304,6 +305,9 @@ void CheckSerial()
 
             statusBuffer[statusIndex++] = SystemParams.AllowGPS;
             checkSum += SystemParams.AllowGPS;
+
+            statusBuffer[statusIndex++] = SystemParams.AllowMotionDetect;
+            checkSum += SystemParams.AllowMotionDetect;
 
             send = SERIAL_TRAILER & 0xFF;
             checkSum += send;
@@ -382,7 +386,7 @@ void CheckSerial()
                             Channels[configBuffer[CONFIG_DATA_INDEX]].ChanType = (ChannelType)configBuffer[CONFIG_DATA_START_INDEX];
                             break;
                         case 1: // Override flag
-                            Channels[configBuffer[CONFIG_DATA_INDEX]].Override = configBuffer[CONFIG_DATA_START_INDEX];
+                            ChannelRuntime[configBuffer[CONFIG_DATA_INDEX]].Override = configBuffer[CONFIG_DATA_START_INDEX];
                             break;
                         case 2: // Current threshold high
                             memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdHigh, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].CurrentThresholdHigh));
@@ -489,6 +493,44 @@ void CheckSerial()
                         break;
 
                     case CONFIG_DATA_SYSTEM:
+
+                        switch (configBuffer[CONFIG_PARAMETER_INDEX])
+                        {
+                        case 0: // CAN resistor enable
+                            SystemParams.CANResEnabled = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 1: // Channel CAN data ID
+                            memcpy(&SystemParams.ChannelDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.ChannelDataCANID));
+                            break;
+                        case 2: // System CAN ID
+                            memcpy(&SystemParams.SystemDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.SystemDataCANID));
+                            break;
+                        case 3: // Config CAN ID
+                            memcpy(&SystemParams.ConfigDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.ConfigDataCANID));
+                            break;
+                        case 4: // IMU wake window
+                            memcpy(&SystemParams.IMUwakeWindow, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.IMUwakeWindow));
+                            break;
+                        case 5: // Speed unit preference
+                            SystemParams.SpeedUnitPref = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 6: // Distance unit preference
+                            SystemParams.DistanceUnitPref = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 7: // Allow mobile data
+                            SystemParams.AllowData = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 8: // Allow GPS
+                            SystemParams.AllowGPS = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 9: // Allow motion detect wake
+                            SystemParams.AllowMotionDetect = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        default:
+                            // System parameter out of range. Ignore packet
+                            validPacket = false;
+                            break;
+                        }
                         connectionStatus = 7;
 
                         break;
@@ -563,7 +605,7 @@ void CheckSerial()
             if (LoadAnalogueConfig())
             {
                 allSaved &= true;
-                InitialiseInputs();                
+                InitialiseInputs();
             }
             else
             {

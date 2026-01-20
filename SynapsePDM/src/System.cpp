@@ -25,38 +25,44 @@
 
 SystemConfigUnion SystemConfigData;
 SystemParameters SystemParams;
+SystemRuntime SystemRuntimeParams;
 
 #define CDC_TRANSMIT_QUEUE_BUFFER_PACKET_NUMBER 20
 
 bool SystemCRCValid;
 bool ChannelCRCValid;
 bool SDCardOK;
-uint8_t PowerState;
+volatile uint8_t PowerState;
 bool RTCSet;
 bool DisplayBacklightInitialised = false;
 
 void IgnitionWake()
 {
-    SystemClock_Config();
-    PowerState = IGNITION_WAKE;
+    PowerState = IGNITION_WAKING;
 }
 
 void IMUWake()
 {
-    SystemClock_Config();
-    PowerState = IMU_WAKE;
-    Serial.println("IMU INT");
+    if (!IMUWakeMode)
+    {
+        IMUWakeMode = true;
+        imuWakePending = true;
+    }
 }
 
 void InitialiseSystem()
 {
     // Start the low power features. Attach sleep mode interrupts
     LowPower.begin();
-    LowPower.attachInterruptWakeup(IGN_INPUT, IgnitionWake, RISING, DEEP_SLEEP_MODE);
     LowPower.attachInterruptWakeup(IMU_INT1, IMUWake, RISING, DEEP_SLEEP_MODE);
+    LowPower.attachInterruptWakeup(IGN_INPUT, IgnitionWake, RISING, DEEP_SLEEP_MODE);
 
     // Set power state to run
     PowerState = RUN;
+
+    // Reset all peripherals on boot
+    SleepSystem();
+    delay(100);
 
     WakeSystem();
 
@@ -98,104 +104,106 @@ void InitialiseSystem()
 void InitialiseSystemData()
 {
     // Initialise default system data
+    memset(&SystemParams, 0, sizeof(SystemParams));
     SystemParams.CANResEnabled = 1;
     SystemParams.ChannelDataCANID = CHAN_CAN_ID;
     SystemParams.SystemDataCANID = SYS_CAN_ID;
     SystemParams.ConfigDataCANID = CONF_CAN_ID;
     SystemParams.IMUwakeWindow = DEFAULT_WW;
+    SystemParams.MotionDeadTime = DEFAULT_MOTION_DEADTIME;
     SystemParams.SystemCurrentLimit = SYSTEM_CURRENT_MAX;
     SystemParams.AllowData = 1;
     SystemParams.AllowGPS = 1;
     SystemParams.SpeedUnitPref = 1;
     SystemParams.DistanceUnitPref = 1;
+    SystemParams.AllowMotionDetect = 1;
 }
 
 void UpdateSystem()
 {
     // Get system temperature
     int32_t VRef = readVref();
-    SystemParams.SystemTemperature = readTempSensor(VRef);
+    SystemRuntimeParams.SystemTemperature = readTempSensor(VRef);
 
     // Calculate battery voltage
-    SystemParams.VBatt = analogRead(VBATT_ANALOG_PIN) * 0.0039787f;
+    SystemRuntimeParams.VBatt = analogRead(VBATT_ANALOG_PIN) * 0.0039787f;
 
     // Calculate system current draw
-    SystemParams.SystemCurrent = 0.0f;
+    SystemRuntimeParams.SystemCurrent = 0.0f;
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
-        SystemParams.SystemCurrent += Channels[i].CurrentValue;
+        SystemRuntimeParams.SystemCurrent += ChannelRuntime[i].CurrentValue;
     }
 
     // Check system temperature limit
-    if (SystemParams.SystemTemperature > SYSTEM_TEMP_LIMIT)
+    if (SystemRuntimeParams.SystemTemperature > SYSTEM_TEMP_LIMIT)
     {
-        SystemParams.ErrorFlags |= OVERTEMP;
+        SystemRuntimeParams.ErrorFlags |= OVERTEMP;
     }
     else
     {
-        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~OVERTEMP;
+        SystemRuntimeParams.ErrorFlags = SystemRuntimeParams.ErrorFlags & ~OVERTEMP;
     }
 
     // Check battery voltage
-    if (SystemParams.VBatt <= LOGGING_VBATT_THRESHOLD)
+    if (SystemRuntimeParams.VBatt <= LOGGING_VBATT_THRESHOLD)
     {
-        SystemParams.ErrorFlags |= UNDERVOLTAGE;
+        SystemRuntimeParams.ErrorFlags |= UNDERVOLTAGE;
     }
     else
     {
-        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~UNDERVOLTAGE;
+        SystemRuntimeParams.ErrorFlags = SystemRuntimeParams.ErrorFlags & ~UNDERVOLTAGE;
     }
 
     // Check current limit
-    if (SystemParams.SystemCurrent > SYSTEM_CURRENT_MAX)
+    if (SystemRuntimeParams.SystemCurrent > SYSTEM_CURRENT_MAX)
     {
-        SystemParams.ErrorFlags |= OVERCURRENT;
+        SystemRuntimeParams.ErrorFlags |= OVERCURRENT;
     }
     else
     {
-        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~OVERCURRENT;
+        SystemRuntimeParams.ErrorFlags = SystemRuntimeParams.ErrorFlags & ~OVERCURRENT;
     }
 
     // Check CRC
     if (!SystemCRCValid)
     {
-        SystemParams.ErrorFlags |= CRC_CHECK_FAILED;
+        SystemRuntimeParams.ErrorFlags |= CRC_CHECK_FAILED;
     }
     else
     {
-        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~CRC_CHECK_FAILED;
+        SystemRuntimeParams.ErrorFlags = SystemRuntimeParams.ErrorFlags & ~CRC_CHECK_FAILED;
     }
 
     // Check SD card status
     if (!SDCardOK)
     {
-        SystemParams.ErrorFlags |= SDCARD_ERROR;
+        SystemRuntimeParams.ErrorFlags |= SDCARD_ERROR;
     }
     else
     {
-        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~SDCARD_ERROR;
+        SystemRuntimeParams.ErrorFlags = SystemRuntimeParams.ErrorFlags & ~SDCARD_ERROR;
     }
 
     // Check GPS fix
-    if (!GPSFix)
+    if (!GPSFix && SystemParams.AllowGPS)
     {
-        SystemParams.ErrorFlags |= GPS_ERROR;
+        SystemRuntimeParams.ErrorFlags |= GPS_ERROR;
     }
     else
     {
-        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~GPS_ERROR;
+        SystemRuntimeParams.ErrorFlags = SystemRuntimeParams.ErrorFlags & ~GPS_ERROR;
     }
 
     // Checksum status of PC communications
     switch (connectionStatus)
     {
-    case 0:
-    case 1:
+    default:
         // Disconnected or connected successfully
-        SystemParams.ErrorFlags = SystemParams.ErrorFlags & ~PC_COMMS_CHECKSUM_ERROR;
+        SystemRuntimeParams.ErrorFlags = SystemRuntimeParams.ErrorFlags & ~PC_COMMS_CHECKSUM_ERROR;
         break;
-    case 2:
-        SystemParams.ErrorFlags |= PC_COMMS_CHECKSUM_ERROR;
+    case 8:
+        SystemRuntimeParams.ErrorFlags |= PC_COMMS_CHECKSUM_ERROR;
         break;
     }
 }

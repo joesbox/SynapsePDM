@@ -33,9 +33,10 @@
 #include <IMU.h>
 #include <SPI.h>
 #include <Storage.h>
+#include <backup.h>
 
 // Firmware version
-#define FW_VER "v0.4"
+#define FW_VER "v0.5"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -94,6 +95,9 @@
 // Watchdog timer interval (microseconds)
 #define WATCHDOG_INTERVAL 2000000
 
+// Wake debounce time (milliseconds)
+#define WAKE_DEBOUNCE_TIME 50
+
 // Unused pin that can be used to debug analog read timings which are critical to obtaining correct current measurements on PWM channels
 #define ANALOG_READ_DEBUG_PIN 20
 
@@ -146,6 +150,12 @@
 // Default wake window for IMU checks
 #define DEFAULT_WW 5000
 
+// Default motion dead time (minutes). Ignore motion after ignition off for this period (gives time for vehicle to come to rest, passengers to disembark etc.)
+#define DEFAULT_MOTION_DEADTIME 5
+
+// Backup register to store ignition off time
+#define BACKUP_REG_IGN_OFF_TIME 0
+
 // Default log frequecy of 10Hz
 #define DEFAULT_LOG_FREQUENCY 10
 
@@ -174,9 +184,11 @@
 #define RUN 0
 #define PREPARE_SLEEP 1
 #define SLEEPING 2
-#define IGNITION_WAKE 3
-#define IMU_WAKE 4
-#define IMU_WAKE_WINDOW 5
+#define IGNITION_WAKING 3
+#define IGNITION_WAKE 4
+#define IMU_WAKING 5
+#define IMU_WAKE 6
+#define IMU_WAKE_WINDOW 7
 
 // SPI 2 Pins
 #define PICO PB15
@@ -186,9 +198,9 @@
 #define CS2 PB11
 
 // LCD pins
-//#define TFT_RST PD8
-//#define TFT_DC PD9
-//#define TFT_CS PB11
+// #define TFT_RST PD8
+// #define TFT_DC PD9
+// #define TFT_CS PB11
 #define TFT_BL PB10
 
 // GSM Module Pins
@@ -209,45 +221,60 @@ extern SPIClass SPI_2;
 
 /// @brief PC connection status. 0 = disconnected, 1 = connected, 2 = Checksum fail
 extern uint8_t connectionStatus;
+
+/// @brief PC communications OK flag
+extern bool pcCommsOK;
+
+/// @brief Number of bytes read from PC
 extern int recBytesRead;
 
 /// @brief Flag to denote if the background has been drawn
 extern bool backgroundDrawn;
 
+/// @brief Flag to denote if the system is to boot to sleep mode. Display background needs to be drawn first.
+extern bool bootToSleep;
+
+/// @brief IMU wake mode flag
+extern volatile bool IMUWakeMode;
+
+/// @brief IMU wake pending flag
+extern volatile bool imuWakePending;
+
 /// @brief Analogue input config structure
 struct __attribute__((packed)) AnalogueInputs
 {
-  uint8_t InputPin;    // Input pin
-  uint8_t PullUpPin;   // Pull-up enable pin
-  uint8_t PullDownPin; // Pull-down enable pin
-  bool PullUpEnable;   // Pull-up enable flag
-  bool PullDownEnable; // Pull-down enable flag
-  bool IsDigital;      // True if the input is to be treated as a digital input
-  bool IsThreshold;    // True if the input is to be treated as a thresholded input or PWM input (false = scaled PWM). Only applies to analogue inputs
-  float OnThreshold;   // On threshold (Voltage)
-  float OffThreshold;  // Off threshold (Voltage)
-  float ScaleMin;      // Minimum scale value (Used for PWM scaled inputs)
-  float ScaleMax;      // Maximum scale value (Used for PWM scaled inputs)
-  uint8_t PWMMin;      // Minimum PWM value (0-100%)
-  uint8_t PWMMax;        // Maximum PWM value (0-100%)
+  uint8_t InputPin;     // Input pin
+  uint8_t PullUpPin;    // Pull-up enable pin
+  uint8_t PullDownPin;  // Pull-down enable pin
+  bool PullUpEnable;    // Pull-up enable flag
+  bool PullDownEnable;  // Pull-down enable flag
+  bool IsDigital;       // True if the input is to be treated as a digital input
+  bool IsThreshold;     // True if the input is to be treated as a thresholded input or PWM input (false = scaled PWM). Only applies to analogue inputs
+  float OnThreshold;    // On threshold (Voltage)
+  float OffThreshold;   // Off threshold (Voltage)
+  float ScaleMin;       // Minimum scale value (Used for PWM scaled inputs)
+  float ScaleMax;       // Maximum scale value (Used for PWM scaled inputs)
+  uint8_t PWMMin;       // Minimum PWM value (0-100%)
+  uint8_t PWMMax;       // Maximum PWM value (0-100%)
+  uint8_t Reserved[32]; // Reserved for future use
 };
 
-// Channel digital input pins (defaults)
+/// @brief Channel digital input pins (defaults)
 const uint8_t DIchannelInputPins[NUM_DI_CHANNELS] = {PE15, PE14, PE13, PE12, PE11, PE10, PE9, PE8};
 
-// Channel analogue input pins (defaults)
+/// @brief Channel analogue input pins (defaults)
 const uint8_t ANAchannelInputPins[NUM_ANA_CHANNELS] = {PF3, PF4, PF5, PF6, PF7, PF8, PF9, PF10};
 
-// Channel analogue input pull-up pins (defaults)
+// @brief Channel analogue input pull-up pins (defaults)
 const uint8_t ANAchannelInputPullUps[NUM_ANA_CHANNELS] = {PD3, PD5, PD7, PG12, PG15, PB4, PB9, PE1};
 
-// Channel analogue input pull-down pins (defaults)
+/// @brief Channel analogue input pull-down pins (defaults)
 const uint8_t ANAchannelInputPullDowns[NUM_ANA_CHANNELS] = {PD4, PD6, PG11, PG13, PG14, PB3, PB5, PE0};
 
-// Channel digital output pins
+/// @brief Channel digital output pins
 const uint8_t channelOutputPins[NUM_CHANNELS] = {PG10, PG9, PG6, PG5, PG4, PG3, PG2, PF15, PF14, PF13, PF12, PF2, PF1, PF0};
 
-// Channel analog current sense pins
+/// @brief Channel analog current sense pins
 const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {PA0, PA1, PA2, PA3, PA4, PA5, PA6, PB1, PB0, PA7, PC3, PC2, PC1, PC0};
 
 // Timers for main tasks
@@ -258,12 +285,16 @@ extern uint32_t BattTimer;
 extern uint32_t LogTimer;
 extern uint32_t GPSTimer;
 extern uint32_t BLTimer;
+extern uint32_t wakeDebounceTimer;
 extern int blLevel;
 
-// HSD Output channels
+/// @brief HSD Output channels
 extern ChannelConfig Channels[NUM_CHANNELS];
 
-// Channel configurations
+/// @brief Channel runtime data
+extern ChannelConfigRuntime ChannelRuntime[NUM_CHANNELS];
+
+/// @brief Channel configurations
 extern AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 
 /// @brief  Channel config union for reading and writing from and to EEPROM storage

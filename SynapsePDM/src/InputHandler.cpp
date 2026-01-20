@@ -108,7 +108,7 @@ void HandleInputs()
         case DIG_PWM:
 
             // Override takes precedence over input control pin
-            if (Channels[i].Override)
+            if (ChannelRuntime[i].Override)
             {
                 Channels[i].Enabled = true;
             }
@@ -154,7 +154,7 @@ void HandleInputs()
         if (!Channels[i].Enabled)
         {
             // Clear error flags on disable
-            Channels[i].ErrorFlags = 0;
+            ChannelRuntime[i].ErrorFlags = 0;
         }
     }
 

@@ -23,6 +23,7 @@
 
 #include "GSM.h"
 
+//#define DEBUG
 #define BAUD_RATE 115200
 
 uint32_t lastGPSTime = 0;
@@ -33,6 +34,8 @@ float lat, lon, speed, alt, accuracy;
 int vsat, usat, year, month, day, hour, minute, second;
 
 bool GPSFix = false;
+
+bool previousGPSEnable = false;
 
 uint8_t SIM7600State = 0; // 0 = Power up, 1 = Initialising, 2 = Ready for command, 4 = Wait response
 
@@ -49,8 +52,8 @@ void InitialiseGSM(bool enableData)
 
     // Power the module on
     digitalWrite(SIM_PWR, HIGH);
-    delay(100);
     Serial1.begin(BAUD_RATE);
+    previousGPSEnable = SystemParams.AllowGPS;
     SIM7600State = 0;
 #ifdef DEBUG
     Serial.println("Initializing SIM7600G...");
@@ -86,14 +89,43 @@ void UpdateSIM7600(SIM7600Commands command)
         Serial1.print("AT\r");
         break;
     case 1:
-        Serial1.print("AT+CGPS=1\r");
+        if (SystemParams.AllowGPS)
+        {
+            Serial1.print("AT+CGPS=1\r");
+        }
+        else
+        {
+            Serial1.print("AT+CGPS=0\r");
+        }
         break;
     case 2:
         // Ready for command
         switch (command)
         {
         case GPS:
-            Serial1.print("AT+CGNSSINFO\r");
+            if (SystemParams.AllowGPS)
+            {
+                // GPS was enabled during runtime, make sure it's on
+                if (previousGPSEnable != SystemParams.AllowGPS)
+                {
+                    Serial1.print("AT+CGPS=1\r");
+                    previousGPSEnable = SystemParams.AllowGPS;
+                }
+                Serial1.print("AT+CGNSSINFO\r");
+#ifdef DEBUG
+                Serial.println("Requesting GPS info...");
+#endif
+            }
+            else
+            {
+                // GPS was disabled during runtime, ensure it's off
+                if (previousGPSEnable != SystemParams.AllowGPS)
+                {
+                    Serial1.print("AT+CGPS=0\r");
+                    previousGPSEnable = SystemParams.AllowGPS;
+                    GPSFix = false;
+                }
+            }
             break;
         case HTTP:
             break;
@@ -139,7 +171,6 @@ void UpdateSIM7600(SIM7600Commands command)
 
     if (strstr(simBuffer, "+CGNSSINFO") != nullptr)
     {
-        // String response(simBuffer);
         parseGPSData(simBuffer); // Parse GPS data
         SIM7600State = 2;        // Transition to Ready for command state
     }
@@ -174,6 +205,11 @@ void parseGPSData(const char *response)
 
     // Parse values
     int fixStatus = atoi(tokens[0]);
+
+#ifdef DEBUG
+    Serial.print("Fix status: ");
+    Serial.println(fixStatus);
+#endif
 
     if (fixStatus == 0)
     {

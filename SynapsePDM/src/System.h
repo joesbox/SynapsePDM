@@ -37,25 +37,36 @@
 
 /// @brief System parameters structure
 struct __attribute__((packed)) SystemParameters
-{
-  int32_t SystemTemperature;  // Internal system (STM32 processor) temperature
+{  
   uint8_t CANResEnabled;      // CAN bus termination resistor enabled. 0 = disabled, 1 = enabled
-  float VBatt;                // Battery supply voltage
-  float SystemCurrent;        // Total current draw for all enabled channels
   uint8_t SystemCurrentLimit; // System current limit in amps
-  uint16_t ErrorFlags;        // Bitmask for system error flags
   uint16_t ChannelDataCANID;  // Channel data CAN ID (transmit)
   uint16_t SystemDataCANID;   // System data CAN ID (transmit)
   uint16_t ConfigDataCANID;   // Configuration data CAN ID (receive)
   uint32_t IMUwakeWindow;     // Wake window for the IMU to determine if something needs to be done or go back to sleep
+  uint8_t MotionDeadTime;     // Time in minutes to ignore motion after wake
   uint8_t SpeedUnitPref;      // Speed units. 0 = KPH, 1 = MPH
   uint8_t DistanceUnitPref;   // Distance units. 0 = Metric (m), 1 = Imperial (ft)
   uint8_t AllowData;          // Allow mobile data
   uint8_t AllowGPS;           // Allow GPS
+  uint8_t AllowMotionDetect;  // Allow motion detection wake
+  uint8_t Reserved[32];       // Reserved for future use
+};
+
+/// @brief System runtime data structure
+struct __attribute__((packed))SystemRuntime
+{
+    int32_t SystemTemperature;
+    float VBatt;
+    float SystemCurrent;
+    uint16_t ErrorFlags;
 };
 
 /// @brief System parameters
 extern SystemParameters SystemParams;
+
+/// @brief System runtime parameters
+extern SystemRuntime SystemRuntimeParams;
 
 /// @brief  System config union for reading and writing from and to EEPROM storage
 union SystemConfigUnion
@@ -77,7 +88,7 @@ extern bool ChannelCRCValid;
 extern bool SDCardOK;
 
 /// @brief Power state. 0 = Run, 1 = prepare for sleep, 2 = sleeping, 3 = Ignition wake, 4 = IMU wake
-extern uint8_t PowerState;
+extern volatile uint8_t PowerState;
 
 /// @brief Flag to denote RTC has been set
 extern bool RTCSet;

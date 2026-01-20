@@ -28,13 +28,21 @@
     Version history:
     Date              Version       Description
     ----              -------       ------------------------------------------------------------
+    2026-01-06        v0.5          - Added boot to sleep functionality. If enabled, system will enter deep sleep mode after initialisation until wake event.
+                                    - Corrected peripheral clock enable/disable in OutputHandler sleep/wake functions. Sleep current is ~2.2mA.
+                                    - Added wake debounce timer to prevent multiple wake events.
+                                    - Wake deadtime parameter added to system parameters. Configurable via Cortex.
+                                    - More robust sleep and wake handling.
+                                    - Moved dynamic system parameters to SystemRuntime structure.
+                                    - Added padding to EEPROM structures to allow for future expansion without breaking existing installations.
+                                    - Added system config changes read from Cortex app.
     2025-12-16        v0.4          - Removed battery management functionality.
                                     - Removed battery measurement from display.
                                     - Removed battery measurement from logging.
     2025-12-11        v0.3          Fixes:
-                                    - Buffered serial writes.    
+                                    - Buffered serial writes.
                                     - Analogue input data stored to EEPROM.
-                                    - Update analogue input parameters from Cortex.                                
+                                    - Update analogue input parameters from Cortex.
                                     - Check input type and pin when evaluating digital inputs.
     2025-12-02        v0.2          Fixes:
                                     - Added clearing of channel error flags before storage.
@@ -62,6 +70,12 @@ STM32RTC &rtc = STM32RTC::getInstance();
 
 constexpr int SPLASH_SCREEN_DELAY = 2000;
 constexpr int RTC_YEAR_THRESHOLD = 24;
+
+void SleepFunctions();
+
+//#define DEBUG
+
+bool hitInit = false;
 
 void Debug()
 {
@@ -145,7 +159,7 @@ void Debug()
     Serial.print(imuLabels[i]);
     Serial.print(": ");
     Serial.println(imuData[i], 3);
-  }*/
+  }
 
   Serial.print("Log file bytes stored: ");
   Serial.println(BytesStored);
@@ -158,7 +172,7 @@ void Debug()
   Serial.print("Analogue raw current: ");
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    Serial.print(Channels[i].AnalogRaw);
+    Serial.print(ChannelRuntime[i].AnalogRaw);
     Serial.print(", ");
   }
 
@@ -167,14 +181,26 @@ void Debug()
   Serial.print("Analogue calculated current: ");
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    Serial.print(Channels[i].CurrentValue);
+    Serial.print(ChannelRuntime[i].CurrentValue);
     Serial.print(", ");
   }
 
   Serial.println();
-  Serial.print("Error flags: ");
+  Serial.print("Error flags: ");*/
+  Serial.print("EEPROM flags: ");
+  Serial.print(SystemCRCValid ? "Valid" : "Invalid");
+  Serial.print(", ");
+  Serial.print(ChannelCRCValid ? "Valid" : "Invalid");
+  Serial.print(", ");
+  Serial.print(StorageCRCValid ? "Valid" : "Invalid");
+  Serial.print(", ");
+  Serial.print(AnalogueCRCValid ? "Valid" : "Invalid");
+  Serial.print(", ");
 
-  Serial.println(SystemParams.ErrorFlags, HEX);
+  Serial.print(hitInit ? "Yep" : "Nope");
+  Serial.print(", ");
+
+  Serial.println(SystemRuntimeParams.ErrorFlags, HEX);
 
 #endif
 }
@@ -184,31 +210,32 @@ void setup()
   InitialiseSystem();
   InitialiseGSM(false);
   pinMode(TFT_BL, OUTPUT);
-  digitalWrite(TFT_BL, LOW);  
+  digitalWrite(TFT_BL, LOW);
   rtc.setClockSource(STM32RTC::LSE_CLOCK);
   rtc.begin();
   InitialiseSerial();
-  InitialiseOutputs();  
+  InitialiseOutputs();
   InitialiseStorageData();
   InitialiseDisplay();
   InitialiseChannelData();
+
+  // Load channel data first
+  ChannelCRCValid = LoadChannelConfig();
+  if (!ChannelCRCValid)
+  {
+    // CRC wasn't valid on the EEPROM channel data. Save the default values to EEPROM now.
+    InitialiseChannelData();
+    SaveChannelConfig();
+  }
 
   // Load system data
   SystemCRCValid = LoadSystemConfig();
   if (!SystemCRCValid)
   {
-    // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.
+    // CRC wasn't valid on the EEPROM system data. Save the default values to EEPROM now.
     InitialiseSystemData();
     SaveSystemConfig();
-  }
-
-  // Load channel data
-  ChannelCRCValid = LoadChannelConfig();
-  if (!ChannelCRCValid)
-  {
-    // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.
-    InitialiseChannelData();
-    SaveChannelConfig();
+    hitInit = true;
   }
 
   // Load storage data
@@ -244,6 +271,8 @@ void setup()
   // Display the splash screen for 2 seconds
   splashCounter = millis() + SPLASH_SCREEN_DELAY;
   digitalWrite(TFT_BL, HIGH);
+
+  SystemParams.MotionDeadTime = 1;
 }
 
 void handlePowerState()
@@ -254,43 +283,83 @@ void handlePowerState()
     if (!digitalRead(IGN_INPUT))
     {
       delay(100); // Debounce
-      if (!digitalRead(IGN_INPUT))
+      if (!digitalRead(IGN_INPUT) && bootToSleep)
       {
         PowerState = PREPARE_SLEEP;
       }
     }
     break;
   case PREPARE_SLEEP:
-    EnableMotionDetect();
-    PullResistorSleep();
-    SleepSD();
-    OutputsOff();
-    SleepOutputs();
-    SleepComms();
-    StopDisplay();
-    SleepSystem();
+    if (SystemParams.AllowMotionDetect)
+    {
+      EnableMotionDetect();
+      uint32_t ignitionOffTime = rtc.getEpoch();
+      SDCardOK = false;
+      HAL_PWR_EnableBkUpAccess();
+      setBackupRegister(BACKUP_REG_IGN_OFF_TIME, ignitionOffTime);
+    }
+    SleepFunctions();
     PowerState = SLEEPING;
-    delay(100);
     HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
     break;
   case SLEEPING:
-
+    if (imuWakePending)
+    {
+      imuWakePending = false;
+      PowerState = IMU_WAKING;
+    }
+    break;
+  case IGNITION_WAKING:
+    if (!IMUWakeMode)
+    {
+      // Only call these if we haven't woken from the IMU
+      SystemClock_Config();
+      rtc.begin();
+    }
+    wakeDebounceTimer = millis();
+    PowerState = IGNITION_WAKE;
     break;
   case IGNITION_WAKE:
-    DisableMotionDetect();
-    InitialiseSerial();
-    WakeSystem();
-    analogWrite(TFT_BL, 1023);
-    StartDisplay();
-    DrawBackground();
-    PowerState = RUN;
+    if (millis() - wakeDebounceTimer > WAKE_DEBOUNCE_TIME)
+    {
+      DisableMotionDetect();
+      InitialiseSerial();
+      WakeSystem();
+      InitialiseGSM(false);
+      analogWrite(TFT_BL, 1023);
+      StartDisplay();
+      DrawBackground();
+      PowerState = RUN;
+    }
+    break;
+  case IMU_WAKING:
+    SystemClock_Config();
+    rtc.begin();
+    PowerState = IMU_WAKE;
     break;
   case IMU_WAKE:
-    SystemClock_Config();
-    DisableMotionDetect();
-    WakeSystem();
-    imuWWtimer = millis() + SystemParams.IMUwakeWindow;
-    PowerState = IMU_WAKE_WINDOW;
+    if (SystemParams.AllowMotionDetect)
+    {
+      uint32_t ignitionOffTime = getBackupRegister(BACKUP_REG_IGN_OFF_TIME);
+      uint32_t currentTime = rtc.getEpoch();
+      if ((currentTime - ignitionOffTime) >= (SystemParams.MotionDeadTime * 60))
+      {
+        // Motion dead time has elapsed. Disable motion detection, wake the system.
+        DisableMotionDetect();
+        InitialiseSerial();
+        WakeSystem();
+        InitialiseGSM(false);
+        imuWWtimer = millis() + SystemParams.IMUwakeWindow;
+        PowerState = IMU_WAKE_WINDOW;
+      }
+      else
+      {
+        // Still within motion dead time. Go back to sleep.
+        SleepFunctions();
+        PowerState = SLEEPING;
+        HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+      }
+    }
     break;
   case IMU_WAKE_WINDOW:
     if (millis() < imuWWtimer)
@@ -299,7 +368,9 @@ void handlePowerState()
     }
     else
     {
-      PowerState = PREPARE_SLEEP;
+      SleepFunctions();
+      PowerState = SLEEPING;
+      HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
     }
     break;
   }
@@ -307,92 +378,87 @@ void handlePowerState()
 
 void loop()
 {
-  /*if (!DisplayBacklightInitialised)
+  if (PowerState == RUN)
   {
-    if (millis() > BLTimer)
+    if (millis() > DisplayTimer)
     {
-      BLTimer = millis() + BL_FADE_INTRVAL;
-      if (blLevel <= 1023)
+      DisplayTimer = millis() + DISPLAY_INTERVAL;
+      // Update channel outputs
+      UpdateOutputs();
+
+      // Read input channel status
+      HandleInputs();
+
+      // If we're heading for sleep, don't update the display. Something with the DMA seems to keeep the SPI bus active. Drastically increases sleep current.
+      if (backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
       {
-        analogWrite(TFT_BL, blLevel++);
-        if (blLevel > 1023)
-        {
-          blLevel = 1023;
-          DisplayBacklightInitialised = true;
-        }
+        UpdateDisplay();
       }
+      UpdateSystem();
     }
-  }
-  else
-  {
-    analogWrite(TFT_BL, 1023);
-  }*/
-  
-  if (millis() > DisplayTimer)
-  {
-    DisplayTimer = millis() + DISPLAY_INTERVAL;
-    // Update channel outputs
-    UpdateOutputs();
 
-    // Read input channel status
-    HandleInputs();
-
-    // If we're heading for sleep, don't update the display. Something with the DMA seems to keeep the SPI bus active. Drastically increases sleep current.
-    if (backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
+    if (millis() > CommsTimer)
     {
-      UpdateDisplay();
+      CommsTimer = millis() + COMMS_INTERVAL;
+      ReadIMU();
     }
-    UpdateSystem();
-  }
 
-  if (millis() > CommsTimer)
-  {
-    CommsTimer = millis() + COMMS_INTERVAL;
-    ReadIMU();
-  }
-
-  if (millis() > LogTimer)
-  {
-    LogTimer = millis() + LOG_INTERVAL;
-    RTCyear = rtc.getYear();
-    RTCmonth = rtc.getMonth();
-    RTCday = rtc.getDay();
-    RTChour = rtc.getHours();
-    RTCminute = rtc.getMinutes();
-    RTCsecond = rtc.getSeconds();
-
-    if (!RTCSet && year > RTC_YEAR_THRESHOLD)
+    if (millis() > LogTimer)
     {
-      RTCSet = true;
-      // GPS time must be updated, use that
-      rtc.setDate(day, month, (year % 100));
-      rtc.setTime(hour, minute, second);
+      LogTimer = millis() + LOG_INTERVAL;
       RTCyear = rtc.getYear();
       RTCmonth = rtc.getMonth();
       RTCday = rtc.getDay();
       RTChour = rtc.getHours();
       RTCminute = rtc.getMinutes();
       RTCsecond = rtc.getSeconds();
-      InitialiseSD();
+
+      if (!RTCSet && year > RTC_YEAR_THRESHOLD)
+      {
+        RTCSet = true;
+        // GPS time must be updated, use that
+        rtc.setDate(day, month, (year % 100));
+        rtc.setTime(hour, minute, second);
+        RTCyear = rtc.getYear();
+        RTCmonth = rtc.getMonth();
+        RTCday = rtc.getDay();
+        RTChour = rtc.getHours();
+        RTCminute = rtc.getMinutes();
+        RTCsecond = rtc.getSeconds();
+        InitialiseSD();
+      }
+      else if (RTCSet)
+      {
+        // RTC is set. log SD card data
+        LogData();
+      }
     }
-    else if (RTCSet)
+
+    if (millis() > GPSTimer)
     {
-      // RTC is set. log SD card data
-      LogData();
+      GPSTimer = millis() + GPS_INTERVAL;
+      UpdateSIM7600(GPS);
+      Debug();
     }
-  }
 
-  if (millis() > GPSTimer)
-  {
-    GPSTimer = millis() + GPS_INTERVAL;
-    UpdateSIM7600(GPS);
-    Debug();
-  }
-
-  if (millis() > splashCounter && !backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
-  {
-    DrawBackground();
+    if (millis() > splashCounter && !backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
+    {
+      DrawBackground();
+      bootToSleep = true;
+    }
+    CheckSerial();
   }
   handlePowerState();
-  CheckSerial();
+}
+
+void SleepFunctions()
+{
+  PullResistorSleep();
+  SleepSD();
+  OutputsOff();
+  SleepOutputs();
+  SleepComms();
+  StopDisplay();
+  SleepSystem();
+  IMUWakeMode = false;
 }

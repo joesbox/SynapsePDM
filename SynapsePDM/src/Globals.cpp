@@ -26,6 +26,7 @@
 ChannelConfigUnion ChannelConfigData;
 AnalogueConfigUnion AnalogueConfigData;
 ChannelConfig Channels[NUM_CHANNELS];
+ChannelConfigRuntime ChannelRuntime[NUM_CHANNELS];
 AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 
 uint32_t imuWWtimer;
@@ -34,6 +35,7 @@ uint32_t CommsTimer;
 uint32_t LogTimer;
 uint32_t GPSTimer;
 uint32_t BLTimer;
+uint32_t wakeDebounceTimer;
 int blLevel = 0;
 
 uint8_t RTCyear;
@@ -51,15 +53,24 @@ SPIClass SPI_2(PICO, POCI, SCK2);
 
 uint8_t connectionStatus = 0;
 
+bool pcCommsOK = false;
+
 int recBytesRead = 0;
 
 bool backgroundDrawn = false;
+
+bool bootToSleep = false;
+
+volatile bool IMUWakeMode = false;
+
+volatile bool imuWakePending = false;
 
 void InitialiseChannelData()
 {
   // Initialise channels to default values, ensure they are initially off
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
+    memset(&Channels[i], 0, sizeof(ChannelConfig));
     Channels[i].ChanType = DIG;
     Channels[i].Enabled = false;
     Channels[i].OutputControlPin = channelOutputPins[i];
@@ -82,7 +93,7 @@ void InitialiseChannelData()
     Channels[i].MultiChannel = false;    
     Channels[i].RetryCount = 3;
     Channels[i].InrushDelay = INRUSH_DELAY;
-    Channels[i].Override = false;
+    ChannelRuntime[i].Override = false;
   } 
 }
 
