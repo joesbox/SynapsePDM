@@ -30,6 +30,8 @@ int statusIndex = 0;
 
 bool receivingConfig = false;
 
+bool previousConnectionStatus = false;
+
 uint32_t lastComms = 0;
 
 unsigned int readBufIdx = 0;
@@ -54,6 +56,18 @@ void SleepComms()
 
 void CheckSerial()
 {
+    if (previousConnectionStatus != pcCommsOK)
+    {
+        previousConnectionStatus = pcCommsOK;
+        if (pcCommsOK)
+        {
+            IWatchdog.set(10000 * 1000); // 5 second watchdog when PC comms active (microseconds)
+        }
+        else
+        {
+            IWatchdog.set(2000 * 1000); // 2 second watchdog when PC comms inactive (microseconds)
+        }
+    }
     if ((millis() - lastComms > COMMS_TIMEOUT))
     {
         connectionStatus = 0; // Timeout - reset connection
@@ -74,7 +88,7 @@ void CheckSerial()
         switch (nextByte)
         {
         case COMMAND_ID_BEGIN:
-            Serial.write(COMMAND_ID_CONFIM);            
+            Serial.write(COMMAND_ID_CONFIM);
             break;
 
         case COMMAND_ID_SKIP:
@@ -280,7 +294,14 @@ void CheckSerial()
                 checkSum += twoBytePacket[j];
             }
 
-            memcpy(&twoBytePacket, &SystemParams.ConfigDataCANID, sizeof(SystemParams.ConfigDataCANID));
+            memcpy(&twoBytePacket, &SystemParams.ChannelConfigDataCANID, sizeof(SystemParams.ChannelConfigDataCANID));
+            for (uint j = 0; j < sizeof(twoBytePacket); j++)
+            {
+                statusBuffer[statusIndex++] = twoBytePacket[j];
+                checkSum += twoBytePacket[j];
+            }
+
+            memcpy(&twoBytePacket, &SystemParams.SystemConfigDataCANID, sizeof(SystemParams.SystemConfigDataCANID));
             for (uint j = 0; j < sizeof(twoBytePacket); j++)
             {
                 statusBuffer[statusIndex++] = twoBytePacket[j];
@@ -308,6 +329,10 @@ void CheckSerial()
 
             statusBuffer[statusIndex++] = SystemParams.AllowMotionDetect;
             checkSum += SystemParams.AllowMotionDetect;
+
+            uint8_t mobileSignalBars = csq_to_bars();
+            statusBuffer[statusIndex++] = mobileSignalBars;
+            checkSum += mobileSignalBars;
 
             send = SERIAL_TRAILER & 0xFF;
             checkSum += send;
@@ -506,7 +531,7 @@ void CheckSerial()
                             memcpy(&SystemParams.SystemDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.SystemDataCANID));
                             break;
                         case 3: // Config CAN ID
-                            memcpy(&SystemParams.ConfigDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.ConfigDataCANID));
+                            memcpy(&SystemParams.ChannelConfigDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.ChannelConfigDataCANID));
                             break;
                         case 4: // IMU wake window
                             memcpy(&SystemParams.IMUwakeWindow, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.IMUwakeWindow));
@@ -525,6 +550,9 @@ void CheckSerial()
                             break;
                         case 9: // Allow motion detect wake
                             SystemParams.AllowMotionDetect = configBuffer[CONFIG_DATA_START_INDEX];
+                            break;
+                        case 10: // System config CAN ID
+                            memcpy(&SystemParams.SystemConfigDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.SystemConfigDataCANID));
                             break;
                         default:
                             // System parameter out of range. Ignore packet

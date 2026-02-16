@@ -26,6 +26,7 @@
 
 #include <Arduino.h>
 #include <Globals.h>
+#include <IWatchdog.h>
 
 #define VTEMP 760
 #define AVG_SLOPE 2500
@@ -37,29 +38,30 @@
 
 /// @brief System parameters structure
 struct __attribute__((packed)) SystemParameters
-{  
-  uint8_t CANResEnabled;      // CAN bus termination resistor enabled. 0 = disabled, 1 = enabled
-  uint8_t SystemCurrentLimit; // System current limit in amps
-  uint16_t ChannelDataCANID;  // Channel data CAN ID (transmit)
-  uint16_t SystemDataCANID;   // System data CAN ID (transmit)
-  uint16_t ConfigDataCANID;   // Configuration data CAN ID (receive)
-  uint32_t IMUwakeWindow;     // Wake window for the IMU to determine if something needs to be done or go back to sleep
-  uint8_t MotionDeadTime;     // Time in minutes to ignore motion after wake
-  uint8_t SpeedUnitPref;      // Speed units. 0 = KPH, 1 = MPH
-  uint8_t DistanceUnitPref;   // Distance units. 0 = Metric (m), 1 = Imperial (ft)
-  uint8_t AllowData;          // Allow mobile data
-  uint8_t AllowGPS;           // Allow GPS
-  uint8_t AllowMotionDetect;  // Allow motion detection wake
-  uint8_t Reserved[32];       // Reserved for future use
+{
+  uint8_t CANResEnabled;           // CAN bus termination resistor enabled. 0 = disabled, 1 = enabled
+  uint8_t SystemCurrentLimit;      // System current limit in amps
+  uint16_t ChannelDataCANID;       // Channel data CAN ID. Response is this ID + 1.
+  uint16_t SystemDataCANID;        // System status data CAN ID. Two messages are sent, the second is on the next ID.
+  uint16_t SystemConfigDataCANID;  // System config data CAN ID.
+  uint16_t ChannelConfigDataCANID; // Configuration data CAN ID. Message on this ID is basic control. Subsequent two messages for further channel configuration.
+  uint32_t IMUwakeWindow;          // Wake window for the IMU to determine if something needs to be done or go back to sleep
+  uint8_t MotionDeadTime;          // Time in minutes to ignore motion after wake
+  uint8_t SpeedUnitPref;           // Speed units. 0 = KPH, 1 = MPH
+  uint8_t DistanceUnitPref;        // Distance units. 0 = Metric (m), 1 = Imperial (ft)
+  uint8_t AllowData;               // Allow mobile data
+  uint8_t AllowGPS;                // Allow GPS
+  uint8_t AllowMotionDetect;       // Allow motion detection wake
+  uint8_t Reserved[30];            // Reserved for future use
 };
 
 /// @brief System runtime data structure
-struct __attribute__((packed))SystemRuntime
+struct __attribute__((packed)) SystemRuntime
 {
-    int32_t SystemTemperature;
-    float VBatt;
-    float SystemCurrent;
-    uint16_t ErrorFlags;
+  int32_t SystemTemperature;
+  float VBatt;
+  float SystemCurrent;
+  uint16_t ErrorFlags;
 };
 
 /// @brief System parameters

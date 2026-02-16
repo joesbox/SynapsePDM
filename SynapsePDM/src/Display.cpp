@@ -44,6 +44,9 @@ static bool prevSDOK = false, prevGPSOK = false, initIcons = false, prevGPSEnabl
 static uint8_t prevMotionStatus = 0;
 static int prevMin = 0;
 static uint16_t systemErrorFlags = 0;
+static uint8_t prevBars = 0;
+
+bool invalidateDisplay = false;
 
 const int lights[14][4] = {
     {23, 129, 44, 90},
@@ -114,7 +117,6 @@ void InitialiseDisplay()
   digitalWrite(TFT_RST, LOW);
   delay(20);
   digitalWrite(TFT_RST, HIGH);
-  delay(120); // give controller time to boot
   tft.begin();
   tft.initDMA();
   spix = tft.getSPIinstance();
@@ -140,7 +142,6 @@ void StartDisplay()
   digitalWrite(TFT_RST, LOW);
   delay(20);
   digitalWrite(TFT_RST, HIGH);
-  delay(120); // give controller time to boot
   tft.begin();
   tft.initDMA();
   spix = tft.getSPIinstance();
@@ -241,6 +242,36 @@ void UpdateDisplay()
   spix.begin();
   tft.startWrite();
 
+  if (invalidateDisplay)
+  {
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+      prevEnabled[i] = !Channels[i].Enabled;
+      prevErrorFlags[i] = -1;
+      prevCurrentValues[i] = -1.0F;
+
+      // Calculate the width of the channel name
+      int chanNameWidth = tft.textWidth(Channels[i].ChannelName);
+      int chanNameX = channelName[i][0] + (5 - chanNameWidth) / 2;
+
+      // Ensure channel name is null-terminated
+      char safeName[4];
+      memcpy(safeName, Channels[i].ChannelName, 3);
+      safeName[3] = '\0';
+
+      tft.fillRect(chanNameX, channelName[i][1], chanNameWidth, tft.fontHeight(), TFT_BLACK);
+      tft.setCursor(chanNameX, channelName[i][1]);
+      tft.print(safeName);
+    }
+
+    prevSDOK = !SDCardOK;
+    prevGPSOK = !GPSFix;
+    prevMotionStatus = !SystemParams.AllowMotionDetect;
+    systemErrorFlags = !SystemRuntimeParams.ErrorFlags;
+    previousConnectionStatus = !pcCommsOK;
+    invalidateDisplay = false;
+  }
+
   if (!initIcons)
   {
     initIcons = true;
@@ -261,7 +292,7 @@ void UpdateDisplay()
     {
       tft.fillRect(47, 4, ICON_WIDTH, ICON_HEIGHT, TFT_BLACK);
     }
-    
+
     if (SystemParams.AllowMotionDetect != 0)
     {
       tft.pushImage(99, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)motion_ok);
@@ -270,8 +301,10 @@ void UpdateDisplay()
     {
       tft.pushImage(99, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)motion_error);
     }
+
+    tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)zero_bar);
     char timeString[6];
-    snprintf(timeString, sizeof(timeString), "%02d:%02d", RTChour, RTCminute);
+    snprintf(timeString, sizeof(timeString), "%02d:%02d", rtc.getHours(), rtc.getMinutes());
     tft.setCursor(271, 21);
     tft.print(timeString);
   }
@@ -336,7 +369,7 @@ void UpdateDisplay()
   }
 
   // Check for GPS status change
-  if (GPSFix != prevGPSOK  || SystemParams.AllowGPS != prevGPSEnable)
+  if (GPSFix != prevGPSOK || SystemParams.AllowGPS != prevGPSEnable)
   {
     if (SystemParams.AllowGPS)
     {
@@ -375,17 +408,18 @@ void UpdateDisplay()
   if (SystemRuntimeParams.ErrorFlags != systemErrorFlags)
   {
     int16_t textWidth = tft.textWidth("EFFFF");
+    int16_t textHeight = tft.fontHeight();
     if (SystemRuntimeParams.ErrorFlags != 0)
     {
       tft.setTextColor(TFT_ORANGE, TFT_BLACK);
-      tft.fillRect(169, 4, textWidth + 5, ICON_HEIGHT, TFT_BLACK);
-      tft.setCursor(169, 21);
+      tft.fillRect(269, 40, textWidth + 5, textHeight, TFT_BLACK);
+      tft.setCursor(269, 40);
       tft.printf("E%04X", SystemRuntimeParams.ErrorFlags);
       tft.setTextColor(TFT_WHITE, TFT_BLACK);
     }
     else
     {
-      tft.fillRect(169, 4, textWidth + 5, ICON_HEIGHT, TFT_BLACK);
+      tft.fillRect(269, 40, textWidth + 5, textHeight, TFT_BLACK);
     }
     systemErrorFlags = SystemRuntimeParams.ErrorFlags;
   }
@@ -404,13 +438,41 @@ void UpdateDisplay()
     previousConnectionStatus = pcCommsOK;
   }
 
-  if (prevMin != RTCminute)
+  // Check for signal bars change
+  int bars = csq_to_bars();
+  if (bars != prevBars)
+  {
+    switch (bars)
+    {
+    case 0:
+      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)zero_bar);
+      break;
+    case 1:
+      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)one_bar);
+      break;
+    case 2:
+      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)two_bar);
+      break;
+    case 3:
+      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)three_bar);
+      break;
+    case 4:
+      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)four_bar);
+      break;
+    case 5:
+      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)five_bar);
+      break;
+    }
+    prevBars = bars;
+  }
+
+  if (prevMin != rtc.getMinutes())
   {
     char timeString[6];
-    snprintf(timeString, sizeof(timeString), "%02d:%02d", RTChour, RTCminute);
+    snprintf(timeString, sizeof(timeString), "%02d:%02d", rtc.getHours(), rtc.getMinutes());
     tft.fillRect(271, 21, 40, 15, TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    prevMin = RTCminute;
+    prevMin = rtc.getMinutes();
     tft.setCursor(271, 21);
     tft.print(timeString);
   }

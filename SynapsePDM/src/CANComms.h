@@ -29,13 +29,15 @@
 #include "STM32_CAN.h"
 #include <CANDB.h>
 
+#define MAX_CURRENT_X10 170
+
 // Initialise CAN bus
 void InitialiseCAN();
 
-// Callback for receiving CAN messages
-void canSniff(const CAN_message_t &msg);
+/// @brief Read CAN messages
+void ReadCANMessages();
 
-// Broadcast CAN updates
-void SendCANMessages();
+// Broadcast system status CAN update
+void BroadcastSystemStatus();
 
 #endif

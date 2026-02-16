@@ -34,6 +34,7 @@ uint32_t BytesStored;
 bool UndervoltageLatch;
 bool StorageCRCValid;
 bool AnalogueCRCValid;
+bool SDFileOpen = false; // Track whether SD file is currently open
 
 CircularBuffer<String, 10> logs;
 
@@ -41,54 +42,73 @@ uint32_t lineCount;
 
 M95640R EEPROMext(&SPI_2, CS1);
 
-const char systemHeader[] = "Date,Time,Backup Battery SoC,System Temp,System Voltage,System Current,Error Flags,IMU Accel X,IMU Accel Y,IMU Accel Z,IMU Gyro X,IMU Gyro Y,IMU Gyro Z,Lat,Lon,Alt,Speed,Accuracy,";
+const char systemHeader[] = "Date,Time,System Temp,System Voltage,System Current,Error Flags,IMU Accel X,IMU Accel Y,IMU Accel Z,IMU Gyro X,IMU Gyro Y,IMU Gyro Z,Lat,Lon,Alt,Speed,Accuracy,";
 const char channelHeader[] = "Channel Type,Enabled,Current Value,Current Threshold High,Current Threshold Low,Multi-Channel,Group Number,Channel Error Flags";
 
 long startMillis;
 long endMillis;
 
-//#define DEBUG
+// #define DEBUG
 
 void SaveChannelConfig()
 {
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
-    // Reset EEPROM index
     EEPROMindex = 0;
 
     // Copy current channel info to storage structure
     memcpy(&ChannelConfigData.data, &Channels, sizeof(Channels));
 
-    // Calculate stored config bytes CRC
-    uint32_t checksum = CRC32::calculate(ChannelConfigData.dataBytes, sizeof(ChannelConfigData.dataBytes));
+    // Calculate CRC
+    uint32_t checksum = CRC32::calculate(
+        ChannelConfigData.dataBytes,
+        sizeof(ChannelConfigData.dataBytes));
 
-    // Store data and CRC value
-    uint8_t int32Buf[4];
-    int32Buf[0] = (checksum >> 24) & 0xFF;
-    int32Buf[1] = (checksum >> 16) & 0xFF;
-    int32Buf[2] = (checksum >> 8) & 0xFF;
-    int32Buf[3] = checksum & 0xFF;
+    const uint8_t *src = ChannelConfigData.dataBytes;
+    size_t bytesRemaining = sizeof(ChannelConfigData.dataBytes);
 
-    for (unsigned int i = 0; i < sizeof(ChannelConfigData.dataBytes); i++)
+    uint8_t pageBuf[EEPROM_PAGE_SIZE];
+
+    while (bytesRemaining > 0)
     {
-        EEPROMext.EepromWrite(EEPROMindex, 1, &ChannelConfigData.dataBytes[i]);
+        // How many bytes until the next page boundary?
+        uint8_t pageOffset = EEPROMindex % EEPROM_PAGE_SIZE;
+        uint8_t spaceInPage = EEPROM_PAGE_SIZE - pageOffset;
+
+        uint8_t writeLen = (bytesRemaining < spaceInPage)
+                               ? bytesRemaining
+                               : spaceInPage;
+
+        memcpy(pageBuf, src, writeLen);
+
+        EEPROMext.EepromWrite(EEPROMindex, writeLen, pageBuf);
         EEPROMext.EepromWaitEndWriteOperation();
-        EEPROMindex++;
+
+        EEPROMindex += writeLen;
+        src += writeLen;
+        bytesRemaining -= writeLen;
     }
+
+    // Write CRC (4 bytes) — will naturally page-align if needed
+    uint8_t crcBuf[4];
+    crcBuf[0] = (checksum >> 24) & 0xFF;
+    crcBuf[1] = (checksum >> 16) & 0xFF;
+    crcBuf[2] = (checksum >> 8) & 0xFF;
+    crcBuf[3] = checksum & 0xFF;
+
+    EEPROMext.EepromWrite(EEPROMindex, sizeof(crcBuf), crcBuf);
+    EEPROMext.EepromWaitEndWriteOperation();
 
 #ifdef DEBUG
     Serial.print("Channel Checksum written: ");
     Serial.print(checksum, HEX);
-    Serial.print(", at index: ");
-    Serial.println(EEPROMindex);
+    Serial.print(", final index: ");
+    Serial.println(EEPROMindex + sizeof(crcBuf));
     Serial.print("EEPROM status register: ");
     Serial.println(EEPROMext.EepromStatus());
 #endif
-    EEPROMext.EepromWrite(EEPROMindex, sizeof(checksum), int32Buf);
-    EEPROMext.EepromWaitEndWriteOperation();
 
-    // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
     SPI_2.end();
@@ -98,28 +118,40 @@ bool LoadChannelConfig()
 {
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
-    // Set valid CRC flag to false
+
     bool validCRC = false;
-
-    // Reset index
     EEPROMindex = 0;
-
-    // Reset CRC result
-    uint32_t result = 0;
 
     uint8_t int32Buf[4];
 
-    for (unsigned int i = 0; i < sizeof(ChannelConfigData.dataBytes); i++)
-    {
-        EEPROMext.EepromRead(EEPROMindex, 1, &ChannelConfigData.dataBytes[i]);
-        EEPROMindex++;
-    }
-    EEPROMext.EepromRead(EEPROMindex, sizeof(result), int32Buf);
+    // Read channel config data in 32-byte chunks
+    const uint16_t totalSize = sizeof(ChannelConfigData.dataBytes);
+    uint16_t bytesRemaining = totalSize;
+    uint16_t addr = EEPROMindex;
+    uint8_t *dst = ChannelConfigData.dataBytes;
 
-    result = (int32_t(int32Buf[0]) << 24) |
-             (int32_t(int32Buf[1]) << 16) |
-             (int32_t(int32Buf[2]) << 8) |
-             int32_t(int32Buf[3]);
+    while (bytesRemaining > 0)
+    {
+        uint8_t chunk =
+            (bytesRemaining > 32) ? 32 : bytesRemaining;
+
+        EEPROMext.EepromRead(addr, chunk, dst);
+
+        addr += chunk;
+        dst += chunk;
+        bytesRemaining -= chunk;
+    }
+
+    EEPROMindex += totalSize;
+
+    // Read stored CRC
+    EEPROMext.EepromRead(EEPROMindex, sizeof(int32Buf), int32Buf);
+
+    uint32_t result =
+        (uint32_t(int32Buf[0]) << 24) |
+        (uint32_t(int32Buf[1]) << 16) |
+        (uint32_t(int32Buf[2]) << 8) |
+        (uint32_t(int32Buf[3]));
 
 #ifdef DEBUG
     Serial.print("Channel Checksum read: ");
@@ -129,18 +161,19 @@ bool LoadChannelConfig()
     Serial.print("EEPROM status register: ");
     Serial.println(EEPROMext.EepromStatus());
 #endif
-    // Calculate read config bytes CRC
-    uint32_t checksum = CRC32::calculate(ChannelConfigData.dataBytes, sizeof(ChannelConfigData.dataBytes));
 
-    // Check stored CRC vs calculated CRC
+    // Calculate CRC
+    uint32_t checksum = CRC32::calculate(
+        ChannelConfigData.dataBytes,
+        sizeof(ChannelConfigData.dataBytes));
+
+    // Validate CRC
     if (result == checksum)
     {
         validCRC = true;
-        // Copy channel info
         memcpy(&Channels, &ChannelConfigData.data, sizeof(Channels));
     }
 
-    // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
     SPI_2.end();
@@ -153,7 +186,7 @@ void SaveSystemConfig()
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
-    // Reset EEPROM index, system info comes straight after channel info
+    // System info comes straight after channel info + CRC
     EEPROMindex = sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t);
 
 #ifdef DEBUG
@@ -167,28 +200,50 @@ void SaveSystemConfig()
     // Copy current system info to storage structure
     memcpy(&SystemConfigData.data, &SystemParams, sizeof(SystemParams));
 
-    // Calculate stored config bytes CRC
-    uint32_t checksum = CRC32::calculate(SystemConfigData.dataBytes, sizeof(SystemConfigData.dataBytes));
+    // Calculate CRC
+    uint32_t checksum = CRC32::calculate(
+        SystemConfigData.dataBytes,
+        sizeof(SystemConfigData.dataBytes));
 
-    // Store data and CRC value
-    uint8_t int32Buf[4];
-    int32Buf[0] = (checksum >> 24) & 0xFF;
-    int32Buf[1] = (checksum >> 16) & 0xFF;
-    int32Buf[2] = (checksum >> 8) & 0xFF;
-    int32Buf[3] = checksum & 0xFF;
+    const uint8_t *src = SystemConfigData.dataBytes;
+    size_t bytesRemaining = sizeof(SystemConfigData.dataBytes);
 
-    for (unsigned int i = 0; i < sizeof(SystemConfigData.dataBytes); i++)
+    uint8_t pageBuf[EEPROM_PAGE_SIZE];
+
+    while (bytesRemaining > 0)
     {
-        EEPROMext.EepromWrite(EEPROMindex, 1, &SystemConfigData.dataBytes[i]);
+        uint8_t pageOffset = EEPROMindex % EEPROM_PAGE_SIZE;
+        uint8_t spaceInPage = EEPROM_PAGE_SIZE - pageOffset;
+
+        uint8_t writeLen = (bytesRemaining < spaceInPage)
+                               ? bytesRemaining
+                               : spaceInPage;
+
+        memcpy(pageBuf, src, writeLen);
+
+        EEPROMext.EepromWrite(EEPROMindex, writeLen, pageBuf);
         EEPROMext.EepromWaitEndWriteOperation();
-        EEPROMindex++;
+
+        EEPROMindex += writeLen;
+        src += writeLen;
+        bytesRemaining -= writeLen;
     }
+
+    // Write CRC (4 bytes)
+    uint8_t crcBuf[4];
+    crcBuf[0] = (checksum >> 24) & 0xFF;
+    crcBuf[1] = (checksum >> 16) & 0xFF;
+    crcBuf[2] = (checksum >> 8) & 0xFF;
+    crcBuf[3] = checksum & 0xFF;
+
+    EEPROMext.EepromWrite(EEPROMindex, sizeof(crcBuf), crcBuf);
+    EEPROMext.EepromWaitEndWriteOperation();
 
 #ifdef DEBUG
     Serial.print("System Checksum written: ");
     Serial.print(checksum, HEX);
-    Serial.print(", at index: ");
-    Serial.println(EEPROMindex);
+    Serial.print(", final index: ");
+    Serial.println(EEPROMindex + sizeof(crcBuf));
     Serial.print("EEPROM status register: ");
     Serial.println(EEPROMext.EepromStatus());
     Serial.print("SystemParams size: ");
@@ -202,10 +257,7 @@ void SaveSystemConfig()
     Serial.print(" ");
     Serial.println(SystemConfigData.dataBytes[3], HEX);
 #endif
-    EEPROMext.EepromWrite(EEPROMindex, sizeof(checksum), int32Buf);
-    EEPROMext.EepromWaitEndWriteOperation();
 
-    // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
     SPI_2.end();
@@ -215,10 +267,10 @@ bool LoadSystemConfig()
 {
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
-    // Set valid CRC flag to false
+
     bool validCRC = false;
 
-    // Reset EEPROM index, system info comes straight after channel info
+    // System config follows channel config + CRC
     EEPROMindex = sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t);
 
 #ifdef DEBUG
@@ -228,22 +280,36 @@ bool LoadSystemConfig()
     Serial.println(sizeof(ChannelConfigData.dataBytes));
 #endif
 
-    // Reset CRC result
-    uint32_t result = 0;
-
     uint8_t int32Buf[4];
 
-    for (unsigned int i = 0; i < sizeof(SystemConfigData.dataBytes); i++)
-    {
-        EEPROMext.EepromRead(EEPROMindex, 1, &SystemConfigData.dataBytes[i]);
-        EEPROMindex++;
-    }
-    EEPROMext.EepromRead(EEPROMindex, sizeof(result), int32Buf);
+    // Read system config data in 32-byte chunks
+    const uint16_t totalSize = sizeof(SystemConfigData.dataBytes);
+    uint16_t bytesRemaining = totalSize;
+    uint16_t addr = EEPROMindex;
+    uint8_t *dst = SystemConfigData.dataBytes;
 
-    result = (int32_t(int32Buf[0]) << 24) |
-             (int32_t(int32Buf[1]) << 16) |
-             (int32_t(int32Buf[2]) << 8) |
-             int32_t(int32Buf[3]);
+    while (bytesRemaining > 0)
+    {
+        uint8_t chunk =
+            (bytesRemaining > 32) ? 32 : bytesRemaining;
+
+        EEPROMext.EepromRead(addr, chunk, dst);
+
+        addr += chunk;
+        dst += chunk;
+        bytesRemaining -= chunk;
+    }
+
+    EEPROMindex += totalSize;
+
+    // Read stored CRC
+    EEPROMext.EepromRead(EEPROMindex, sizeof(int32Buf), int32Buf);
+
+    uint32_t result =
+        (uint32_t(int32Buf[0]) << 24) |
+        (uint32_t(int32Buf[1]) << 16) |
+        (uint32_t(int32Buf[2]) << 8) |
+        (uint32_t(int32Buf[3]));
 
 #ifdef DEBUG
     Serial.print("System checksum read: ");
@@ -253,8 +319,11 @@ bool LoadSystemConfig()
     Serial.print("EEPROM status register: ");
     Serial.println(EEPROMext.EepromStatus());
 #endif
-    // Calculate read config bytes CRC
-    uint32_t checksum = CRC32::calculate(SystemConfigData.dataBytes, sizeof(SystemConfigData.dataBytes));
+
+    // Calculate CRC
+    uint32_t checksum = CRC32::calculate(
+        SystemConfigData.dataBytes,
+        sizeof(SystemConfigData.dataBytes));
 
 #ifdef DEBUG
     Serial.print("System checksum calculated: ");
@@ -271,15 +340,13 @@ bool LoadSystemConfig()
     Serial.println(SystemConfigData.dataBytes[3], HEX);
 #endif
 
-    // Check stored CRC vs calculated CRC
+    // Validate CRC
     if (result == checksum)
     {
         validCRC = true;
-        // Copy system info
         memcpy(&SystemParams, &SystemConfigData.data, sizeof(SystemParams));
     }
 
-    // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
     SPI_2.end();
@@ -290,6 +357,7 @@ bool LoadSystemConfig()
 void SaveStorageConfig()
 {
     SPI_2.begin();
+
     if (StorageParams.LogFrequency == 0)
     {
         StorageParams.LogFrequency = DEFAULT_LOG_FREQUENCY;
@@ -299,30 +367,50 @@ void SaveStorageConfig()
     {
         StorageParams.MaxLogLength = DEFAULT_LOG_LINES;
     }
+
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
-    // Reset EEPROM index, storage info comes straight after system info
-    EEPROMindex = sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) + sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t);
+    // Storage config follows channel + CRC + system + CRC
+    EEPROMindex =
+        sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) +
+        sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t);
 
     // Copy current storage info to storage structure
     memcpy(&StorageConfigData.data, &StorageParams, sizeof(StorageParameters));
 
-    // Calculate stored config bytes CRC
-    uint32_t checksum = CRC32::calculate(StorageConfigData.dataBytes, sizeof(StorageConfigData.dataBytes));
+    // Calculate CRC
+    uint32_t checksum = CRC32::calculate(
+        StorageConfigData.dataBytes,
+        sizeof(StorageConfigData.dataBytes));
 
-    // Store data and CRC value
-    uint8_t int32Buf[4];
-    int32Buf[0] = (checksum >> 24) & 0xFF;
-    int32Buf[1] = (checksum >> 16) & 0xFF;
-    int32Buf[2] = (checksum >> 8) & 0xFF;
-    int32Buf[3] = checksum & 0xFF;
+    uint8_t int32Buf[4] =
+        {
+            (uint8_t)(checksum >> 24),
+            (uint8_t)(checksum >> 16),
+            (uint8_t)(checksum >> 8),
+            (uint8_t)(checksum)};
 
-    for (unsigned int i = 0; i < sizeof(StorageConfigData.dataBytes); i++)
+    // Write storage config in 32-byte page-safe chunks
+    uint16_t addr = EEPROMindex;
+    const uint8_t *src = StorageConfigData.dataBytes;
+    uint16_t bytesRemaining = sizeof(StorageConfigData.dataBytes);
+
+    while (bytesRemaining > 0)
     {
-        EEPROMext.EepromWrite(EEPROMindex, 1, &StorageConfigData.dataBytes[i]);
+        uint8_t pageOffset = addr % 32;
+        uint8_t spaceInPage = 32 - pageOffset;
+        uint8_t writeLen =
+            (bytesRemaining < spaceInPage) ? bytesRemaining : spaceInPage;
+
+        EEPROMext.EepromWrite(addr, writeLen, (uint8_t *)src);
         EEPROMext.EepromWaitEndWriteOperation();
-        EEPROMindex++;
+
+        addr += writeLen;
+        src += writeLen;
+        bytesRemaining -= writeLen;
     }
+
+    EEPROMindex += sizeof(StorageConfigData.dataBytes);
 
 #ifdef DEBUG
     Serial.print("Storage Checksum written: ");
@@ -332,10 +420,11 @@ void SaveStorageConfig()
     Serial.print("EEPROM status register: ");
     Serial.println(EEPROMext.EepromStatus());
 #endif
-    EEPROMext.EepromWrite(EEPROMindex, sizeof(checksum), int32Buf);
+
+    // Write CRC
+    EEPROMext.EepromWrite(EEPROMindex, sizeof(int32Buf), int32Buf);
     EEPROMext.EepromWaitEndWriteOperation();
 
-    // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
     SPI_2.end();
@@ -345,28 +434,44 @@ bool LoadStorageConfig()
 {
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
-    // Set valid CRC flag to false
+
     bool validCRC = false;
 
-    // Reset EEPROM index, storage info comes straight after channel info
-    EEPROMindex = sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) + sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t);
-
-    // Reset CRC result
-    uint32_t result = 0;
+    // Storage config follows channel + CRC + system + CRC
+    EEPROMindex =
+        sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) +
+        sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t);
 
     uint8_t int32Buf[4];
 
-    for (unsigned int i = 0; i < sizeof(StorageConfigData.dataBytes); i++)
-    {
-        EEPROMext.EepromRead(EEPROMindex, 1, &StorageConfigData.dataBytes[i]);
-        EEPROMindex++;
-    }
-    EEPROMext.EepromRead(EEPROMindex, sizeof(result), int32Buf);
+    // Read storage config data in 32-byte chunks
+    const uint16_t totalSize = sizeof(StorageConfigData.dataBytes);
+    uint16_t bytesRemaining = totalSize;
+    uint16_t addr = EEPROMindex;
+    uint8_t *dst = StorageConfigData.dataBytes;
 
-    result = (int32_t(int32Buf[0]) << 24) |
-             (int32_t(int32Buf[1]) << 16) |
-             (int32_t(int32Buf[2]) << 8) |
-             int32_t(int32Buf[3]);
+    while (bytesRemaining > 0)
+    {
+        uint8_t chunk =
+            (bytesRemaining > 32) ? 32 : bytesRemaining;
+
+        EEPROMext.EepromRead(addr, chunk, dst);
+
+        addr += chunk;
+        dst += chunk;
+        bytesRemaining -= chunk;
+    }
+
+    EEPROMindex += totalSize;
+
+    // Read stored CRC
+    EEPROMext.EepromRead(EEPROMindex, sizeof(int32Buf), int32Buf);
+
+    uint32_t result =
+        (uint32_t(int32Buf[0]) << 24) |
+        (uint32_t(int32Buf[1]) << 16) |
+        (uint32_t(int32Buf[2]) << 8) |
+        (uint32_t(int32Buf[3]));
 
 #ifdef DEBUG
     Serial.print("Storage checksum read: ");
@@ -376,17 +481,20 @@ bool LoadStorageConfig()
     Serial.print("EEPROM status register: ");
     Serial.println(EEPROMext.EepromStatus());
 #endif
-    // Calculate read config bytes CRC
-    uint32_t checksum = CRC32::calculate(StorageConfigData.dataBytes, sizeof(StorageConfigData.dataBytes));
 
-    // Check stored CRC vs calculated CRC
+    // Calculate CRC
+    uint32_t checksum = CRC32::calculate(
+        StorageConfigData.dataBytes,
+        sizeof(StorageConfigData.dataBytes));
+
+    // Validate CRC
     if (result == checksum)
     {
         validCRC = true;
-        // Copy storage info
+
         memcpy(&StorageParams, &StorageConfigData.data, sizeof(StorageParams));
 
-        // Load the circular buffer with the log files we're currently keeping
+        // Rebuild circular buffer of log files
         for (int i = 0; i < 10; i++)
         {
             if (strlen(StorageParams.LogFileNames[i]) != 0)
@@ -396,7 +504,6 @@ bool LoadStorageConfig()
         }
     }
 
-    // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
     SPI_2.end();
@@ -409,30 +516,48 @@ void SaveAnalogueConfig()
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
-    // Reset EEPROM index, analogue config comes straight after storage info
-    EEPROMindex = sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) + sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t) +
-                  sizeof(StorageConfigData.dataBytes) + sizeof(uint32_t);
+    // Analogue config follows channel + CRC + system + CRC + storage + CRC
+    EEPROMindex =
+        sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) +
+        sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t) +
+        sizeof(StorageConfigData.dataBytes) + sizeof(uint32_t);
 
     // Copy current analogue input info to storage structure
     memcpy(&AnalogueConfigData.data, &AnalogueIns, sizeof(AnalogueIns));
 
-    // Calculate stored config bytes CRC
-    uint32_t checksum = CRC32::calculate(AnalogueConfigData.dataBytes, sizeof(AnalogueConfigData.dataBytes));
+    // Calculate CRC
+    uint32_t checksum = CRC32::calculate(
+        AnalogueConfigData.dataBytes,
+        sizeof(AnalogueConfigData.dataBytes));
 
-    // Store data and CRC value
-    uint8_t int32Buf[4];
-    int32Buf[0] = (checksum >> 24) & 0xFF;
-    int32Buf[1] = (checksum >> 16) & 0xFF;
-    int32Buf[2] = (checksum >> 8) & 0xFF;
-    int32Buf[3] = checksum & 0xFF;
+    uint8_t int32Buf[4] =
+        {
+            (uint8_t)(checksum >> 24),
+            (uint8_t)(checksum >> 16),
+            (uint8_t)(checksum >> 8),
+            (uint8_t)(checksum)};
 
-    // Store data
-    for (unsigned int i = 0; i < sizeof(AnalogueConfigData.dataBytes); i++)
+    // Write analogue config data in 32-byte page-safe chunks
+    uint16_t addr = EEPROMindex;
+    const uint8_t *src = AnalogueConfigData.dataBytes;
+    uint16_t bytesRemaining = sizeof(AnalogueConfigData.dataBytes);
+
+    while (bytesRemaining > 0)
     {
-        EEPROMext.EepromWrite(EEPROMindex, 1, &AnalogueConfigData.dataBytes[i]);
+        uint8_t pageOffset = addr % 32;
+        uint8_t spaceInPage = 32 - pageOffset;
+        uint8_t writeLen =
+            (bytesRemaining < spaceInPage) ? bytesRemaining : spaceInPage;
+
+        EEPROMext.EepromWrite(addr, writeLen, (uint8_t *)src);
         EEPROMext.EepromWaitEndWriteOperation();
-        EEPROMindex++;
+
+        addr += writeLen;
+        src += writeLen;
+        bytesRemaining -= writeLen;
     }
+
+    EEPROMindex += sizeof(AnalogueConfigData.dataBytes);
 
 #ifdef DEBUG
     Serial.print("Analogue Checksum written: ");
@@ -443,10 +568,10 @@ void SaveAnalogueConfig()
     Serial.println(EEPROMext.EepromStatus());
 #endif
 
-    EEPROMext.EepromWrite(EEPROMindex, sizeof(checksum), int32Buf);
+    // Write CRC
+    EEPROMext.EepromWrite(EEPROMindex, sizeof(int32Buf), int32Buf);
     EEPROMext.EepromWaitEndWriteOperation();
 
-    // Reset EEPROM index
     EEPROMindex = 0;
     EEPROMext.end();
     SPI_2.end();
@@ -461,24 +586,38 @@ bool LoadAnalogueConfig()
 
     // Reset EEPROM index, analogue config comes straight after storage info
     EEPROMindex = sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) + sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t) +
-                  sizeof(StorageConfigData.data) + sizeof(uint32_t);
+                  sizeof(StorageConfigData.dataBytes) + sizeof(uint32_t);
 
     // Reset CRC result
     uint32_t result = 0;
 
     uint8_t int32Buf[4];
+    // Read analogue config data in 32-byte chunks (page-safe)
+    const uint16_t totalSize = sizeof(AnalogueConfigData.dataBytes);
+    uint16_t bytesRemaining = totalSize;
+    uint16_t addr = EEPROMindex;
+    uint8_t *dst = AnalogueConfigData.dataBytes;
 
-    for (unsigned int i = 0; i < sizeof(AnalogueConfigData.dataBytes); i++)
+    while (bytesRemaining > 0)
     {
-        EEPROMext.EepromRead(EEPROMindex, 1, &AnalogueConfigData.dataBytes[i]);
-        EEPROMindex++;
-    }
-    EEPROMext.EepromRead(EEPROMindex, sizeof(result), int32Buf);
+        uint8_t chunk = (bytesRemaining > 32) ? 32 : bytesRemaining;
 
-    result = (int32_t(int32Buf[0]) << 24) |
-             (int32_t(int32Buf[1]) << 16) |
-             (int32_t(int32Buf[2]) << 8) |
-             int32_t(int32Buf[3]);
+        EEPROMext.EepromRead(addr, chunk, dst);
+
+        addr += chunk;
+        dst += chunk;
+        bytesRemaining -= chunk;
+    }
+
+    EEPROMindex += totalSize;
+
+    // Read stored CRC
+    EEPROMext.EepromRead(EEPROMindex, sizeof(int32Buf), int32Buf);
+
+    result = (uint32_t(int32Buf[0]) << 24) |
+             (uint32_t(int32Buf[1]) << 16) |
+             (uint32_t(int32Buf[2]) << 8) |
+             (uint32_t(int32Buf[3]));
 #ifdef DEBUG
     Serial.print("Analogue Checksum read: ");
     Serial.print(result, HEX);
@@ -524,7 +663,6 @@ void CleanEEPROM()
     SPI_2.end();
 }
 
-
 void InitialiseStorageData()
 {
     if (StorageParams.LogFrequency == 0)
@@ -566,7 +704,7 @@ void InitialiseSD()
     if (SDCardOK)
     {
         // Filename format is: YYYY-MM-DD_HH-MM-SS.csv
-        sprintf(fileName, "%04d-%02d-%02d_%02d-%02d-%02d.csv", (2000 + RTCyear), RTCmonth, RTCday, RTChour, RTCminute, RTCsecond);
+        sprintf(fileName, "%04d-%02d-%02d_%02d-%02d-%02d.csv", (2000 + rtc.getYear()), rtc.getMonth(), rtc.getDay(), rtc.getHours(), rtc.getMinutes(), rtc.getSeconds());
 
         // Create new file
         dataFile = SD.open(fileName, FILE_WRITE);
@@ -592,6 +730,9 @@ void InitialiseSD()
                 logs.unshift(fileName);
             }
 
+            // Clear all log file names first
+            memset(StorageParams.LogFileNames, 0, sizeof(StorageParams.LogFileNames));
+
             // Copy the circular buffer to storage parameters and save to EEPROM
             for (int i = 0; i < logs.size(); i++)
             {
@@ -601,6 +742,7 @@ void InitialiseSD()
             SaveStorageConfig();
 
             BytesStored = 0;
+            SDFileOpen = true;
 
             // Print the file header to the buffer
             BytesStored += dataFile.print(systemHeader);
@@ -621,6 +763,7 @@ void InitialiseSD()
         else
         {
             SDCardOK = false;
+            SDFileOpen = false;
         }
 
 #ifdef DEBUG
@@ -645,7 +788,7 @@ void LogData()
     if (!(SystemRuntimeParams.ErrorFlags & UNDERVOLTAGE) && SDCardOK)
     {
         // Timestamp
-        snprintf(timeStamp, sizeof(timeStamp), "%04d-%02d-%02d,%02d:%02d:%02d.%04d,", (2000 + RTCyear), RTCmonth, RTCday, RTChour, RTCminute, RTCsecond, millis() % 1000);
+        snprintf(timeStamp, sizeof(timeStamp), "%04d-%02d-%02d,%02d:%02d:%02d.%04d,", (2000 + rtc.getYear()), rtc.getMonth(), rtc.getDay(), rtc.getHours(), rtc.getMinutes(), rtc.getSeconds(), rtc.getSubSeconds() % 1000);
         writtenBytes = dataFile.write(timeStamp, strlen(timeStamp));
         if (writtenBytes == 0)
         {
@@ -728,6 +871,7 @@ void LogData()
         if (lineCount == StorageParams.MaxLogLength)
         {
             dataFile.close();
+            SDFileOpen = false;
             InitialiseSD();
         }
     }
@@ -750,11 +894,143 @@ void LogData()
     }
 }
 
+void ResumeSD()
+{
+    // Attempt to begin SD if needed
+    if (!SDCardOK)
+    {
+        SD.setDx(PC8, PC9, PC10, PC11);
+        SD.setCMD(PD2);
+        SD.setCK(PC12);
+        SDCardOK = SD.begin();
+        HAL_NVIC_DisableIRQ(SDIO_IRQn);
+        HAL_NVIC_ClearPendingIRQ(SDIO_IRQn);
+        HAL_NVIC_EnableIRQ(SDIO_IRQn);
+        HAL_NVIC_SetPriority(SDIO_IRQn, 0, 0);
+        if (!SDCardOK)
+        {
+#ifdef DEBUG
+            Serial.println("SD Begin error during resume");
+#endif
+            return;
+        }
+    }
+
+    if (SDCardOK)
+    {
+        // Get the most recent log file from the circular buffer
+        if (logs.size() > 0)
+        {
+            char lastFileName[24] = {0};
+            logs[0].toCharArray(lastFileName, sizeof(lastFileName));
+
+            // Open the existing file in append mode
+            dataFile = SD.open(lastFileName, FILE_WRITE);
+
+            if (dataFile)
+            {
+                // Seek to end of file for appending
+                dataFile.seek(dataFile.size());
+                SDFileOpen = true;
+
+#ifdef DEBUG
+                Serial.print("Resumed logging to file: ");
+                Serial.println(lastFileName);
+#endif
+            }
+            else
+            {
+                SDCardOK = false;
+                SDFileOpen = false;
+#ifdef DEBUG
+                Serial.print("Failed to open file for resume: ");
+                Serial.println(lastFileName);
+#endif
+            }
+        }
+        else
+        {
+            // No log files in buffer, create a new one
+            InitialiseSD();
+        }
+
+        // Clear the undervoltage latch flag
+        UndervoltageLatch = false;
+    }
+}
+
 void CloseSDFile()
 {
-    dataFile.flush();
-    dataFile.close();
+    if (SDFileOpen)
+    {
+        dataFile.flush();
+        dataFile.close();
+        SDFileOpen = false;
+    }
     SD.end();
+}
+
+void CleanupOrphanedLogFiles()
+{
+    if (!SDCardOK)
+    {
+#ifdef DEBUG
+        Serial.println("SD card not ready for cleanup");
+#endif
+        return;
+    }
+
+    File root = SD.open("/");
+    if (!root)
+    {
+#ifdef DEBUG
+        Serial.println("Failed to open root directory");
+#endif
+        return;
+    }
+
+    File entry;
+    int deletedCount = 0;
+
+    while (entry = root.openNextFile())
+    {
+        // Only process files, not directories
+        if (!entry.isDirectory())
+        {
+            char fileName[24] = {0};
+            strncpy(fileName, entry.name(), sizeof(fileName) - 1);
+
+            // Check if this file exists in the logs buffer
+            bool fileInLogs = false;
+            for (int i = 0; i < logs.size(); i++)
+            {
+                if (logs[i] == String(fileName))
+                {
+                    fileInLogs = true;
+                    break;
+                }
+            }
+
+            // If file is not in logs, delete it
+            if (!fileInLogs)
+            {
+                entry.close();
+                SD.remove(fileName);
+                deletedCount++;
+#ifdef DEBUG
+                Serial.print("Deleted orphaned log file: ");
+                Serial.println(fileName);
+#endif
+            }
+        }
+        entry.close();
+    }
+    root.close();
+
+#ifdef DEBUG
+    Serial.print("Cleanup complete. Files deleted: ");
+    Serial.println(deletedCount);
+#endif
 }
 
 void SleepSD()

@@ -40,6 +40,8 @@ enum SIM7600Commands
   MQTT_DISCONNECT,  // Disconnect from MQTT server
   MQTT_PING,        // Ping MQTT server
   MQTT_STATUS,      // Get MQTT status
+  SIGNAL_QUALITY,   // Get signal quality
+  NETWORK_MODE      // Get network mode
 };
 
 /// @brief Initialise GSM/GPS
@@ -52,6 +54,10 @@ void UpdateSIM7600(SIM7600Commands command);
 /// @brief Parse GPS response data
 /// @param response Response data
 void parseGPSData(const char *response);
+
+/// @brief Convert signal quality to bars
+/// @return Signal strength in bars
+uint8_t csq_to_bars();
 
 /// @brief GPS fix flag
 extern bool GPSFix;

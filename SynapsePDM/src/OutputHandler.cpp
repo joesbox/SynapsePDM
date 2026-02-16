@@ -289,11 +289,11 @@ void UpdateOutputs()
         }
         else if (amps > Channels[i].CurrentThresholdHigh)
         {
-          ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT_RANGE;
+          ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT;
         }
         else if (amps < Channels[i].CurrentThresholdLow)
         {
-          ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
+          ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT;
         }
         else
         {
@@ -313,6 +313,7 @@ void UpdateOutputs()
       }
       break;
     case DIG:
+    case CAN_DIGITAL:
       if (Channels[i].Enabled)
       {
         static uint8_t trySampleCount[NUM_CHANNELS] = {0};
@@ -366,11 +367,11 @@ void UpdateOutputs()
 
             if (avgCurrent > Channels[i].CurrentThresholdHigh)
             {
-              ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT_RANGE;
+              ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT;
             }
             else if (avgCurrent < Channels[i].CurrentThresholdLow)
             {
-              ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT_RANGE;
+              ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT;
             }
 
             // --- Retry / lockout handling ---

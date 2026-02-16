@@ -45,19 +45,41 @@ void InitialiseInputs()
         if (AnalogueIns[i].PullDownEnable)
         {
             digitalWrite(AnalogueIns[i].PullDownPin, HIGH);
+
+            // Internal pull-down for digital inputs prevents floating inputs on boot/resume
+            if (AnalogueIns[i].IsDigital)
+            {
+                pinMode(AnalogueIns[i].InputPin, INPUT_PULLDOWN);
+            }
+            else
+            {
+                pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
+            }
         }
         else
         {
             digitalWrite(AnalogueIns[i].PullDownPin, LOW);
+            pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
         }
 
         if (AnalogueIns[i].PullUpEnable)
         {
             digitalWrite(AnalogueIns[i].PullUpPin, HIGH);
+
+            // Internal pull-up for digital inputs prevents floating inputs on boot/resume
+            if (AnalogueIns[i].IsDigital)
+            {
+                pinMode(AnalogueIns[i].InputPin, INPUT_PULLUP);
+            }
+            else
+            {
+                pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
+            }
         }
         else
         {
             digitalWrite(AnalogueIns[i].PullUpPin, LOW);
+            pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
         }
 
         if (AnalogueIns[i].IsDigital)
@@ -144,6 +166,29 @@ void HandleInputs()
                 if (Channels[i].Enabled)
                 {
                     enabledTimers[i] = millis();
+                }
+            }
+            break;
+
+        case CAN_DIGITAL:
+        case CAN_PWM:
+            // Override takes precedence over CAN message
+            if (ChannelRuntime[i].Override)
+            {
+                Channels[i].Enabled = true;
+            }
+            else
+            {
+                Channels[i].Enabled = CANChannelEnableFlags[i];
+
+                // Used for inrush delay timing
+                if (enabledFlags[i] != Channels[i].Enabled)
+                {
+                    enabledFlags[i] = Channels[i].Enabled;
+                    if (Channels[i].Enabled)
+                    {
+                        enabledTimers[i] = millis();
+                    }
                 }
             }
             break;

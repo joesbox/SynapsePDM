@@ -16,7 +16,7 @@
     all copies or substantial portions of the Software.
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
@@ -28,10 +28,20 @@
     Version history:
     Date              Version       Description
     ----              -------       ------------------------------------------------------------
+    2026-01-21        v0.6          - Added watchdog timer. Different timings applied on boot and normal operation. Extended to 10 seconds during PC comms, 30 seconds during sleep.
+                                    - Invalidate display flag set on sleep to force redraw on wake.
+                                    - Added internal pull-up/pull-down configuration for analogue inputs to prevent false input read on wake.
+                                    - Added GSM signal strength to display.
+                                    - CAN messaging implementation. CAN channel configuration and EEPROM update. 5 second timeout for multiple channel config messages before saving to EEPROM.
+                                    - Global RTC
+                                    - Re-open last log file on wake. Maximises log file storage capacity over 10 files.
+                                    - Fix: GPS status on sleep/wake.
+                                    - Fix: Corrected default CAN IDs to be within standard range.
+                                    - Fix: CAN bus resistor enable pin state on wake/power up.
+                                    - Optimised page read and writes to EEPROM to be in page-sized chunks.
     2026-01-06        v0.5          - Added boot to sleep functionality. If enabled, system will enter deep sleep mode after initialisation until wake event.
                                     - Corrected peripheral clock enable/disable in OutputHandler sleep/wake functions. Sleep current is ~2.2mA.
                                     - Added wake debounce timer to prevent multiple wake events.
-                                    - Wake deadtime parameter added to system parameters. Configurable via Cortex.
                                     - More robust sleep and wake handling.
                                     - Moved dynamic system parameters to SystemRuntime structure.
                                     - Added padding to EEPROM structures to allow for future expansion without breaking existing installations.
@@ -66,16 +76,13 @@
 #include <GSM.h>
 #include <Display.h>
 
-STM32RTC &rtc = STM32RTC::getInstance();
-
 constexpr int SPLASH_SCREEN_DELAY = 2000;
 constexpr int RTC_YEAR_THRESHOLD = 24;
 
 void SleepFunctions();
+void alarmMatch(void *data);
 
-//#define DEBUG
-
-bool hitInit = false;
+// #define DEBUG
 
 void Debug()
 {
@@ -207,6 +214,9 @@ void Debug()
 
 void setup()
 {
+
+  IWatchdog.begin(5000 * 1000); // 5 second watchdog (microseconds) on boot.
+
   InitialiseSystem();
   InitialiseGSM(false);
   pinMode(TFT_BL, OUTPUT);
@@ -218,6 +228,7 @@ void setup()
   InitialiseStorageData();
   InitialiseDisplay();
   InitialiseChannelData();
+  IWatchdog.reload();
 
   // Load channel data first
   ChannelCRCValid = LoadChannelConfig();
@@ -235,7 +246,6 @@ void setup()
     // CRC wasn't valid on the EEPROM system data. Save the default values to EEPROM now.
     InitialiseSystemData();
     SaveSystemConfig();
-    hitInit = true;
   }
 
   // Load storage data
@@ -266,13 +276,27 @@ void setup()
   }
 
   InitialiseIMU();
+  InitialiseCAN();
   PowerState = RUN;
 
-  // Display the splash screen for 2 seconds
-  splashCounter = millis() + SPLASH_SCREEN_DELAY;
+  if (IWatchdog.isReset())
+  {
+    IWatchdog.clearReset();
+
+    // If we reset due to the watchdog, skip the splash screen
+    splashCounter = millis();
+  }
+  else
+  {
+    // Display splash screen for set time
+    splashCounter = millis() + SPLASH_SCREEN_DELAY;
+  }
   digitalWrite(TFT_BL, HIGH);
 
   SystemParams.MotionDeadTime = 1;
+
+  LowPower.enableWakeupFrom(&rtc, alarmMatch);
+  IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) on boot.
 }
 
 void handlePowerState()
@@ -282,7 +306,7 @@ void handlePowerState()
   case RUN:
     if (!digitalRead(IGN_INPUT))
     {
-      delay(100); // Debounce
+      delay(WAKE_DEBOUNCE_TIME); // Debounce
       if (!digitalRead(IGN_INPUT) && bootToSleep)
       {
         PowerState = PREPARE_SLEEP;
@@ -299,8 +323,8 @@ void handlePowerState()
       setBackupRegister(BACKUP_REG_IGN_OFF_TIME, ignitionOffTime);
     }
     SleepFunctions();
+    GPSFix = false;
     PowerState = SLEEPING;
-    HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
     break;
   case SLEEPING:
     if (imuWakePending)
@@ -308,33 +332,54 @@ void handlePowerState()
       imuWakePending = false;
       PowerState = IMU_WAKING;
     }
+
+    IWatchdog.begin(32000 * 1000); // 32 second watchdog (microseconds) during sleep.
+    IWatchdog.reload();
+    rtc.setAlarmEpoch(rtc.getEpoch() + 30); // Wake every 30 seconds to feed the watchdog
+    rtc.enableAlarm(rtc.MATCH_DHHMMSS);
+
+    // Enter STOP mode
+    HAL_SuspendTick();
+    HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
     break;
   case IGNITION_WAKING:
     if (!IMUWakeMode)
     {
       // Only call these if we haven't woken from the IMU
+      HAL_ResumeTick();
       SystemClock_Config();
       rtc.begin();
     }
+    IWatchdog.reload();
     wakeDebounceTimer = millis();
     PowerState = IGNITION_WAKE;
     break;
   case IGNITION_WAKE:
     if (millis() - wakeDebounceTimer > WAKE_DEBOUNCE_TIME)
     {
-      DisableMotionDetect();
-      InitialiseSerial();
+      IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) during run.
+      IWatchdog.reload();
       WakeSystem();
+      InitialiseInputs();
+      InitialiseOutputs();
+      HandleInputs();
+      UpdateOutputs();
+      DisableMotionDetect();
+      InitialiseCAN();
+      InitialiseSerial();
       InitialiseGSM(false);
-      analogWrite(TFT_BL, 1023);
       StartDisplay();
       DrawBackground();
+      analogWrite(TFT_BL, 1023);
+      ResumeSD();
       PowerState = RUN;
     }
     break;
   case IMU_WAKING:
+    HAL_ResumeTick();
     SystemClock_Config();
     rtc.begin();
+    IWatchdog.reload();
     PowerState = IMU_WAKE;
     break;
   case IMU_WAKE:
@@ -345,10 +390,15 @@ void handlePowerState()
       if ((currentTime - ignitionOffTime) >= (SystemParams.MotionDeadTime * 60))
       {
         // Motion dead time has elapsed. Disable motion detection, wake the system.
+        IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) during run.
+        IWatchdog.reload();
+        InitialiseInputs();
         DisableMotionDetect();
         InitialiseSerial();
         WakeSystem();
+        InitialiseCAN();
         InitialiseGSM(false);
+        ResumeSD();
         imuWWtimer = millis() + SystemParams.IMUwakeWindow;
         PowerState = IMU_WAKE_WINDOW;
       }
@@ -357,7 +407,6 @@ void handlePowerState()
         // Still within motion dead time. Go back to sleep.
         SleepFunctions();
         PowerState = SLEEPING;
-        HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
       }
     }
     break;
@@ -370,7 +419,6 @@ void handlePowerState()
     {
       SleepFunctions();
       PowerState = SLEEPING;
-      HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
     }
     break;
   }
@@ -378,6 +426,7 @@ void handlePowerState()
 
 void loop()
 {
+  IWatchdog.reload();
   if (PowerState == RUN)
   {
     if (millis() > DisplayTimer)
@@ -406,25 +455,13 @@ void loop()
     if (millis() > LogTimer)
     {
       LogTimer = millis() + LOG_INTERVAL;
-      RTCyear = rtc.getYear();
-      RTCmonth = rtc.getMonth();
-      RTCday = rtc.getDay();
-      RTChour = rtc.getHours();
-      RTCminute = rtc.getMinutes();
-      RTCsecond = rtc.getSeconds();
 
       if (!RTCSet && year > RTC_YEAR_THRESHOLD)
       {
-        RTCSet = true;
+        RTCSet = true;        
         // GPS time must be updated, use that
         rtc.setDate(day, month, (year % 100));
         rtc.setTime(hour, minute, second);
-        RTCyear = rtc.getYear();
-        RTCmonth = rtc.getMonth();
-        RTCday = rtc.getDay();
-        RTChour = rtc.getHours();
-        RTCminute = rtc.getMinutes();
-        RTCsecond = rtc.getSeconds();
         InitialiseSD();
       }
       else if (RTCSet)
@@ -441,18 +478,47 @@ void loop()
       Debug();
     }
 
+    if (millis() > signalTimer)
+    {
+      signalTimer = millis() + SIGNAL_QUALITY_INTERVAL;
+      UpdateSIM7600(SIGNAL_QUALITY);
+    }
+
+    if (millis() > systemCANTimer)
+    {
+      systemCANTimer = millis() + SYSTEM_CAN_INTERVAL; 
+      BroadcastSystemStatus();
+    }
+
     if (millis() > splashCounter && !backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
     {
       DrawBackground();
       bootToSleep = true;
     }
     CheckSerial();
+    ReadCANMessages();
   }
   handlePowerState();
+  
+  if(millis() > EEPROMSaveTimout && saveEEPROMOnTimeout)
+  {    
+    saveEEPROMOnTimeout = false;
+    EEPROMSaveTimout = 0;   
+    SaveChannelConfig();    
+    SaveSystemConfig();
+  }
 }
 
 void SleepFunctions()
 {
+  if (saveEEPROMOnTimeout)
+  {
+    // Do it now.
+    SaveChannelConfig();
+    saveEEPROMOnTimeout = false;
+    EEPROMSaveTimout = 0;
+  }
+  analogWrite(TFT_BL, 0);
   PullResistorSleep();
   SleepSD();
   OutputsOff();
@@ -461,4 +527,10 @@ void SleepFunctions()
   StopDisplay();
   SleepSystem();
   IMUWakeMode = false;
+  invalidateDisplay = true;
+}
+
+void alarmMatch(void *data)
+{
+  // Do nothing, just wake the MCU
 }

@@ -36,7 +36,7 @@
 #include <backup.h>
 
 // Firmware version
-#define FW_VER "v0.5"
+#define FW_VER "v0.6"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -78,7 +78,7 @@
 #define INRUSH_MAX 2000
 
 // Sytem current max (total). Should never reach this as each channel is independantly monitored
-#define SYSTEM_CURRENT_MAX 240
+#define SYSTEM_CURRENT_MAX 150
 
 // Default current sense ratio as specified by the BTS50010 datasheet
 #define DEFAULT_DK_VALUE 38000
@@ -88,6 +88,8 @@
 #define COMMS_INTERVAL 100
 #define LOG_INTERVAL 100
 #define GPS_INTERVAL 1000
+#define SIGNAL_QUALITY_INTERVAL 5000
+#define SYSTEM_CAN_INTERVAL 100
 #define BL_FADE_INTRVAL 0
 
 #define DEBUG_INTERVAL 1000
@@ -130,15 +132,16 @@
 #define GPS_ERROR 0x0040
 
 // Channel error bitmasks
-#define CHN_OVERCURRENT_RANGE 0x01
-#define CHN_UNDERCURRENT_RANGE 0x02
+#define CHN_OVERCURRENT 0x01
+#define CHN_UNDERCURRENT 0x02
 #define IS_FAULT 0x04
 #define RETRY_LOCKOUT 0x08
 
 // ECU CAN addresses
-#define CHAN_CAN_ID 0x800
-#define SYS_CAN_ID 0x801
-#define CONF_CAN_ID 0x802
+#define CHAN_CAN_ID 0x700
+#define SYS_CAN_ID 0x720
+#define SYS_CONFIG_CAN_ID 0x730
+#define CONF_CAN_ID 0x740
 
 // Ignition input (KL15)
 #define IGN_INPUT PE2
@@ -164,6 +167,9 @@
 
 // Number of logs to keep on the SD card
 #define NUMBER_LOGS 10
+
+// Maximum motion dead time in minutes
+#define MAX_MOTION_DEAD_TIME 254
 
 // Power enable pins
 #define PWR_EN_5V PE7
@@ -198,9 +204,6 @@
 #define CS2 PB11
 
 // LCD pins
-// #define TFT_RST PD8
-// #define TFT_DC PD9
-// #define TFT_CS PB11
 #define TFT_BL PB10
 
 // GSM Module Pins
@@ -209,6 +212,15 @@
 #define SIM_FLIGHT PB8
 
 #define COMMS_TIMEOUT 5000
+
+// Maximum inrush delay in milliseconds
+#define MAX_INRUSH_DELAY 2000
+
+// Max run on time in milliseconds
+#define MAX_RUN_ON_TIME 3600000
+
+// EEPROM write delay (milliseconds) after a change is made to allow time for multiple changes to be made without writing to EEPROM after each change
+#define EEPROM_WRITE_DELAY 5000
 
 /// @brief Output enabled flags
 extern bool enabledFlags[NUM_CHANNELS];
@@ -239,6 +251,18 @@ extern volatile bool IMUWakeMode;
 
 /// @brief IMU wake pending flag
 extern volatile bool imuWakePending;
+
+/// @brief Flag to re-draw display
+extern bool invalidateDisplay;
+
+/// @brief EEPROM save timeout. Set to a future time (millis) when a change is made that requires saving to EEPROM. When millis exceeds this value, the config will be saved and this reset to 0.
+extern uint32_t EEPROMSaveTimout;
+
+/// @brief Save to EEPROM flag. Set to true when a change is made that requires saving to EEPROM. 
+extern bool pendingEEPROMSave;
+
+/// @brief Flag to indicate to the main look that the channel config needs to be saved to EEPROM. When EEPROMSaveTimout is exceeded, the config will be saved and this reset to false.
+extern bool saveEEPROMOnTimeout;
 
 /// @brief Analogue input config structure
 struct __attribute__((packed)) AnalogueInputs
@@ -277,6 +301,9 @@ const uint8_t channelOutputPins[NUM_CHANNELS] = {PG10, PG9, PG6, PG5, PG4, PG3, 
 /// @brief Channel analog current sense pins
 const uint8_t channelCurrentSensePins[NUM_CHANNELS] = {PA0, PA1, PA2, PA3, PA4, PA5, PA6, PB1, PB0, PA7, PC3, PC2, PC1, PC0};
 
+/// @brief CAN enabled channel enabled flags
+extern bool CANChannelEnableFlags[NUM_CHANNELS];
+
 // Timers for main tasks
 extern uint32_t imuWWtimer;
 extern uint32_t DisplayTimer;
@@ -284,8 +311,10 @@ extern uint32_t CommsTimer;
 extern uint32_t BattTimer;
 extern uint32_t LogTimer;
 extern uint32_t GPSTimer;
+extern uint32_t signalTimer;
 extern uint32_t BLTimer;
 extern uint32_t wakeDebounceTimer;
+extern uint32_t systemCANTimer;
 extern int blLevel;
 
 /// @brief HSD Output channels
@@ -316,12 +345,8 @@ extern ChannelConfigUnion ChannelConfigData;
 /// @brief Config storage union for analogue input data
 extern AnalogueConfigUnion AnalogueConfigData;
 
-extern uint8_t RTCyear;
-extern uint8_t RTCmonth;
-extern uint8_t RTCday;
-extern uint8_t RTChour;
-extern uint8_t RTCminute;
-extern uint8_t RTCsecond;
+// Global RTC
+extern STM32RTC &rtc;
 
 /// @brief Initialise channel data to known defaults
 void InitialiseChannelData();

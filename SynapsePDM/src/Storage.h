@@ -40,6 +40,9 @@
 // SPI clock speed for the EEPROM
 #define EEPROM_SPI_SPEED 4000000
 
+// EEPROM page size in bytes. Writes larger than this will be split into multiple page writes.
+#define EEPROM_PAGE_SIZE 32
+
 extern long startMillis;
 extern long endMillis;
 
@@ -129,10 +132,16 @@ void InitialiseSD();
 /// @brief Logs current system and channel data to the SD card
 void LogData();
 
+/// @brief Deletes all files on the SD card that don't exist in the current log list
+void CleanupOrphanedLogFiles();
+
 /// @brief End the SD logging
 void SleepSD();
 
 /// @brief Closes the current SD file and ends the SD session
 void CloseSDFile();
+
+/// @brief Resumes logging after sleep
+void ResumeSD();
 
 #endif

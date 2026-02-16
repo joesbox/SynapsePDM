@@ -34,16 +34,13 @@ uint32_t DisplayTimer;
 uint32_t CommsTimer;
 uint32_t LogTimer;
 uint32_t GPSTimer;
+uint32_t signalTimer;
 uint32_t BLTimer;
 uint32_t wakeDebounceTimer;
+uint32_t systemCANTimer;
 int blLevel = 0;
 
-uint8_t RTCyear;
-uint8_t RTCmonth;
-uint8_t RTCday;
-uint8_t RTChour;
-uint8_t RTCminute;
-uint8_t RTCsecond;
+STM32RTC &rtc = STM32RTC::getInstance();
 
 bool enabledFlags[NUM_CHANNELS] = {false};
 unsigned long enabledTimers[NUM_CHANNELS] = {0};
@@ -64,6 +61,8 @@ bool bootToSleep = false;
 volatile bool IMUWakeMode = false;
 
 volatile bool imuWakePending = false;
+
+bool CANChannelEnableFlags[NUM_CHANNELS] = {false};
 
 void InitialiseChannelData()
 {

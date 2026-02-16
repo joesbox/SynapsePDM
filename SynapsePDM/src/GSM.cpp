@@ -37,6 +37,8 @@ bool GPSFix = false;
 
 bool previousGPSEnable = false;
 
+int rssi = 0;
+
 uint8_t SIM7600State = 0; // 0 = Power up, 1 = Initialising, 2 = Ready for command, 4 = Wait response
 
 char simBuffer[512];
@@ -76,10 +78,8 @@ void UpdateSIM7600(SIM7600Commands command)
         }
     }
 #ifdef DEBUG
-    Serial.print("GPS buffer: ");
+    Serial.print("Buffer: ");
     Serial.println(simBuffer);
-    Serial.print("Read GPS bytes time: ");
-    Serial.println(millis() - startTime);
 #endif
 
     switch (SIM7600State)
@@ -147,6 +147,12 @@ void UpdateSIM7600(SIM7600Commands command)
             break;
         case MQTT_STATUS:
             break;
+        case SIGNAL_QUALITY:
+            Serial1.print("AT+CSQ\r");
+            break;
+        case NETWORK_MODE:
+            Serial1.print("AT+CESQ?\r");
+            break;
         }
         break;
     }
@@ -173,6 +179,46 @@ void UpdateSIM7600(SIM7600Commands command)
     {
         parseGPSData(simBuffer); // Parse GPS data
         SIM7600State = 2;        // Transition to Ready for command state
+    }
+
+    if (strstr(simBuffer, "+CSQ:") != nullptr)
+    {
+        // Parse signal quality
+        char *csq = strstr(simBuffer, "+CSQ:");
+        if (csq != nullptr)
+        {
+            int ber = 0;
+            sscanf(csq, "+CSQ: %d,%d", &rssi, &ber);
+        }
+#ifdef DEBUG
+        Serial.print("Signal RSSI: ");
+        Serial.println(rssi);
+#endif
+    }
+
+    char *cesq = strstr(simBuffer, "+CESQ:");
+    if (cesq != nullptr)
+    {
+        int rxlev = 0, ber = 0, rscp = 0, ecio = 0, rsrq = 0, rsrp = 0;
+
+        if (sscanf(cesq, "+CESQ: %d,%d,%d,%d,%d,%d",
+                   &rxlev, &ber, &rscp, &ecio, &rsrq, &rsrp) == 6)
+        {
+#ifdef DEBUG
+            Serial.print("CESQ rxlev: ");
+            Serial.println(rxlev);
+            Serial.print("CESQ ber: ");
+            Serial.println(ber);
+            Serial.print("CESQ rscp: ");
+            Serial.println(rscp);
+            Serial.print("CESQ ecio: ");
+            Serial.println(ecio);
+            Serial.print("CESQ rsrq: ");
+            Serial.println(rsrq);
+            Serial.print("CESQ rsrp: ");
+            Serial.println(rsrp);
+#endif
+        }
     }
 }
 
@@ -249,4 +295,29 @@ void parseGPSData(const char *response)
     // Extract time (HHMMSS.s)
     if (strlen(tokens[9]) >= 6)
         sscanf(tokens[9], "%2d%2d%2d", &hour, &minute, &second);
+}
+
+uint8_t csq_to_bars()
+{
+    if (rssi <= 3)
+    {
+        return 0;
+    }
+    if (rssi <= 7)
+    {
+        return 1;
+    }
+    if (rssi <= 11)
+    {
+        return 2;
+    }
+    if (rssi <= 15)
+    {
+        return 3;
+    }
+    if (rssi <= 20)
+    {
+        return 4;
+    }
+    return 5;
 }

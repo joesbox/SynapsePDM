@@ -60,10 +60,6 @@ void InitialiseSystem()
     // Set power state to run
     PowerState = RUN;
 
-    // Reset all peripherals on boot
-    SleepSystem();
-    delay(100);
-
     WakeSystem();
 
     // Debug pin
@@ -108,7 +104,8 @@ void InitialiseSystemData()
     SystemParams.CANResEnabled = 1;
     SystemParams.ChannelDataCANID = CHAN_CAN_ID;
     SystemParams.SystemDataCANID = SYS_CAN_ID;
-    SystemParams.ConfigDataCANID = CONF_CAN_ID;
+    SystemParams.SystemConfigDataCANID = SYS_CONFIG_CAN_ID;
+    SystemParams.ChannelConfigDataCANID = CONF_CAN_ID;
     SystemParams.IMUwakeWindow = DEFAULT_WW;
     SystemParams.MotionDeadTime = DEFAULT_MOTION_DEADTIME;
     SystemParams.SystemCurrentLimit = SYSTEM_CURRENT_MAX;
@@ -228,7 +225,7 @@ void WakeSystem()
     pinMode(PWR_EN_3V3, OUTPUT);
     digitalWrite(PWR_EN_5V, HIGH);
     digitalWrite(PWR_EN_3V3, HIGH);
-    delay(100);
+    delay(20); // Allow power rails to stabilise
 }
 
 static int32_t readTempSensor(int32_t VRef)
