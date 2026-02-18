@@ -28,6 +28,8 @@
     Version history:
     Date              Version       Description
     ----              -------       ------------------------------------------------------------
+    2026-02-18        v0.7          - Fixed display config. Disabled warnings about (non-existent) touch screen.
+                                    - Minor display tweaks.
     2026-01-21        v0.6          - Added watchdog timer. Different timings applied on boot and normal operation. Extended to 10 seconds during PC comms, 30 seconds during sleep.
                                     - Invalidate display flag set on sleep to force redraw on wake.
                                     - Added internal pull-up/pull-down configuration for analogue inputs to prevent false input read on wake.

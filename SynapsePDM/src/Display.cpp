@@ -229,7 +229,7 @@ void DrawBackground()
     tft.setCursor(chanNameX, channelName[i][1]);
     tft.print(safeName);
 
-    tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)greyLED);
+    tft.pushImage(lights[i][0] - 10, lights[i][1] - 8, 24, 24, (uint16_t *)greyLED);
   }
 
   tft.endWrite();
@@ -249,6 +249,18 @@ void UpdateDisplay()
       prevEnabled[i] = !Channels[i].Enabled;
       prevErrorFlags[i] = -1;
       prevCurrentValues[i] = -1.0F;
+
+      tft.drawLine(0, 58, SCREENWIDTH, 58, TFT_DARKGREY);
+      tft.drawLine(0, 148, SCREENWIDTH, 148, TFT_DARKGREY);
+      tft.drawLine(0, 238, SCREENWIDTH, 238, TFT_DARKGREY);
+      tft.drawLine(0, 58, 0, 238, TFT_DARKGREY);
+      tft.drawLine(45, 58, 45, 238, TFT_DARKGREY);
+      tft.drawLine(90, 58, 90, 238, TFT_DARKGREY);
+      tft.drawLine(135, 58, 135, 238, TFT_DARKGREY);
+      tft.drawLine(180, 58, 180, 238, TFT_DARKGREY);
+      tft.drawLine(225, 58, 225, 238, TFT_DARKGREY);
+      tft.drawLine(270, 58, 270, 238, TFT_DARKGREY);
+      tft.drawLine(319, 58, 319, 238, TFT_DARKGREY);
 
       // Calculate the width of the channel name
       int chanNameWidth = tft.textWidth(Channels[i].ChannelName);
@@ -314,15 +326,15 @@ void UpdateDisplay()
     {
       if (Channels[i].Enabled && ChannelRuntime[i].ErrorFlags == 0)
       {
-        tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)greenLED);
+        tft.pushImage(lights[i][0] - 10, lights[i][1] - 8, 24, 24, (uint16_t *)greenLED);
       }
       else if (Channels[i].Enabled && ChannelRuntime[i].ErrorFlags != 0)
       {
-        tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)redLED);
+        tft.pushImage(lights[i][0] - 10, lights[i][1] - 8, 24, 24, (uint16_t *)redLED);
       }
       else
       {
-        tft.pushImage(lights[i][0] - 12, lights[i][1] - 12, 24, 24, (uint16_t *)greyLED);
+        tft.pushImage(lights[i][0] - 10, lights[i][1] - 8, 24, 24, (uint16_t *)greyLED);
       }
 
       // Update previous states

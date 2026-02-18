@@ -36,7 +36,7 @@
 #include <backup.h>
 
 // Firmware version
-#define FW_VER "v0.6"
+#define FW_VER "v0.7"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
