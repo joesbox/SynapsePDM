@@ -85,10 +85,10 @@ SynapsePDM/src/Storage.cpp:648:0: style: The function 'CleanEEPROM' is never use
 SynapsePDM/src/Storage.cpp:973:0: style: The function 'CleanupOrphanedLogFiles' is never used. [unusedFunction]
 
 ^
-SynapsePDM/src/main.cpp:427:0: style: The function 'loop' is never used. [unusedFunction]
+SynapsePDM/src/main.cpp:429:0: style: The function 'loop' is never used. [unusedFunction]
 
 ^
-SynapsePDM/src/main.cpp:215:0: style: The function 'setup' is never used. [unusedFunction]
+SynapsePDM/src/main.cpp:217:0: style: The function 'setup' is never used. [unusedFunction]
 
 ^
 nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingInclude]
