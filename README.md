@@ -4,7 +4,7 @@
 See https://wiki.joeblogs.uk/ for more info.
 
 #### Features (WIP):
-+ 14 High Side Driver output channels configurable as PWM (200Hz) or digital with soft-start/soft-stop capability.
++ 14 High Side Driver output channels configurable as PWM or digital with soft-start/soft-stop capability.
 + Up to 17A output per channel. Channels can be paired to increase current output.
 + Configurable load current and channel diagnostics.
 + Colour LCD interface.
