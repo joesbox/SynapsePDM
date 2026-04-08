@@ -1,94 +1,1657 @@
-SynapsePDM/src/Globals.cpp:72:5: portability: Using memset() on struct which contains a floating point number. [memsetClassFloat]
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:290:47: style: The statement 'if (dev->boot_done_status!=BMM350_BOOT_NOT_DONE) dev->boot_done_status=BMM350_BOOT_NOT_DONE' is logically equivalent to 'dev->boot_done_status=BMM350_BOOT_NOT_DONE'. [duplicateConditionalAssign]
+                    if (dev->boot_done_status != BMM350_BOOT_NOT_DONE)
+                                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:292:47: note: Assignment 'dev->boot_done_status=BMM350_BOOT_NOT_DONE'
+                        dev->boot_done_status = BMM350_BOOT_NOT_DONE;
+                                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:290:47: note: Condition 'dev->boot_done_status!=BMM350_BOOT_NOT_DONE' is redundant
+                    if (dev->boot_done_status != BMM350_BOOT_NOT_DONE)
+                                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:447:47: style: The statement 'if (dev->boot_done_status!=BMM350_BOOT_NOT_DONE) dev->boot_done_status=BMM350_BOOT_NOT_DONE' is logically equivalent to 'dev->boot_done_status=BMM350_BOOT_NOT_DONE'. [duplicateConditionalAssign]
+                    if (dev->boot_done_status != BMM350_BOOT_NOT_DONE)
+                                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:449:47: note: Assignment 'dev->boot_done_status=BMM350_BOOT_NOT_DONE'
+                        dev->boot_done_status = BMM350_BOOT_NOT_DONE;
+                                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:447:47: note: Condition 'dev->boot_done_status!=BMM350_BOOT_NOT_DONE' is redundant
+                    if (dev->boot_done_status != BMM350_BOOT_NOT_DONE)
+                                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:359:14: style: The scope of the variable 'index' can be reduced. [variableScope]
+    uint16_t index = 0;
+             ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:773:13: style: The scope of the variable 'mag_data' can be reduced. [variableScope]
+    uint8_t mag_data[12] = { 0 };
+            ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:775:14: style: The scope of the variable 'raw_mag_x' can be reduced. [variableScope]
+    uint32_t raw_mag_x, raw_mag_y, raw_mag_z, raw_temp;
+             ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:775:25: style: The scope of the variable 'raw_mag_y' can be reduced. [variableScope]
+    uint32_t raw_mag_x, raw_mag_y, raw_mag_z, raw_temp;
+                        ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:775:36: style: The scope of the variable 'raw_mag_z' can be reduced. [variableScope]
+    uint32_t raw_mag_x, raw_mag_y, raw_mag_z, raw_temp;
+                                   ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:775:47: style: The scope of the variable 'raw_temp' can be reduced. [variableScope]
+    uint32_t raw_mag_x, raw_mag_y, raw_mag_z, raw_temp;
+                                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1107:13: style: The scope of the variable 'indx' can be reduced. [variableScope]
+    uint8_t indx;
+            ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1110:11: style: The scope of the variable 'dut_offset_coef' can be reduced. [variableScope]
+    float dut_offset_coef[3], dut_sensit_coef[3], dut_tco[3], dut_tcs[3];
+          ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1110:31: style: The scope of the variable 'dut_sensit_coef' can be reduced. [variableScope]
+    float dut_offset_coef[3], dut_sensit_coef[3], dut_tco[3], dut_tcs[3];
+                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1110:51: style: The scope of the variable 'dut_tco' can be reduced. [variableScope]
+    float dut_offset_coef[3], dut_sensit_coef[3], dut_tco[3], dut_tcs[3];
+                                                  ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1110:63: style: The scope of the variable 'dut_tcs' can be reduced. [variableScope]
+    float dut_offset_coef[3], dut_sensit_coef[3], dut_tco[3], dut_tcs[3];
+                                                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1111:11: style: The scope of the variable 'cr_ax_comp_x' can be reduced. [variableScope]
+    float cr_ax_comp_x, cr_ax_comp_y, cr_ax_comp_z;
+          ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1111:25: style: The scope of the variable 'cr_ax_comp_y' can be reduced. [variableScope]
+    float cr_ax_comp_x, cr_ax_comp_y, cr_ax_comp_z;
+                        ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1111:39: style: The scope of the variable 'cr_ax_comp_z' can be reduced. [variableScope]
+    float cr_ax_comp_x, cr_ax_comp_y, cr_ax_comp_z;
+                                      ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2079:14: style: The scope of the variable 'delay_us' can be reduced. [variableScope]
+    uint32_t delay_us = 0;
+             ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:605:70: style:inconclusive: Function 'bmm350_set_odr_performance' argument 2 names different: declaration 'avg' definition 'performance'. [funcArgNamesDifferent]
+                                  enum bmm350_performance_parameters performance,
+                                                                     ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.h:291:70: note: Function 'bmm350_set_odr_performance' argument 2 names different: declaration 'avg' definition 'performance'.
+                                  enum bmm350_performance_parameters avg,
+                                                                     ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:605:70: note: Function 'bmm350_set_odr_performance' argument 2 names different: declaration 'avg' definition 'performance'.
+                                  enum bmm350_performance_parameters performance,
+                                                                     ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:612:22: style: Variable 'reg_data' is assigned a value that is never used. [unreadVariable]
+    uint8_t reg_data = 0;
+                     ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:892:21: style: Variable 'pmu_cmd' is assigned a value that is never used. [unreadVariable]
+    uint8_t pmu_cmd = 0;
+                    ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:980:13: style: The scope of the variable 'indx' can be reduced. [variableScope]
+    uint8_t indx;
+            ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:983:13: style: The scope of the variable 'dut_offset_coef' can be reduced. [variableScope]
+    fixed_t dut_offset_coef[3], dut_sensit_coef[3], dut_tco[3], dut_tcs[3];
+            ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:983:33: style: The scope of the variable 'dut_sensit_coef' can be reduced. [variableScope]
+    fixed_t dut_offset_coef[3], dut_sensit_coef[3], dut_tco[3], dut_tcs[3];
+                                ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:983:53: style: The scope of the variable 'dut_tco' can be reduced. [variableScope]
+    fixed_t dut_offset_coef[3], dut_sensit_coef[3], dut_tco[3], dut_tcs[3];
+                                                    ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:983:65: style: The scope of the variable 'dut_tcs' can be reduced. [variableScope]
+    fixed_t dut_offset_coef[3], dut_sensit_coef[3], dut_tco[3], dut_tcs[3];
+                                                                ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:984:13: style: The scope of the variable 'cr_ax_comp_x' can be reduced. [variableScope]
+    fixed_t cr_ax_comp_x, cr_ax_comp_y, cr_ax_comp_z;
+            ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:984:27: style: The scope of the variable 'cr_ax_comp_y' can be reduced. [variableScope]
+    fixed_t cr_ax_comp_x, cr_ax_comp_y, cr_ax_comp_z;
+                          ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:984:41: style: The scope of the variable 'cr_ax_comp_z' can be reduced. [variableScope]
+    fixed_t cr_ax_comp_x, cr_ax_comp_y, cr_ax_comp_z;
+                                        ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:986:13: style: The scope of the variable 'fact_1' can be reduced. [variableScope]
+    fixed_t fact_1 = 0, fact_2 = 0;
+            ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:986:25: style: The scope of the variable 'fact_2' can be reduced. [variableScope]
+    fixed_t fact_1 = 0, fact_2 = 0;
+                        ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:13: style: The scope of the variable 'temp_xy1' can be reduced. [variableScope]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+            ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:27: style: The scope of the variable 'temp_xy2' can be reduced. [variableScope]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+                          ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:41: style: The scope of the variable 'temp_xy3' can be reduced. [variableScope]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+                                        ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:55: style: The scope of the variable 'temp_z1' can be reduced. [variableScope]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+                                                      ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:68: style: The scope of the variable 'temp_z2' can be reduced. [variableScope]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+                                                                   ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:986:20: style: Variable 'fact_1' is assigned a value that is never used. [unreadVariable]
+    fixed_t fact_1 = 0, fact_2 = 0;
+                   ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:986:32: style: Variable 'fact_2' is assigned a value that is never used. [unreadVariable]
+    fixed_t fact_1 = 0, fact_2 = 0;
+                               ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:22: style: Variable 'temp_xy1' is assigned a value that is never used. [unreadVariable]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+                     ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:36: style: Variable 'temp_xy2' is assigned a value that is never used. [unreadVariable]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+                                   ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:50: style: Variable 'temp_xy3' is assigned a value that is never used. [unreadVariable]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+                                                 ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:63: style: Variable 'temp_z1' is assigned a value that is never used. [unreadVariable]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+                                                              ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:987:76: style: Variable 'temp_z2' is assigned a value that is never used. [unreadVariable]
+    fixed_t temp_xy1 = 0, temp_xy2 = 0, temp_xy3 = 0, temp_z1 = 0, temp_z2 = 0;
+                                                                           ^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:654:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = bmm350_delay_us(BMM350_UPD_OAE_DELAY, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:925:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = bmm350_delay_us(BMM350_BR_DELAY, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:949:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = bmm350_delay_us(BMM350_FGR_DELAY, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1600:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    (dev->otp_data[BMM350_MAG_OFFSET_Y] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1602:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    (dev->otp_data[BMM350_MAG_OFFSET_Z] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1603:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    t_off = dev->otp_data[BMM350_TEMP_OFF_SENS] & BMM350_LSB_MASK;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1619:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    sens_x = (dev->otp_data[BMM350_MAG_SENS_X] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1620:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    sens_y = (dev->otp_data[BMM350_MAG_SENS_Y] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1621:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    sens_z = (dev->otp_data[BMM350_MAG_SENS_Z] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1622:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    t_sens = (dev->otp_data[BMM350_TEMP_OFF_SENS] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1641:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tco_x = (dev->otp_data[BMM350_MAG_TCO_X] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1642:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tco_y = (dev->otp_data[BMM350_MAG_TCO_Y] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1643:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tco_z = (dev->otp_data[BMM350_MAG_TCO_Z] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1656:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tcs_x = (dev->otp_data[BMM350_MAG_TCS_X] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1657:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tcs_y = (dev->otp_data[BMM350_MAG_TCS_Y] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1658:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tcs_z = (dev->otp_data[BMM350_MAG_TCS_Z] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1683:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cross_x_y = (dev->otp_data[BMM350_CROSS_X_Y] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1684:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cross_y_x = (dev->otp_data[BMM350_CROSS_Y_X] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1685:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cross_z_x = (dev->otp_data[BMM350_CROSS_Z_X] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1686:0: information: Skipping configuration 'INT16_C;UINT16_C;__KERNEL__' since the value of 'UINT16_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cross_z_y = (dev->otp_data[BMM350_CROSS_Z_Y] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:249:0: information: Skipping configuration 'INT32_C;UINT32_C;__KERNEL__' since the value of 'UINT32_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_delay_us(BMM350_START_UP_TIME_FROM_POR, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:261:0: information: Skipping configuration 'INT32_C;UINT32_C;__KERNEL__' since the value of 'UINT32_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = bmm350_delay_us(BMM350_SOFT_RESET_DELAY, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:438:0: information: Skipping configuration 'INT32_C;UINT32_C;__KERNEL__' since the value of 'UINT32_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_delay_us(BMM350_SOFT_RESET_DELAY, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:587:0: information: Skipping configuration 'INT32_C;UINT32_C;__KERNEL__' since the value of 'UINT32_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    rslt = bmm350_delay_us(BMM350_GOTO_SUSPEND_DELAY, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2070:0: information: Skipping configuration 'INT32_C;UINT32_C;__KERNEL__' since the value of 'UINT32_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    { BMM350_SUS_TO_FORCEDMODE_NO_AVG_DELAY, BMM350_SUS_TO_FORCEDMODE_AVG_2_DELAY, BMM350_SUS_TO_FORCEDMODE_AVG_4_DELAY,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2071:0: information: Skipping configuration 'INT32_C;UINT32_C;__KERNEL__' since the value of 'UINT32_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+      BMM350_SUS_TO_FORCEDMODE_AVG_8_DELAY };
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2075:0: information: Skipping configuration 'INT32_C;UINT32_C;__KERNEL__' since the value of 'UINT32_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    { BMM350_SUS_TO_FORCEDMODE_FAST_NO_AVG_DELAY, BMM350_SUS_TO_FORCEDMODE_FAST_AVG_2_DELAY,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2076:0: information: Skipping configuration 'INT32_C;UINT32_C;__KERNEL__' since the value of 'UINT32_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+      BMM350_SUS_TO_FORCEDMODE_FAST_AVG_4_DELAY, BMM350_SUS_TO_FORCEDMODE_FAST_AVG_8_DELAY };
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2106:0: information: Skipping configuration 'INT32_C;UINT32_C;__KERNEL__' since the value of 'UINT32_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            delay_us = BMM350_SUSPEND_TO_NORMAL_DELAY;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:505:0: information: Skipping configuration 'INT64_C;UINT64_C;__KERNEL__' since the value of 'UINT64_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            time *= UINT64_C(390625);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:507:0: information: Skipping configuration 'INT64_C;UINT64_C;__KERNEL__' since the value of 'UINT64_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            time /= UINT64_C(10);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:509:0: information: Skipping configuration 'INT64_C;UINT64_C;__KERNEL__' since the value of 'UINT64_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            *seconds = (uint32_t)(time / UINT64_C(1000000000));
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:510:0: information: Skipping configuration 'INT64_C;UINT64_C;__KERNEL__' since the value of 'UINT64_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            *nanoseconds = (uint32_t)(time - ((*seconds) * UINT64_C(1000000000)));
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:202:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    int8_t rslt = BMM350_OK;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:208:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:242:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:251:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:259:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:265:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:270:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:278:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if ((rslt == BMM350_OK) && (dev->chip_id == BMM350_CHIP_ID))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:283:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:288:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:297:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:306:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = BMM350_E_DEV_NOT_FOUND;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:326:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if ((rslt == BMM350_OK) && (reg_data != NULL) && (len != 0))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:331:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (dev->intf_rslt != BMM350_INTF_RET_SUCCESS)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:333:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = BMM350_E_COM_FAIL;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:338:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:365:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if ((rslt == BMM350_OK) && (reg_data != NULL))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:370:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (dev->intf_rslt == BMM350_INTF_RET_SUCCESS)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:381:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = BMM350_E_COM_FAIL;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:386:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:404:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:429:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:436:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:440:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:445:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:454:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:488:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:516:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:538:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:546:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:566:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:570:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:574:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = BMM350_E_INVALID_CONFIG;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:577:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((rslt == BMM350_OK) &&
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:585:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:591:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:619:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:644:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:652:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:680:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:684:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = BMM350_E_ALL_AXIS_DISABLED;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:697:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:722:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:751:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:782:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:821:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:843:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:869:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    int8_t rslt = BMM350_E_BAD_PAD_DRIVE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:898:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if ((rslt == BMM350_OK) && (dev->mraw_override))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:908:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pwr_mode_is_normal == BMM350_ENABLE))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:916:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:923:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:929:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:934:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value != BMM350_PMU_CMD_STATUS_0_BR))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:936:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = BMM350_E_PMU_CMD_VALUE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:940:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:947:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:953:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:958:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value != BMM350_PMU_CMD_STATUS_0_FGR))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:960:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = BMM350_E_PMU_CMD_VALUE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:964:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if ((rslt == BMM350_OK) && (restore_normal == BMM350_ENABLE))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1118:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1168:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1202:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1224:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1229:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1236:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1246:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1259:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1280:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1310:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1339:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1365:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1382:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1451:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1456:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_OK;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1522:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1528:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1539:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            } while ((!(otp_status & BMM350_OTP_STATUS_CMD_DONE)) && (rslt == BMM350_OK));
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1546:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                        rslt = BMM350_E_OTP_BOOT;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1549:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                        rslt = BMM350_E_OTP_PAGE_RD;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1552:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                        rslt = BMM350_E_OTP_PAGE_PRG;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1555:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                        rslt = BMM350_E_OTP_SIGN;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1558:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                        rslt = BMM350_E_OTP_INV_CMD;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1561:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                        rslt = BMM350_E_OTP_UNDEFINED;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1567:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1571:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1581:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1761:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1777:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = BMM350_E_NULL_PTR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1861:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1867:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1871:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1881:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1885:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1891:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1895:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value == BMM350_PMU_CMD_STATUS_0_FGR))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1902:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1909:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1914:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value == BMM350_PMU_CMD_STATUS_0_BR_FAST))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1920:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1925:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1929:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value == BMM350_PMU_CMD_STATUS_0_FM_FAST))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1953:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1958:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1963:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1995:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2000:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2004:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2008:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2015:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value == BMM350_PMU_CMD_STATUS_0_FM_FAST))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2020:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2049:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = BMM350_E_SELF_TEST_INVALID_AXIS;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2083:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2088:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2093:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2101:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'INT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (rslt == BMM350_OK)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:548:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DISABLE_INTERRUPT = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:549:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ENABLE_INTERRUPT = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:553:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_SUSPEND_MODE = BMM350_PMU_CMD_SUS,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:554:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_NORMAL_MODE = BMM350_PMU_CMD_NM,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:555:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_FORCED_MODE = BMM350_PMU_CMD_FM,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:556:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_FORCED_MODE_FAST = BMM350_PMU_CMD_FM_FAST
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:560:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DATA_RATE_400HZ    = BMM350_ODR_400HZ,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:561:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DATA_RATE_200HZ    = BMM350_ODR_200HZ,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:562:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DATA_RATE_100HZ    = BMM350_ODR_100HZ,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:563:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DATA_RATE_50HZ     = BMM350_ODR_50HZ,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:564:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DATA_RATE_25HZ     = BMM350_ODR_25HZ,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:565:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DATA_RATE_12_5HZ   = BMM350_ODR_12_5HZ,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:566:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DATA_RATE_6_25HZ   = BMM350_ODR_6_25HZ,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:567:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DATA_RATE_3_125HZ  = BMM350_ODR_3_125HZ,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:568:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_DATA_RATE_1_5625HZ = BMM350_ODR_1_5625HZ
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:572:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_INTR_DISABLE = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:573:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_INTR_ENABLE = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:577:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_UNMAP_FROM_PIN = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:578:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_MAP_TO_PIN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:581:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_PULSED = BMM350_INT_MODE_PULSED,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:582:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_LATCHED = BMM350_INT_MODE_LATCHED
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:586:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ACTIVE_LOW = BMM350_INT_POL_ACTIVE_LOW,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:587:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ACTIVE_HIGH = BMM350_INT_POL_ACTIVE_HIGH
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:591:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_INTR_OPEN_DRAIN = BMM350_INT_OD_OPENDRAIN,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:592:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_INTR_PUSH_PULL = BMM350_INT_OD_PUSHPULL
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:596:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_IBI_DISABLE = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:597:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_IBI_ENABLE = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:601:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_NOCLEAR_ON_IBI = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:602:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_CLEAR_ON_IBI = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:606:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_I2C_WDT_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:607:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_I2C_WDT_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:611:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_I2C_WDT_SEL_SHORT = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:612:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_I2C_WDT_SEL_LONG = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:616:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_NO_AVERAGING = BMM350_AVG_NO_AVG,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:617:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_AVERAGING_2 = BMM350_AVG_2,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:618:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_AVERAGING_4 = BMM350_AVG_4,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:619:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_AVERAGING_8 = BMM350_AVG_8,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:621:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ULTRALOWNOISE = BMM350_AVG_8,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:622:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_LOWNOISE = BMM350_AVG_4,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:623:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_REGULARPOWER = BMM350_AVG_2,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:624:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_LOWPOWER = BMM350_AVG_NO_AVG
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:628:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ST_IGEN_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:629:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ST_IGEN_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:633:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ST_N_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:634:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ST_N_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:638:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ST_P_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:639:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_ST_P_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:643:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_IST_X_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:644:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_IST_X_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:648:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_IST_Y_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:649:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_IST_Y_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:653:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_CFG_SENS_TIM_AON_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:654:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_CFG_SENS_TIM_AON_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:658:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_X_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:659:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_X_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:663:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_Y_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:664:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_Y_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:668:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_Z_DIS = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:669:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_Z_EN = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:673:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_BOOT_NOT_DONE = BMM350_DISABLE,
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:674:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    BMM350_BOOT_DONE = BMM350_ENABLE
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350_defs.h:1082:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    uint16_t otp_data[BMM350_OTP_DATA_LENGTH];
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:230:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    uint8_t chip_id = BMM350_DISABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:233:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    uint8_t otp_cmd = BMM350_OTP_CMD_PWR_OFF_OTP;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:247:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        dev->axis_en = BMM350_EN_XYZ_MSK;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:254:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            soft_reset = BMM350_CMD_SOFTRESET;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:257:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_set_regs(BMM350_REG_CMD, &soft_reset, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:268:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_get_regs(BMM350_REG_CHIP_ID, &chip_id, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:278:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if ((rslt == BMM350_OK) && (dev->chip_id == BMM350_CHIP_ID))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:286:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = bmm350_set_regs(BMM350_REG_OTP_CMD_REG, &otp_cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:353:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    uint16_t temp_len = len + BMM350_DUMMY_BYTES;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:356:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    uint8_t temp_buf[BMM350_READ_BUFFER_LENGTH];
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:375:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                reg_data[index] = temp_buf[index + BMM350_DUMMY_BYTES];
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:424:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    uint8_t otp_cmd = BMM350_OTP_CMD_PWR_OFF_OTP;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:431:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_CMD_SOFTRESET;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:434:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_CMD, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:443:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = bmm350_set_regs(BMM350_REG_OTP_CMD_REG, &otp_cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:486:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_get_regs(BMM350_REG_SENSORTIME_XLSB, reg_data, 3, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:536:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_get_regs(BMM350_REG_INT_STATUS, &int_status_reg, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:541:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            (*drdy_status) = BMM350_GET_BITS(int_status_reg, BMM350_DRDY_DATA_REG);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:568:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_get_regs(BMM350_REG_PMU_CMD, &last_pwr_mode, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:572:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (last_pwr_mode > BMM350_PMU_CMD_BR_FAST)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:578:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                ((last_pwr_mode == BMM350_PMU_CMD_NM) || (last_pwr_mode == BMM350_PMU_CMD_UPD_OAE)))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:580:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                reg_data = BMM350_PMU_CMD_SUS;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:583:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:636:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = ((uint8_t)odr & BMM350_ODR_MSK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:639:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_AVG, (uint8_t)performance_fix);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:642:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_PMU_CMD_AGGR_SET, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:647:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            reg_data = BMM350_PMU_CMD_UPD_OAE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:650:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:687:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            dev->axis_en = BMM350_DISABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:691:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            data = (en_x & BMM350_EN_X_MSK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:692:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            data = BMM350_SET_BITS(data, BMM350_EN_Y, en_y);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:693:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            data = BMM350_SET_BITS(data, BMM350_EN_Z, en_z);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:695:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_set_regs(BMM350_REG_PMU_CMD_AXIS_EN, &data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:720:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    rslt = bmm350_get_regs(BMM350_REG_INT_CTRL, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:724:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_DRDY_DATA_REG_EN, (uint8_t)enable_disable);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:727:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_INT_CTRL, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:749:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    rslt = bmm350_get_regs(BMM350_REG_INT_CTRL, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:753:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS_POS_0(reg_data, BMM350_INT_MODE, latching);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:754:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_INT_POL, polarity);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:755:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_INT_OD, drivertype);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:756:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_INT_OUTPUT_EN, map_nomap);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:759:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_INT_CTRL, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:780:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_get_regs(BMM350_REG_MAG_X_XLSB, mag_data, BMM350_MAG_TEMP_DATA_LEN, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:789:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((dev->axis_en & BMM350_EN_X_MSK) == BMM350_DISABLE)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:791:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                raw_data->raw_xdata = BMM350_DISABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:795:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                raw_data->raw_xdata = fix_sign(raw_mag_x, BMM350_SIGNED_24_BIT);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:798:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((dev->axis_en & BMM350_EN_Y_MSK) == BMM350_DISABLE)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:800:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                raw_data->raw_ydata = BMM350_DISABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:804:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                raw_data->raw_ydata = fix_sign(raw_mag_y, BMM350_SIGNED_24_BIT);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:807:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((dev->axis_en & BMM350_EN_Z_MSK) == BMM350_DISABLE)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:809:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                raw_data->raw_zdata = BMM350_DISABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:813:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                raw_data->raw_zdata = fix_sign(raw_mag_z, BMM350_SIGNED_24_BIT);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:816:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            raw_data->raw_data_t = fix_sign(raw_temp, BMM350_SIGNED_24_BIT);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:841:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    rslt = bmm350_get_regs(BMM350_REG_INT_CTRL_IBI, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:845:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS_POS_0(reg_data, BMM350_DRDY_INT_MAP_TO_IBI, en_dis);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:846:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_CLEAR_DRDY_INT_STATUS_UPON_IBI, clear_on_ibi);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:849:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_INT_CTRL_IBI, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:871:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if (drive <= BMM350_PAD_DRIVE_STRONGEST)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:873:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = drive & BMM350_DRV_MSK;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:876:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_PAD_CTRL, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:894:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    uint8_t restore_normal = BMM350_DISABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:908:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pwr_mode_is_normal == BMM350_ENABLE))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:910:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            restore_normal = BMM350_ENABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:919:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            pmu_cmd = BMM350_PMU_CMD_BR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:921:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &pmu_cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:934:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value != BMM350_PMU_CMD_STATUS_0_BR))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:943:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            pmu_cmd = BMM350_PMU_CMD_FGR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:945:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &pmu_cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:958:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value != BMM350_PMU_CMD_STATUS_0_FGR))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:964:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if ((rslt == BMM350_OK) && (restore_normal == BMM350_ENABLE))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1170:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((dev->axis_en & BMM350_EN_X_MSK) == BMM350_DISABLE)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1172:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                mag_temp_data->x = BMM350_DISABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1179:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((dev->axis_en & BMM350_EN_Y_MSK) == BMM350_DISABLE)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1181:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                mag_temp_data->y = BMM350_DISABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1188:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((dev->axis_en & BMM350_EN_Z_MSK) == BMM350_DISABLE)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1190:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                mag_temp_data->z = BMM350_DISABLE;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1222:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_get_regs(BMM350_REG_PMU_CMD, &last_pwr_mode, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1251:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (last_pwr_mode == BMM350_PMU_CMD_NM)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1278:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    rslt = bmm350_get_regs(BMM350_REG_I2C_WDT_SET, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1282:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS_POS_0(reg_data, BMM350_I2C_WDT_EN, i2c_wdt_en_dis);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1283:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_I2C_WDT_SEL, i2c_wdt_sel);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1286:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_I2C_WDT_SET, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1308:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    rslt = bmm350_get_regs(BMM350_REG_TMR_SELFTEST_USER, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1312:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS_POS_0(reg_data, BMM350_ST_IGEN_EN, st_igen_en_dis);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1313:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_ST_N, st_n_en_dis);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1314:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_ST_P, st_p_en_dis);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1315:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_IST_EN_X, ist_x_en_dis);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1316:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS(reg_data, BMM350_IST_EN_Y, ist_y_en_dis);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1319:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_TMR_SELFTEST_USER, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1337:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    rslt = bmm350_get_regs(BMM350_REG_CTRL_USER, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1341:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        reg_data = BMM350_SET_BITS_POS_0(reg_data, BMM350_CFG_SENS_TIM_AON, cfg_sens_tim_aon_en_dis);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1344:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_CTRL_USER, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1363:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_get_regs(BMM350_REG_PMU_CMD_STATUS_0, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1367:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            pmu_cmd_stat_0->pmu_cmd_busy = BMM350_GET_BITS_POS_0(reg_data, BMM350_PMU_CMD_BUSY);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1369:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            pmu_cmd_stat_0->odr_ovwr = BMM350_GET_BITS(reg_data, BMM350_ODR_OVWR);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1371:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            pmu_cmd_stat_0->avr_ovwr = BMM350_GET_BITS(reg_data, BMM350_AVG_OVWR);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1373:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            pmu_cmd_stat_0->pwr_mode_is_normal = BMM350_GET_BITS(reg_data, BMM350_PWR_MODE_IS_NORMAL);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1375:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            pmu_cmd_stat_0->cmd_is_illegal = BMM350_GET_BITS(reg_data, BMM350_CMD_IS_ILLEGAL);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1377:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            pmu_cmd_stat_0->pmu_cmd_value = BMM350_GET_BITS(reg_data, BMM350_PMU_CMD_VALUE);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1472:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        case BMM350_SIGNED_8_BIT:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1476:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        case BMM350_SIGNED_12_BIT:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1480:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        case BMM350_SIGNED_16_BIT:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1484:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        case BMM350_SIGNED_21_BIT:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1488:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        case BMM350_SIGNED_24_BIT:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1515:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    uint8_t otp_cmd, otp_status = 0, otp_err = BMM350_OTP_STATUS_NO_ERROR, lsb = 0, msb = 0;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1520:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        otp_cmd = BMM350_OTP_CMD_DIR_READ | (addr & BMM350_OTP_WORD_ADDR_MSK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1521:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_OTP_CMD_REG, &otp_cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1531:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    rslt = bmm350_get_regs(BMM350_REG_OTP_STATUS_REG, &otp_status, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1533:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    otp_err = BMM350_OTP_STATUS_ERROR(otp_status);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1534:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    if (otp_err != BMM350_OTP_STATUS_NO_ERROR)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1539:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            } while ((!(otp_status & BMM350_OTP_STATUS_CMD_DONE)) && (rslt == BMM350_OK));
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1541:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (otp_err != BMM350_OTP_STATUS_NO_ERROR)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1545:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    case BMM350_OTP_STATUS_BOOT_ERR:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1548:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    case BMM350_OTP_STATUS_PAGE_RD_ERR:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1551:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    case BMM350_OTP_STATUS_PAGE_PRG_ERR:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1554:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    case BMM350_OTP_STATUS_SIGN_ERR:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1557:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    case BMM350_OTP_STATUS_INV_CMD_ERR:
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1570:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_get_regs(BMM350_REG_OTP_DATA_MSB_REG, &msb, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1574:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = bmm350_get_regs(BMM350_REG_OTP_DATA_LSB_REG, &lsb, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1598:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    off_x_lsb_msb = dev->otp_data[BMM350_MAG_OFFSET_X] & 0x0FFF;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1599:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    off_y_lsb_msb = ((dev->otp_data[BMM350_MAG_OFFSET_X] & 0xF000) >> 4) +
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1600:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    (dev->otp_data[BMM350_MAG_OFFSET_Y] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1601:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    off_z_lsb_msb = (dev->otp_data[BMM350_MAG_OFFSET_Y] & 0x0F00) +
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1602:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                    (dev->otp_data[BMM350_MAG_OFFSET_Z] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1603:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    t_off = dev->otp_data[BMM350_TEMP_OFF_SENS] & BMM350_LSB_MASK;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1613:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_offset_coef.offset_x = fix_sign(off_x_lsb_msb, BMM350_SIGNED_12_BIT);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1614:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_offset_coef.offset_y = fix_sign(off_y_lsb_msb, BMM350_SIGNED_12_BIT);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1615:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_offset_coef.offset_z = fix_sign(off_z_lsb_msb, BMM350_SIGNED_12_BIT);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1616:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_offset_coef.t_offs = fix_sign(t_off, BMM350_SIGNED_8_BIT) / 5.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1619:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    sens_x = (dev->otp_data[BMM350_MAG_SENS_X] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1620:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    sens_y = (dev->otp_data[BMM350_MAG_SENS_Y] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1621:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    sens_z = (dev->otp_data[BMM350_MAG_SENS_Z] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1622:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    t_sens = (dev->otp_data[BMM350_TEMP_OFF_SENS] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1635:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_sensit_coef.sens_x = fix_sign(sens_x, BMM350_SIGNED_8_BIT) / 256.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1636:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_sensit_coef.sens_y = fix_sign(sens_y, BMM350_SIGNED_8_BIT) / 256.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1637:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_sensit_coef.sens_z = fix_sign(sens_z, BMM350_SIGNED_8_BIT) / 256.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1638:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_sensit_coef.t_sens = fix_sign(t_sens, BMM350_SIGNED_8_BIT) / 512.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1641:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tco_x = (dev->otp_data[BMM350_MAG_TCO_X] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1642:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tco_y = (dev->otp_data[BMM350_MAG_TCO_Y] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1643:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tco_z = (dev->otp_data[BMM350_MAG_TCO_Z] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1651:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_tco.tco_x = fix_sign(tco_x, BMM350_SIGNED_8_BIT) / 32.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1652:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_tco.tco_y = fix_sign(tco_y, BMM350_SIGNED_8_BIT) / 32.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1653:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_tco.tco_z = fix_sign(tco_z, BMM350_SIGNED_8_BIT) / 32.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1656:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tcs_x = (dev->otp_data[BMM350_MAG_TCS_X] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1657:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tcs_y = (dev->otp_data[BMM350_MAG_TCS_Y] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1658:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    tcs_z = (dev->otp_data[BMM350_MAG_TCS_Z] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1669:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_tcs.tcs_x = fix_sign(tcs_x, BMM350_SIGNED_8_BIT) / 16384.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1670:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_tcs.tcs_y = fix_sign(tcs_y, BMM350_SIGNED_8_BIT) / 16384.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1671:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_tcs.tcs_z = fix_sign(tcs_z, BMM350_SIGNED_8_BIT) / 16384.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1680:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.dut_t0 = (fix_sign(dev->otp_data[BMM350_MAG_DUT_T_0], BMM350_SIGNED_16_BIT) / 512.0f) + 23.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1683:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cross_x_y = (dev->otp_data[BMM350_CROSS_X_Y] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1684:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cross_y_x = (dev->otp_data[BMM350_CROSS_Y_X] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1685:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cross_z_x = (dev->otp_data[BMM350_CROSS_Z_X] & BMM350_LSB_MASK);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1686:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cross_z_y = (dev->otp_data[BMM350_CROSS_Z_Y] & BMM350_MSB_MASK) >> 8;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1699:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.cross_axis.cross_x_y = fix_sign(cross_x_y, BMM350_SIGNED_8_BIT) / 800.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1700:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.cross_axis.cross_y_x = fix_sign(cross_y_x, BMM350_SIGNED_8_BIT) / 800.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1701:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.cross_axis.cross_z_x = fix_sign(cross_z_x, BMM350_SIGNED_8_BIT) / 800.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1702:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->mag_comp.cross_axis.cross_z_y = fix_sign(cross_z_y, BMM350_SIGNED_8_BIT) / 800.0f;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1825:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    for (indx = 0; indx < BMM350_OTP_DATA_LENGTH; indx++)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1834:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    dev->enable_auto_br = ((dev->var_id > BMM350_CURRENT_SHUTTLE_VARIANT_ID) ? BMM350_DISABLE : BMM350_ENABLE);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1857:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cmd = BMM350_PMU_CMD_SUS;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1859:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1879:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    cmd = BMM350_PMU_CMD_FGR;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1883:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1895:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value == BMM350_PMU_CMD_STATUS_0_FGR))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1898:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            cmd = BMM350_PMU_CMD_BR_FAST;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1900:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1914:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value == BMM350_PMU_CMD_STATUS_0_BR_FAST))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1916:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        cmd = BMM350_PMU_CMD_FM_FAST;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1918:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1929:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value == BMM350_PMU_CMD_STATUS_0_FM_FAST))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1948:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    uint8_t cmd = BMM350_PMU_CMD_FM_FAST;
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1951:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    rslt = self_test_config(BMM350_SELF_TEST_POS_X, cmd, out_data, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1956:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = self_test_config(BMM350_SELF_TEST_NEG_X, cmd, out_data, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1961:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = self_test_config(BMM350_SELF_TEST_POS_Y, cmd, out_data, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1966:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                rslt = self_test_config(BMM350_SELF_TEST_NEG_Y, cmd, out_data, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1993:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    rslt = bmm350_set_regs(BMM350_REG_TMR_SELFTEST_USER, &st_cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2002:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &pmu_cmd, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2015:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+    if ((rslt == BMM350_OK) && (pmu_cmd_stat_0.pmu_cmd_value == BMM350_PMU_CMD_STATUS_0_FM_FAST))
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2023:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            if (st_cmd == BMM350_SELF_TEST_POS_X)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2028:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            else if (st_cmd == BMM350_SELF_TEST_NEG_X)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2033:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            else if (st_cmd == BMM350_SELF_TEST_POS_Y)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2038:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            else if (st_cmd == BMM350_SELF_TEST_NEG_Y)
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2086:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+        rslt = bmm350_set_regs(BMM350_REG_PMU_CMD, &reg_data, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2091:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+            rslt = bmm350_get_regs(BMM350_REG_PMU_CMD_AGGR_SET, &get_avg, 1, dev);
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2096:0: information: Skipping configuration 'INT8_C;UINT8_C;__KERNEL__' since the value of 'UINT8_C' is unknown. Use -D if you want to check it. You can use -U to skip it explicitly. [ConfigurationNotChecked]
+                avg = ((get_avg & BMM350_AVG_MSK) >> BMM350_AVG_POS);
+^
+SynapsePDM/src/GSM.cpp:278:9: style: Consider using std::find_if algorithm instead of a raw loop. [useStlAlgorithm]
+        {
+        ^
+SynapsePDM/src/Globals.cpp:78:5: portability: Using memset() on struct which contains a floating point number. [memsetClassFloat]
     memset(&Channels[i], 0, sizeof(ChannelConfig));
     ^
-SynapsePDM/src/IMU.cpp:57:7: style: Variable 'err' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/IMU.cpp:100:7: style: Variable 'err' is reassigned a value before the old one has been used. [redundantAssignment]
   err = imu.setConfig(accelConfig);
       ^
-SynapsePDM/src/IMU.cpp:48:7: note: err is assigned
+SynapsePDM/src/IMU.cpp:92:7: note: err is assigned
   err |= imu.enableFeature(BMI2_ANY_MOTION);
       ^
-SynapsePDM/src/IMU.cpp:57:7: note: err is overwritten
+SynapsePDM/src/IMU.cpp:100:7: note: err is overwritten
   err = imu.setConfig(accelConfig);
       ^
-SynapsePDM/src/IMU.cpp:68:7: style: Variable 'err' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/IMU.cpp:110:7: style: Variable 'err' is reassigned a value before the old one has been used. [redundantAssignment]
   err = imu.setConfig(gyroConfig);
       ^
-SynapsePDM/src/IMU.cpp:57:7: note: err is assigned
+SynapsePDM/src/IMU.cpp:100:7: note: err is assigned
   err = imu.setConfig(accelConfig);
       ^
-SynapsePDM/src/IMU.cpp:68:7: note: err is overwritten
+SynapsePDM/src/IMU.cpp:110:7: note: err is overwritten
   err = imu.setConfig(gyroConfig);
       ^
-SynapsePDM/src/OutputHandler.cpp:269:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
+SynapsePDM/src/InputHandler.cpp:373:29: style: Local variable 'PowerState' shadows outer variable [shadowVariable]
+    extern volatile uint8_t PowerState;
+                            ^
+SynapsePDM/src/System.h:134:25: note: Shadowed declaration
+extern volatile uint8_t PowerState;
+                        ^
+SynapsePDM/src/InputHandler.cpp:373:29: note: Shadow variable
+    extern volatile uint8_t PowerState;
+                            ^
+SynapsePDM/src/InputHandler.cpp:374:17: style: Local variable 'runOnEligible' shadows outer variable [shadowVariable]
+    extern bool runOnEligible[NUM_CHANNELS];
+                ^
+SynapsePDM/src/Globals.h:260:13: note: Shadowed declaration
+extern bool runOnEligible[NUM_CHANNELS];
+            ^
+SynapsePDM/src/InputHandler.cpp:374:17: note: Shadow variable
+    extern bool runOnEligible[NUM_CHANNELS];
+                ^
+SynapsePDM/src/InputHandler.cpp:375:21: style: Local variable 'runOnDeadline' shadows outer variable [shadowVariable]
+    extern uint32_t runOnDeadline[NUM_CHANNELS];
+                    ^
+SynapsePDM/src/Globals.h:263:17: note: Shadowed declaration
+extern uint32_t runOnDeadline[NUM_CHANNELS];
+                ^
+SynapsePDM/src/InputHandler.cpp:375:21: note: Shadow variable
+    extern uint32_t runOnDeadline[NUM_CHANNELS];
+                    ^
+SynapsePDM/src/OutputHandler.cpp:464:16: style: Redundant initialization for 'amps'. The initialized value is overwritten before it is read. [redundantInitialization]
+          amps = 0.0f;
+               ^
+SynapsePDM/src/OutputHandler.cpp:458:20: note: amps is initialized
+        float amps = measuredAmps;
+                   ^
+SynapsePDM/src/OutputHandler.cpp:464:16: note: amps is overwritten
+          amps = 0.0f;
+               ^
+SynapsePDM/src/OutputHandler.cpp:432:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
         float analogMean = 0.0f;
               ^
-SynapsePDM/src/OutputHandler.cpp:319:24: style: The scope of the variable 'trySampleCount' can be reduced. [variableScope]
-        static uint8_t trySampleCount[NUM_CHANNELS] = {0};
-                       ^
-SynapsePDM/src/SerialComms.cpp:400:38: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
-                    connectionStatus = 4;
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'CurrentValue' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:149:27: note: Address of variable taken here.
+        AppendStatusBytes(&ChannelRuntime[i].CurrentValue, sizeof(ChannelRuntime[i].CurrentValue), checksum);
+                          ^
+SynapsePDM/src/SerialComms.cpp:149:27: note: Calling function 'AppendStatusBytes', 1st argument '&ChannelRuntime[i].CurrentValue' value is lifetime=CurrentValue
+        AppendStatusBytes(&ChannelRuntime[i].CurrentValue, sizeof(ChannelRuntime[i].CurrentValue), checksum);
+                          ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'CurrentValue' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'InputVoltage' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:158:27: note: Address of variable taken here.
+        AppendStatusBytes(&AnalogueIns[i].InputVoltage, sizeof(AnalogueIns[i].InputVoltage), checksum);
+                          ^
+SynapsePDM/src/SerialComms.cpp:158:27: note: Calling function 'AppendStatusBytes', 1st argument '&AnalogueIns[i].InputVoltage' value is lifetime=InputVoltage
+        AppendStatusBytes(&AnalogueIns[i].InputVoltage, sizeof(AnalogueIns[i].InputVoltage), checksum);
+                          ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'InputVoltage' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'InputValue' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:159:27: note: Address of variable taken here.
+        AppendStatusBytes(&AnalogueIns[i].InputValue, sizeof(AnalogueIns[i].InputValue), checksum);
+                          ^
+SynapsePDM/src/SerialComms.cpp:159:27: note: Calling function 'AppendStatusBytes', 1st argument '&AnalogueIns[i].InputValue' value is lifetime=InputValue
+        AppendStatusBytes(&AnalogueIns[i].InputValue, sizeof(AnalogueIns[i].InputValue), checksum);
+                          ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'InputValue' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'SystemTemperature' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:162:23: note: Address of variable taken here.
+    AppendStatusBytes(&SystemRuntimeParams.SystemTemperature, sizeof(SystemRuntimeParams.SystemTemperature), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:162:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.SystemTemperature' value is lifetime=SystemTemperature
+    AppendStatusBytes(&SystemRuntimeParams.SystemTemperature, sizeof(SystemRuntimeParams.SystemTemperature), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'SystemTemperature' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'SIMModuleTemp' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:163:23: note: Address of variable taken here.
+    AppendStatusBytes(&SystemRuntimeParams.SIMModuleTemp, sizeof(SystemRuntimeParams.SIMModuleTemp), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:163:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.SIMModuleTemp' value is lifetime=SIMModuleTemp
+    AppendStatusBytes(&SystemRuntimeParams.SIMModuleTemp, sizeof(SystemRuntimeParams.SIMModuleTemp), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'SIMModuleTemp' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'IMUTemp' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:164:23: note: Address of variable taken here.
+    AppendStatusBytes(&SystemRuntimeParams.IMUTemp, sizeof(SystemRuntimeParams.IMUTemp), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:164:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.IMUTemp' value is lifetime=IMUTemp
+    AppendStatusBytes(&SystemRuntimeParams.IMUTemp, sizeof(SystemRuntimeParams.IMUTemp), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'IMUTemp' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'VBatt' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:165:23: note: Address of variable taken here.
+    AppendStatusBytes(&SystemRuntimeParams.VBatt, sizeof(SystemRuntimeParams.VBatt), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:165:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.VBatt' value is lifetime=VBatt
+    AppendStatusBytes(&SystemRuntimeParams.VBatt, sizeof(SystemRuntimeParams.VBatt), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'VBatt' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'SystemCurrent' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:166:23: note: Address of variable taken here.
+    AppendStatusBytes(&SystemRuntimeParams.SystemCurrent, sizeof(SystemRuntimeParams.SystemCurrent), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:166:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.SystemCurrent' value is lifetime=SystemCurrent
+    AppendStatusBytes(&SystemRuntimeParams.SystemCurrent, sizeof(SystemRuntimeParams.SystemCurrent), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'SystemCurrent' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'ErrorFlags' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:167:23: note: Address of variable taken here.
+    AppendStatusBytes(&SystemRuntimeParams.ErrorFlags, sizeof(SystemRuntimeParams.ErrorFlags), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:167:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.ErrorFlags' value is lifetime=ErrorFlags
+    AppendStatusBytes(&SystemRuntimeParams.ErrorFlags, sizeof(SystemRuntimeParams.ErrorFlags), checksum);
+                      ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'ErrorFlags' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'CurrentThresholdHigh' might be accessed at non-zero index. [objectIndex]
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:186:27: note: Address of variable taken here.
+        AppendStatusBytes(&Channels[i].CurrentThresholdHigh, sizeof(Channels[i].CurrentThresholdHigh), checksum);
+                          ^
+SynapsePDM/src/SerialComms.cpp:186:27: note: Calling function 'AppendStatusBytes', 1st argument '&Channels[i].CurrentThresholdHigh' value is lifetime=CurrentThresholdHigh
+        AppendStatusBytes(&Channels[i].CurrentThresholdHigh, sizeof(Channels[i].CurrentThresholdHigh), checksum);
+                          ^
+SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'CurrentThresholdHigh' might be accessed at non-zero index.
+        AppendStatusByte(bytes[i], checksum);
+                              ^
+SynapsePDM/src/SerialComms.cpp:743:42: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
+                        connectionStatus = 4;
+                                         ^
+SynapsePDM/src/SerialComms.cpp:726:38: note: connectionStatus is assigned
+                    connectionStatus = 3;
                                      ^
-SynapsePDM/src/SerialComms.cpp:383:34: note: connectionStatus is assigned
-                connectionStatus = 3;
-                                 ^
-SynapsePDM/src/SerialComms.cpp:400:38: note: connectionStatus is overwritten
-                    connectionStatus = 4;
-                                     ^
-SynapsePDM/src/SerialComms.cpp:401:33: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/SerialComms.cpp:743:42: note: connectionStatus is overwritten
+                        connectionStatus = 4;
+                                         ^
+SynapsePDM/src/SerialComms.cpp:744:37: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
+                        validPacket = true;
+                                    ^
+SynapsePDM/src/SerialComms.cpp:727:33: note: validPacket is assigned
                     validPacket = true;
                                 ^
-SynapsePDM/src/SerialComms.cpp:384:29: note: validPacket is assigned
-                validPacket = true;
-                            ^
-SynapsePDM/src/SerialComms.cpp:401:33: note: validPacket is overwritten
-                    validPacket = true;
-                                ^
-SynapsePDM/src/SerialComms.cpp:360:22: style: The scope of the variable 'calcChecksum' can be reduced. [variableScope]
-            uint32_t calcChecksum = 0;
-                     ^
-SynapsePDM/src/SerialComms.cpp:464:85: style: Checking if unsigned expression 'Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime' is less than zero. [unsignedLessThanZero]
-                            if (Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime < 0)
-                                                                                    ^
-SynapsePDM/src/SerialComms.cpp:125:22: style: Variable 'chanSize' is assigned a value that is never used. [unreadVariable]
-            chanSize = sizeof(Channels) / NUM_CHANNELS;
-                     ^
-SynapsePDM/src/Storage.cpp:784:10: style: The scope of the variable 'timeStamp' can be reduced. [variableScope]
-    char timeStamp[100];
+SynapsePDM/src/SerialComms.cpp:744:37: note: validPacket is overwritten
+                        validPacket = true;
+                                    ^
+SynapsePDM/src/SerialComms.cpp:827:89: style: Checking if unsigned expression 'Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime' is less than zero. [unsignedLessThanZero]
+                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime < 0)
+                                                                                        ^
+SynapsePDM/src/Storage.cpp:1105:10: style: The scope of the variable 'logLine' can be reduced. [variableScope]
+    char logLine[LOG_LINE_BUFFER_SIZE] = {0};
          ^
-SynapsePDM/src/Storage.cpp:785:10: style: The scope of the variable 'sysLog' can be reduced. [variableScope]
-    char sysLog[150];
-         ^
-SynapsePDM/src/Storage.cpp:786:10: style: The scope of the variable 'channelLog' can be reduced. [variableScope]
-    char channelLog[150];
-         ^
-SynapsePDM/src/Storage.cpp:787:9: style: The scope of the variable 'writtenBytes' can be reduced. [variableScope]
-    int writtenBytes = 0;
-        ^
-SynapsePDM/src/Storage.cpp:1000:18: style: Local variable 'fileName' shadows outer variable [shadowVariable]
+SynapsePDM/src/Storage.cpp:1107:12: style: The scope of the variable 'expectedBytes' can be reduced. [variableScope]
+    size_t expectedBytes = 0;
+           ^
+SynapsePDM/src/Storage.cpp:1547:14: style: The scope of the variable 'linesSent' can be reduced. [variableScope]
+    uint16_t linesSent = 0;
+             ^
+SynapsePDM/src/Storage.cpp:1375:18: style: Local variable 'fileName' shadows outer variable [shadowVariable]
             char fileName[24] = {0};
                  ^
-SynapsePDM/src/Storage.h:75:13: note: Shadowed declaration
+SynapsePDM/src/Storage.h:78:13: note: Shadowed declaration
 extern char fileName[];
             ^
-SynapsePDM/src/Storage.cpp:1000:18: note: Shadow variable
+SynapsePDM/src/Storage.cpp:1375:18: note: Shadow variable
             char fileName[24] = {0};
                  ^
-SynapsePDM/src/Storage.cpp:787:22: style: Variable 'writtenBytes' is assigned a value that is never used. [unreadVariable]
-    int writtenBytes = 0;
-                     ^
-SynapsePDM/src/Storage.cpp:823:18: style: Unused variable: logEntry [unusedVariable]
-            char logEntry[40];
+SynapsePDM/src/Storage.cpp:1654:18: style: Local variable 'fileName' shadows outer variable [shadowVariable]
+            char fileName[32] = {0};
                  ^
-SynapsePDM/src/Storage.cpp:648:0: style: The function 'CleanEEPROM' is never used. [unusedFunction]
+SynapsePDM/src/Storage.h:78:13: note: Shadowed declaration
+extern char fileName[];
+            ^
+SynapsePDM/src/Storage.cpp:1654:18: note: Shadow variable
+            char fileName[32] = {0};
+                 ^
+SynapsePDM/src/Storage.cpp:1107:26: style: Variable 'expectedBytes' is assigned a value that is never used. [unreadVariable]
+    size_t expectedBytes = 0;
+                         ^
+SynapsePDM/src/System.cpp:99:13: style: Local variable 'year' shadows outer variable [shadowVariable]
+    int32_t year = (int32_t)yearOfEra + era * 400;
+            ^
+SynapsePDM/src/GSM.h:119:12: note: Shadowed declaration
+extern int year;
+           ^
+SynapsePDM/src/System.cpp:99:13: note: Shadow variable
+    int32_t year = (int32_t)yearOfEra + era * 400;
+            ^
+SynapsePDM/src/System.cpp:220:13: style: Local variable 'day' shadows outer variable [shadowVariable]
+    uint8_t day = 1;
+            ^
+SynapsePDM/src/GSM.h:125:12: note: Shadowed declaration
+extern int day;
+           ^
+SynapsePDM/src/System.cpp:220:13: note: Shadow variable
+    uint8_t day = 1;
+            ^
+SynapsePDM/src/System.cpp:189:17: style: Local variable 'day' shadows outer variable [shadowVariable]
+        uint8_t day = GetFixedTransitionDay(encodedWeek);
+                ^
+SynapsePDM/src/GSM.h:125:12: note: Shadowed declaration
+extern int day;
+           ^
+SynapsePDM/src/System.cpp:189:17: note: Shadow variable
+        uint8_t day = GetFixedTransitionDay(encodedWeek);
+                ^
+SynapsePDM/src/System.cpp:212:17: style: Local variable 'day' shadows outer variable [shadowVariable]
+        uint8_t day = GetDaysInMonth(fullYear, month);
+                ^
+SynapsePDM/src/GSM.h:125:12: note: Shadowed declaration
+extern int day;
+           ^
+SynapsePDM/src/System.cpp:212:17: note: Shadow variable
+        uint8_t day = GetDaysInMonth(fullYear, month);
+                ^
+SynapsePDM/src/Storage.cpp:1348:0: style: The function 'CleanupOrphanedLogFiles' is never used. [unusedFunction]
 
 ^
-SynapsePDM/src/Storage.cpp:973:0: style: The function 'CleanupOrphanedLogFiles' is never used. [unusedFunction]
+SynapsePDM/src/FirmwareUpdate.cpp:352:0: style: The function 'ClearFirmwareUpdateDiagnostic' is never used. [unusedFunction]
 
 ^
-SynapsePDM/src/main.cpp:429:0: style: The function 'loop' is never used. [unusedFunction]
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:199:0: style: The function 'bmm350_api_version' is never used. [unusedFunction]
 
 ^
-SynapsePDM/src/main.cpp:217:0: style: The function 'setup' is never used. [unusedFunction]
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:736:0: style: The function 'bmm350_configure_interrupt' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1396:0: style: The function 'bmm350_fixed_point_sqrt' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:974:0: style: The function 'bmm350_get_compensated_mag_xyz_temp_data_fixed' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:526:0: style: The function 'bmm350_get_interrupt_status' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1212:0: style: The function 'bmm350_perform_self_test' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:471:0: style: The function 'bmm350_read_sensortime' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1329:0: style: The function 'bmm350_set_ctrl_user' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:1268:0: style: The function 'bmm350_set_i2c_wdt' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:830:0: style: The function 'bmm350_set_int_ctrl_ibi' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:864:0: style: The function 'bmm350_set_pad_drive' is never used. [unusedFunction]
+
+^
+SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:416:0: style: The function 'bmm350_soft_reset' is never used. [unusedFunction]
+
+^
+SynapsePDM/src/main.cpp:519:0: style: The function 'loop' is never used. [unusedFunction]
+
+^
+SynapsePDM/src/main.cpp:166:0: style: The function 'setup' is never used. [unusedFunction]
 
 ^
 nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingInclude]
