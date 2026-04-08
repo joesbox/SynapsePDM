@@ -1,3 +1,4 @@
+
 /*  Globals.h Global variables, definitions and functions.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
@@ -35,6 +36,7 @@ uint32_t CommsTimer;
 uint32_t LogTimer;
 uint32_t GPSTimer;
 uint32_t signalTimer;
+uint32_t simTemperatureTimer;
 uint32_t BLTimer;
 uint32_t wakeDebounceTimer;
 uint32_t systemCANTimer;
@@ -64,6 +66,10 @@ volatile bool imuWakePending = false;
 
 bool CANChannelEnableFlags[NUM_CHANNELS] = {false};
 
+// Tracks which channels are eligible for RunOn (were enabled at PREPARE_SLEEP entry)
+bool runOnEligible[NUM_CHANNELS] = {false};
+uint32_t runOnDeadline[NUM_CHANNELS] = {0};
+
 void InitialiseChannelData()
 {
   // Initialise channels to default values, ensure they are initially off
@@ -71,6 +77,7 @@ void InitialiseChannelData()
   {
     memset(&Channels[i], 0, sizeof(ChannelConfig));
     Channels[i].ChanType = DIG;
+    Channels[i].Category = CHANNEL_CATEGORY_AUXILIARY;
     Channels[i].Enabled = false;
     Channels[i].OutputControlPin = channelOutputPins[i];
     Channels[i].CurrentSensePin = channelCurrentSensePins[i];
@@ -82,8 +89,14 @@ void InitialiseChannelData()
     {
       Channels[i].InputControlPin = ANAchannelInputPins[i - NUM_DI_CHANNELS];
     }    
-    Channels[i].CurrentThresholdHigh = CURRENT_MAX;
+    Channels[i].CurrentThresholdHigh = 1.0;
     Channels[i].CurrentThresholdLow = 0.0;
+    Channels[i].OnThreshold = 2.5;
+    Channels[i].OffThreshold = 2.0;
+    Channels[i].ScaleMin = 0.0;
+    Channels[i].ScaleMax = 5.0;
+    Channels[i].PWMMin = 0;
+    Channels[i].PWMMax = 100;
     pinMode(Channels[i].OutputControlPin, OUTPUT);
     digitalWrite(Channels[i].OutputControlPin, LOW);
     Channels[i].ActiveHigh = true;
@@ -92,6 +105,13 @@ void InitialiseChannelData()
     Channels[i].MultiChannel = false;    
     Channels[i].RetryCount = 3;
     Channels[i].InrushDelay = INRUSH_DELAY;
+    Channels[i].SoftStart = false;
+    Channels[i].SoftStartTime = 0;
+    Channels[i].SoftStop = false;
+    Channels[i].SoftStopTime = 0;
+    Channels[i].InrushCurrentThreshold = 1.0;
+    Channels[i].IntermittentOnTime = 1000;
+    Channels[i].IntermittentOffTime = 1000;
     ChannelRuntime[i].Override = false;
   } 
 }
@@ -104,15 +124,20 @@ void InitialiseAnalogueData()
     AnalogueIns[i].InputPin = ANAchannelInputPins[i];
     AnalogueIns[i].PullUpPin = ANAchannelInputPullUps[i];
     AnalogueIns[i].PullDownPin = ANAchannelInputPullDowns[i];
+    AnalogueIns[i].ChanType = RAW_VOLTAGE;
     AnalogueIns[i].PullUpEnable = false;
     AnalogueIns[i].PullDownEnable = false;
-    AnalogueIns[i].IsDigital = false;
-    AnalogueIns[i].IsThreshold = true;
-    AnalogueIns[i].OnThreshold = 2.5;   // 2.5V on threshold
-    AnalogueIns[i].OffThreshold = 2.0;  // 2.0V off threshold
-    AnalogueIns[i].ScaleMin = 0.0;     // Minimum scale value
-    AnalogueIns[i].ScaleMax = CURRENT_MAX; // Maximum scale value
-    AnalogueIns[i].PWMMin = 0;         // Minimum PWM value
-    AnalogueIns[i].PWMMax = 100;       // Maximum PWM value
+    AnalogueIns[i].InputVoltage = 0.0f;
+    AnalogueIns[i].InputValue = 0.0f;
+    AnalogueIns[i].Units = ANA_UNITS_VOLTS;
+    AnalogueIns[i].CalibrationPoints = 2;
+    AnalogueIns[i].CalibrationVolt1 = 0.0f;
+    AnalogueIns[i].CalibrationValue1 = 0.0f;
+    AnalogueIns[i].CalibrationVolt2 = 5.0f;
+    AnalogueIns[i].CalibrationValue2 = 5.0f;
+    AnalogueIns[i].CalibrationVolt3 = 5.0f;
+    AnalogueIns[i].CalibrationValue3 = 5.0f;
+    AnalogueIns[i].NTCBeta = 3950.0f;
+    AnalogueIns[i].NTCNominalResistance = 10000.0f;
   }
 }

@@ -40,6 +40,9 @@
 
 #define k_ILIS 18407.72F // Current sense ratio
 
+#define PWM_CURRENT_FILTER_ALPHA 0.20f
+#define PWM_CURRENT_ZERO_SNAP_AMPS 0.05f
+
 /// @brief Setup interrupts and analog read timers
 void InitialiseOutputs();
 
@@ -65,6 +68,18 @@ void UpdateOutputs();
 
 /// @brief Turn all outputs off
 void OutputsOff();
+
+/// @brief Force all outputs off until explicitly cleared.
+void SetOutputsInhibited(bool inhibited);
+
+/// @brief Returns true while outputs are globally inhibited.
+bool AreOutputsInhibited();
+
+/// @brief Returns true when a channel is temporarily shed by thermal protection.
+bool IsChannelThermallyShed(uint8_t channelIndex);
+
+/// @brief Returns the effective live enabled state after runtime interlocks.
+bool IsChannelEffectivelyEnabled(uint8_t channelIndex);
 
 /// @brief Output timer handler
 void OutputTimer();

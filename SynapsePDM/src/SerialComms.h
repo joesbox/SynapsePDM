@@ -26,6 +26,7 @@
 #include <Globals.h>
 #include <Storage.h>
 #include <InputHandler.h>
+#include <FirmwareUpdate.h>
 
 // Expected number of bytes in a config packet
 #define NUM_CONFIG_BYTES 499
@@ -49,6 +50,7 @@ const uint16_t SERIAL_TRAILER = 0x2024;
 const byte COMMAND_ID_BEGIN = 'b';
 const byte COMMAND_ID_CONFIM = 'c';
 const byte COMMAND_ID_REQUEST = 'r';
+const byte COMMAND_ID_REQUEST_STATIC = 'R';
 const byte COMMAND_ID_NEWCONFIG = 'n';
 const byte COMMAND_ID_SKIP = 'k';
 const byte COMMAND_ID_SEND = 's';
@@ -56,6 +58,21 @@ const byte COMMAND_ID_CHECKSUM_FAIL = 'f';
 const byte COMMAND_ID_SAVECHANGES = 'S';
 const byte COMMAND_ID_FW_VER = 'v';
 const byte COMMAND_ID_BUILD_DATE = 'd';
+const byte COMMAND_ID_LOG_LIST = 'l';
+const byte COMMAND_ID_LOG_OPEN = 'o';
+const byte COMMAND_ID_LOG_CHUNK = 'p';
+const byte COMMAND_ID_LOG_STREAM = 'q';
+const byte COMMAND_ID_LOG_CANCEL = 'x';
+const byte COMMAND_ID_LOG_RESET = 'w';
+const byte COMMAND_ID_LOG_BULK = 'y';
+const byte COMMAND_ID_FW_UPLOAD_BEGIN = 'U';
+const byte COMMAND_ID_FW_UPLOAD_CHUNK = 'J';
+const byte COMMAND_ID_FW_UPLOAD_END = 'E';
+const byte COMMAND_ID_FW_UPLOAD_CANCEL = 'C';
+const byte COMMAND_ID_FW_INSTALL = 'I';
+const byte COMMAND_ID_FW_DIAGNOSTIC = 'Z';
+const byte COMMAND_ID_SET_RTC = 'T';
+const byte COMMAND_ID_FACTORY_RESET = 'P';
 
 /// @brief Config type index, channel, input or system
 const byte CONFIG_TYPE_INDEX = 2;
@@ -69,6 +86,7 @@ const byte CONFIG_DATA_INDEX = 4;
 /// @brief Config data start index, first byte of actual config data
 const byte CONFIG_DATA_START_INDEX = 5;
 
+/// @brief Config type values
 const byte CONFIG_DATA_CHANNELS = 0;
 const byte CONFIG_DATA_ANALOGUE = 1;
 const byte CONFIG_DATA_SYSTEM = 2;

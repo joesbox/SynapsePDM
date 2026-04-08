@@ -23,172 +23,462 @@
 
 #include "GSM.h"
 
-//#define DEBUG
-#define BAUD_RATE 115200
+#include <ctype.h>
+#include <math.h>
+#include <stdio.h>
+
+// #define DEBUG
 
 uint32_t lastGPSTime = 0;
 
-bool moduleReady = false; // Track module initialization
+static bool hasAcceptedGPSFix = false;
+static bool hasSeenGNSSResponse = false;
+static float lastAcceptedLat = 0.0f;
+static float lastAcceptedLon = 0.0f;
+static float lastAcceptedSpeedKnots = 0.0f;
+
+static bool previousGPSEnable = false;
+static int rssi = SIM7600_CSQ_RSSI_UNKNOWN;
+static uint8_t SIM7600State = 0; // 0 = Power up, 1 = Initialising, 2 = Ready for command, 4 = Wait response
+static uint32_t simStartupDeadline = 0;
+static uint32_t nextGPSEnableRetryAt = 0;
+static char simBuffer[512];
+static size_t simBufferLength = 0;
+static SIM7600Commands pendingCommand = GPS;
+static bool simCommandPending = false;
+static uint32_t simCommandSentAt = 0;
+static uint16_t queuedSimCommands = 0;
+static uint8_t activeSimCommandType = 0;
+static bool activeGPSEnableState = false;
 
 float lat, lon, speed, alt, accuracy;
 int vsat, usat, year, month, day, hour, minute, second;
 
 bool GPSFix = false;
 
-bool previousGPSEnable = false;
+float simModuleTemp = 0.0f;
 
-int rssi = 0;
-
-uint8_t SIM7600State = 0; // 0 = Power up, 1 = Initialising, 2 = Ready for command, 4 = Wait response
-
-char simBuffer[512];
-
-void InitialiseGSM(bool enableData)
+struct ParsedGPSFix
 {
-    pinMode(SIM_PWR, OUTPUT);
-    pinMode(SIM_RST, OUTPUT);
-    pinMode(SIM_FLIGHT, OUTPUT);
+    float latitude;
+    float longitude;
+    float altitude;
+    float speedKnots;
+    int parsedDay;
+    int parsedMonth;
+    int parsedYear;
+    int parsedHour;
+    int parsedMinute;
+    int parsedSecond;
+};
 
-    digitalWrite(SIM_RST, LOW);
-    digitalWrite(SIM_FLIGHT, LOW);
-
-    // Power the module on
-    digitalWrite(SIM_PWR, HIGH);
-    Serial1.begin(BAUD_RATE);
-    previousGPSEnable = SystemParams.AllowGPS;
-    SIM7600State = 0;
-#ifdef DEBUG
-    Serial.println("Initializing SIM7600G...");
-#endif
+static void ClearLiveGPSData()
+{
+    lat = 0.0f;
+    lon = 0.0f;
+    speed = 0.0f;
+    alt = 0.0f;
+    accuracy = 0.0f;
+    vsat = 0;
+    usat = 0;
 }
 
-void UpdateSIM7600(SIM7600Commands command)
+static void UpdateGPSFixState(bool hasCurrentFix, uint32_t now)
 {
-    // Clear the buffer before reading
-    memset(simBuffer, 0, sizeof(simBuffer));
-    size_t bytesRead = 0;
-
-    unsigned long startTime = millis();
-
-    while (Serial1.available())
+    if (hasCurrentFix)
     {
-        if (bytesRead < sizeof(simBuffer) - 1)
+        GPSFix = true;
+        return;
+    }
+
+    if (hasAcceptedGPSFix && lastGPSTime != 0 && (now - lastGPSTime) <= GPS_FIX_GRACE_PERIOD_MS)
+    {
+        GPSFix = true;
+        return;
+    }
+
+    GPSFix = false;
+    ClearLiveGPSData();
+}
+
+static float KnotsToMetresPerSecond(float knots)
+{
+    return knots * 0.514444f;
+}
+
+static float DegreesToRadians(float degrees)
+{
+    return degrees * 0.01745329252f;
+}
+
+static float GreatCircleDistanceMetres(float startLat, float startLon, float endLat, float endLon)
+{
+    float startLatRad = DegreesToRadians(startLat);
+    float endLatRad = DegreesToRadians(endLat);
+    float deltaLat = DegreesToRadians(endLat - startLat);
+    float deltaLon = DegreesToRadians(endLon - startLon);
+
+    float sinLat = sinf(deltaLat * 0.5f);
+    float sinLon = sinf(deltaLon * 0.5f);
+    float a = (sinLat * sinLat) + (cosf(startLatRad) * cosf(endLatRad) * sinLon * sinLon);
+    float clampedA = fminf(1.0f, fmaxf(0.0f, a));
+    float c = 2.0f * atan2f(sqrtf(clampedA), sqrtf(1.0f - clampedA));
+    return EARTH_RADIUS_METRES * c;
+}
+
+static bool IsCandidateFixPlausible(const ParsedGPSFix &candidate, uint32_t now)
+{
+    if (!isfinite(candidate.latitude) || !isfinite(candidate.longitude) || !isfinite(candidate.altitude) || !isfinite(candidate.speedKnots))
+    {
+        return false;
+    }
+
+    if (candidate.latitude < -90.0f || candidate.latitude > 90.0f || candidate.longitude < -180.0f || candidate.longitude > 180.0f || candidate.speedKnots < 0.0f)
+    {
+        return false;
+    }
+
+    float candidateSpeedMps = KnotsToMetresPerSecond(candidate.speedKnots);
+    if (candidateSpeedMps > GPS_FILTER_MAX_SPEED_MPS)
+    {
+        return false;
+    }
+
+    uint32_t elapsedMs = now - lastGPSTime;
+    if (!hasAcceptedGPSFix || lastGPSTime == 0 || elapsedMs == 0 || elapsedMs > GPS_FILTER_RESET_INTERVAL_MS)
+    {
+        return true;
+    }
+
+    float elapsedSeconds = elapsedMs / 1000.0f;
+    float previousSpeedMps = KnotsToMetresPerSecond(lastAcceptedSpeedKnots);
+    float maxAllowedSpeedMps = previousSpeedMps + (GPS_FILTER_MAX_ACCEL_MPS2 * elapsedSeconds) + GPS_FILTER_SPEED_MARGIN_MPS;
+    if (candidateSpeedMps > maxAllowedSpeedMps)
+    {
+        return false;
+    }
+
+    float travelledDistanceMetres = GreatCircleDistanceMetres(lastAcceptedLat, lastAcceptedLon, candidate.latitude, candidate.longitude);
+    float impliedSpeedMps = travelledDistanceMetres / elapsedSeconds;
+    float maxAllowedTravelSpeedMps = fminf(
+        GPS_FILTER_MAX_SPEED_MPS,
+        fmaxf(previousSpeedMps, candidateSpeedMps) + (GPS_FILTER_MAX_ACCEL_MPS2 * elapsedSeconds) + GPS_FILTER_SPEED_MARGIN_MPS);
+
+    return impliedSpeedMps <= maxAllowedTravelSpeedMps;
+}
+
+static void AcceptCandidateFix(const ParsedGPSFix &candidate, uint32_t now)
+{
+    lat = candidate.latitude;
+    lon = candidate.longitude;
+    alt = candidate.altitude;
+    speed = candidate.speedKnots;
+    day = candidate.parsedDay;
+    month = candidate.parsedMonth;
+    year = candidate.parsedYear;
+    hour = candidate.parsedHour;
+    minute = candidate.parsedMinute;
+    second = candidate.parsedSecond;
+
+    lastAcceptedLat = candidate.latitude;
+    lastAcceptedLon = candidate.longitude;
+    lastAcceptedSpeedKnots = candidate.speedKnots;
+    lastGPSTime = now;
+    hasAcceptedGPSFix = true;
+    GPSFix = true;
+}
+
+static void ResetAcceptedGPSFixState()
+{
+    hasAcceptedGPSFix = false;
+    hasSeenGNSSResponse = false;
+    lastAcceptedLat = 0.0f;
+    lastAcceptedLon = 0.0f;
+    lastAcceptedSpeedKnots = 0.0f;
+    lastGPSTime = 0;
+    ClearLiveGPSData();
+}
+
+static bool CanDispatchNonGPSCommandNow(uint32_t now)
+{
+    if (!SystemParams.AllowGPS)
+    {
+        return true;
+    }
+
+    return (int32_t)(GPSTimer - now) > (int32_t)SIM_NON_GPS_GUARD_TIME_MS;
+}
+
+static uint16_t CommandBit(SIM7600Commands command)
+{
+    return static_cast<uint16_t>(1U << static_cast<uint8_t>(command));
+}
+
+static bool ShouldQueueSimCommand(SIM7600Commands command)
+{
+    if (command == GPS)
+    {
+        return true;
+    }
+    
+    if (command == MODULE_TEMPERATURE)
+    {
+        return true;
+    }
+
+    if (!SystemParams.AllowGPS)
+    {
+        return true;
+    }
+
+    return hasSeenGNSSResponse;
+}
+
+static void QueueSimCommand(SIM7600Commands command)
+{
+    if (!ShouldQueueSimCommand(command))
+    {
+        return;
+    }
+
+    queuedSimCommands |= CommandBit(command);
+}
+
+static void ClearQueuedSimCommand(SIM7600Commands command)
+{
+    queuedSimCommands &= ~CommandBit(command);
+}
+
+static bool TryDequeueNextSimCommand(SIM7600Commands *command)
+{
+    if (command == nullptr)
+    {
+        return false;
+    }
+
+    const SIM7600Commands commandOrder[] = {
+        GPS,
+        MODULE_TEMPERATURE,
+        SIGNAL_QUALITY,
+        NETWORK_MODE,
+        HTTP,
+        SMS,
+        MQTT,
+        MQTT_PUBLISH,
+        MQTT_SUBSCRIBE,
+        MQTT_UNSUBSCRIBE,
+        MQTT_CONNECT,
+        MQTT_DISCONNECT,
+        MQTT_PING,
+        MQTT_STATUS};
+
+    for (SIM7600Commands candidate : commandOrder)
+    {
+        if ((queuedSimCommands & CommandBit(candidate)) != 0)
         {
-            simBuffer[bytesRead++] = Serial1.read();
+            ClearQueuedSimCommand(candidate);
+            *command = candidate;
+            return true;
         }
     }
-#ifdef DEBUG
-    Serial.print("Buffer: ");
-    Serial.println(simBuffer);
-#endif
 
-    switch (SIM7600State)
+    return false;
+}
+
+static void ResetSimResponseBuffer()
+{
+    memset(simBuffer, 0, sizeof(simBuffer));
+    simBufferLength = 0;
+}
+
+static bool IsSimResponseComplete(const char *response)
+{
+    return response != nullptr &&
+           (strstr(response, "\r\nOK\r\n") != nullptr ||
+            strstr(response, "\r\nERROR\r\n") != nullptr ||
+            strstr(response, "\nOK\n") != nullptr ||
+            strstr(response, "\nERROR\n") != nullptr);
+}
+
+static bool HasSimResponseSuccess(const char *response)
+{
+    return response != nullptr &&
+           (strstr(response, "\r\nOK\r\n") != nullptr ||
+            strstr(response, "\nOK\n") != nullptr ||
+            strstr(response, "DONE") != nullptr ||
+            strstr(response, "READY") != nullptr);
+}
+
+static bool HasSimResponseError(const char *response)
+{
+    return response != nullptr &&
+           (strstr(response, "\r\nERROR\r\n") != nullptr ||
+            strstr(response, "\nERROR\n") != nullptr ||
+            strstr(response, "ERROR") != nullptr);
+}
+
+static bool HasCompleteGNSSInfoLine(const char *response)
+{
+    if (response == nullptr)
     {
-    case 0:
-        // Power up
-        Serial1.print("AT\r");
-        break;
-    case 1:
+        return false;
+    }
+
+    const char *payload = strstr(response, SIM7600_GNSSINFO_RESPONSE_TOKEN);
+    if (payload == nullptr)
+    {
+        return false;
+    }
+
+    payload += strlen(SIM7600_GNSSINFO_RESPONSE_TOKEN);
+    return strchr(payload, '\r') != nullptr || strchr(payload, '\n') != nullptr;
+}
+
+static void SendGPSPowerCommand(bool enableGPS, uint32_t now)
+{
+    ResetSimResponseBuffer();
+    if (enableGPS)
+    {
+        Serial1.print("AT+CGPS=1\r");
+    }
+    else
+    {
+        Serial1.print("AT+CGPS=0\r");
+        ResetGPSPlausibilityFilter();
+        ClearQueuedSimCommand(GPS);
+    }
+
+    activeSimCommandType = SIM_ACTIVE_COMMAND_GPS_POWER;
+    activeGPSEnableState = enableGPS;
+    simCommandPending = true;
+    simCommandSentAt = now;
+}
+
+static void SendSimCommand(SIM7600Commands command)
+{
+    switch (command)
+    {
+    case GPS:
         if (SystemParams.AllowGPS)
         {
-            Serial1.print("AT+CGPS=1\r");
-        }
-        else
-        {
-            Serial1.print("AT+CGPS=0\r");
+            Serial1.print("AT+CGNSSINFO\r");
+#ifdef DEBUG
+            Serial.println("Requesting GPS info...");
+#endif
         }
         break;
-    case 2:
-        // Ready for command
-        switch (command)
-        {
-        case GPS:
-            if (SystemParams.AllowGPS)
-            {
-                // GPS was enabled during runtime, make sure it's on
-                if (previousGPSEnable != SystemParams.AllowGPS)
-                {
-                    Serial1.print("AT+CGPS=1\r");
-                    previousGPSEnable = SystemParams.AllowGPS;
-                }
-                Serial1.print("AT+CGNSSINFO\r");
-#ifdef DEBUG
-                Serial.println("Requesting GPS info...");
-#endif
-            }
-            else
-            {
-                // GPS was disabled during runtime, ensure it's off
-                if (previousGPSEnable != SystemParams.AllowGPS)
-                {
-                    Serial1.print("AT+CGPS=0\r");
-                    previousGPSEnable = SystemParams.AllowGPS;
-                    GPSFix = false;
-                }
-            }
-            break;
-        case HTTP:
-            break;
-        case SMS:
-            break;
-        case MQTT:
-            break;
-        case MQTT_PUBLISH:
-            break;
-        case MQTT_SUBSCRIBE:
-            break;
-        case MQTT_UNSUBSCRIBE:
-            break;
-        case MQTT_CONNECT:
-            break;
-        case MQTT_DISCONNECT:
-            break;
-        case MQTT_PING:
-            break;
-        case MQTT_STATUS:
-            break;
-        case SIGNAL_QUALITY:
-            Serial1.print("AT+CSQ\r");
-            break;
-        case NETWORK_MODE:
-            Serial1.print("AT+CESQ?\r");
-            break;
-        }
+    case HTTP:
+        break;
+    case SMS:
+        break;
+    case MQTT:
+        break;
+    case MQTT_PUBLISH:
+        break;
+    case MQTT_SUBSCRIBE:
+        break;
+    case MQTT_UNSUBSCRIBE:
+        break;
+    case MQTT_CONNECT:
+        break;
+    case MQTT_DISCONNECT:
+        break;
+    case MQTT_PING:
+        break;
+    case MQTT_STATUS:
+        break;
+    case SIGNAL_QUALITY:
+        Serial1.print("AT+CSQ\r");
+        break;
+    case NETWORK_MODE:
+        Serial1.print("AT+CESQ?\r");
+        break;
+    case MODULE_TEMPERATURE:
+        Serial1.print("AT+CPMUTEMP\r");
         break;
     }
+}
 
-    // Check response
-    if (strstr(simBuffer, "AT") != nullptr || strstr(simBuffer, "OK") != nullptr || strstr(simBuffer, "DONE") != nullptr || strstr(simBuffer, "READY") != nullptr)
+static bool TryParseSimTemperatureResponse(const char *response, float *temperature)
+{
+    if (response == nullptr || temperature == nullptr)
+    {
+        return false;
+    }
+
+    const char *token = strstr(response, SIM7600_TEMP_RESPONSE_TOKEN);
+    if (token == nullptr)
+    {
+        return false;
+    }
+
+    token += strlen(SIM7600_TEMP_RESPONSE_TOKEN);
+    while (*token != '\0' && (*token == ':' || *token == '=' || *token == ' ' || *token == '\t' || *token == '"'))
+    {
+        token++;
+    }
+
+    while (*token != '\0' && !isdigit(static_cast<unsigned char>(*token)) && *token != '-' && *token != '+')
+    {
+        token++;
+    }
+
+    if (*token == '\0')
+    {
+        return false;
+    }
+
+    char *endPtr = nullptr;
+    float parsedTemperature = strtof(token, &endPtr);
+    if (endPtr == token)
+    {
+        return false;
+    }
+
+    *temperature = parsedTemperature;
+    return true;
+}
+
+static void ProcessSimResponseBuffer()
+{
+    if (HasSimResponseSuccess(simBuffer))
     {
         if (SIM7600State == 0)
         {
-            SIM7600State = 1; // Transition to initialise GPS state
+            SIM7600State = 1;
         }
         else if (SIM7600State == 1)
         {
-            SIM7600State = 2; // Transition to enable GPS
+            SIM7600State = 2;
         }
     }
 
     if (strstr(simBuffer, "ERROR") != nullptr)
     {
-        SIM7600State = 2; // Transition to Ready for command state
+        SIM7600State = 2;
     }
 
-    if (strstr(simBuffer, "+CGNSSINFO") != nullptr)
+    if (HasCompleteGNSSInfoLine(simBuffer))
     {
-        parseGPSData(simBuffer); // Parse GPS data
-        SIM7600State = 2;        // Transition to Ready for command state
+        parseGPSData(simBuffer);
+        SIM7600State = 2;
     }
 
     if (strstr(simBuffer, "+CSQ:") != nullptr)
     {
-        // Parse signal quality
         char *csq = strstr(simBuffer, "+CSQ:");
         if (csq != nullptr)
         {
+            int parsedRssi = SIM7600_CSQ_RSSI_UNKNOWN;
             int ber = 0;
-            sscanf(csq, "+CSQ: %d,%d", &rssi, &ber);
+            if (sscanf(csq, "+CSQ: %d,%d", &parsedRssi, &ber) == 2 && parsedRssi >= 0 && parsedRssi <= SIM7600_CSQ_RSSI_UNKNOWN)
+            {
+                rssi = parsedRssi;
+            }
+            else
+            {
+                rssi = SIM7600_CSQ_RSSI_UNKNOWN;
+            }
         }
 #ifdef DEBUG
         Serial.print("Signal RSSI: ");
@@ -220,11 +510,217 @@ void UpdateSIM7600(SIM7600Commands command)
 #endif
         }
     }
+
+    float parsedTemperature = 0.0f;
+    if (TryParseSimTemperatureResponse(simBuffer, &parsedTemperature))
+    {
+        simModuleTemp = parsedTemperature;
+    }
+}
+
+void InitialiseGSM(bool enableData)
+{
+    pinMode(SIM_PWR, OUTPUT);
+    pinMode(SIM_RST, OUTPUT);
+    pinMode(SIM_FLIGHT, OUTPUT);
+
+    digitalWrite(SIM_PWR, LOW);
+    digitalWrite(SIM_RST, LOW);
+    digitalWrite(SIM_FLIGHT, LOW);
+
+    delay(SIM7600_POWER_KEY_SETTLE_MS);
+
+    // Power the module on
+    digitalWrite(SIM_PWR, HIGH);
+    Serial1.begin(GSM_BAUD_RATE);
+    delay(10);
+    while (Serial1.available())
+    {
+        Serial1.read();
+    }
+    simStartupDeadline = millis() + SIM7600_BOOT_WAIT_MS;
+    nextGPSEnableRetryAt = simStartupDeadline;
+    ResetAcceptedGPSFixState();
+    GPSFix = false;
+    simModuleTemp = 0.0f;
+    rssi = SIM7600_CSQ_RSSI_UNKNOWN;
+    previousGPSEnable = false;
+    SIM7600State = 0;
+    simCommandPending = false;
+    pendingCommand = GPS;
+    simCommandSentAt = 0;
+    queuedSimCommands = 0;
+    activeSimCommandType = SIM_ACTIVE_COMMAND_NONE;
+    activeGPSEnableState = false;
+    ResetSimResponseBuffer();
+#ifdef DEBUG
+    Serial.println("Initializing SIM7600G...");
+#endif
+}
+
+void ResetGPSPlausibilityFilter()
+{
+    ResetAcceptedGPSFixState();
+    GPSFix = false;
+}
+
+void UpdateSIM7600(SIM7600Commands command)
+{
+    QueueSimCommand(command);
+
+    UpdateSIM7600();
+}
+
+void UpdateSIM7600()
+{
+    SIM7600Commands command = GPS;
+    uint32_t now = millis();
+
+    while (Serial1.available())
+    {
+        if (simBufferLength < sizeof(simBuffer) - 1)
+        {
+            simBuffer[simBufferLength++] = Serial1.read();
+            simBuffer[simBufferLength] = '\0';
+        }
+        else
+        {
+            Serial1.read();
+        }
+    }
+#ifdef DEBUG
+    Serial.print("Buffer: ");
+    Serial.println(simBuffer);
+#endif
+
+    if (simBufferLength > 0)
+    {
+        ProcessSimResponseBuffer();
+    }
+
+    if (simCommandPending)
+    {
+        bool responseComplete = IsSimResponseComplete(simBuffer);
+        bool responseSuccess = HasSimResponseSuccess(simBuffer);
+        bool responseError = HasSimResponseError(simBuffer);
+        bool commandTimedOut = (now - simCommandSentAt) >= SIM7600_RESPONSE_TIMEOUT_MS;
+        if (!responseComplete && !commandTimedOut)
+        {
+            return;
+        }
+
+        if (activeSimCommandType == SIM_ACTIVE_COMMAND_AT)
+        {
+            if (commandTimedOut || responseError)
+            {
+                SIM7600State = 0;
+            }
+        }
+        else if (activeSimCommandType == SIM_ACTIVE_COMMAND_GPS_POWER)
+        {
+            if (!commandTimedOut && responseSuccess)
+            {
+                previousGPSEnable = activeGPSEnableState;
+                nextGPSEnableRetryAt = 0;
+            }
+            else
+            {
+                previousGPSEnable = false;
+                nextGPSEnableRetryAt = now + SIM7600_GPS_ENABLE_RETRY_MS;
+            }
+        }
+
+        simCommandPending = false;
+        pendingCommand = GPS;
+        activeSimCommandType = SIM_ACTIVE_COMMAND_NONE;
+        activeGPSEnableState = false;
+        ResetSimResponseBuffer();
+    }
+
+    switch (SIM7600State)
+    {
+    case 0:
+        // Power up
+        if ((int32_t)(now - simStartupDeadline) < 0)
+        {
+            break;
+        }
+
+        ResetSimResponseBuffer();
+        Serial1.print("AT\r");
+        activeSimCommandType = SIM_ACTIVE_COMMAND_AT;
+        simCommandPending = true;
+        simCommandSentAt = now;
+        break;
+    case 1:
+        if ((int32_t)(now - simStartupDeadline) < 0)
+        {
+            break;
+        }
+
+        SendGPSPowerCommand(SystemParams.AllowGPS, now);
+        break;
+    case 2:
+        // Ready for command
+        if (previousGPSEnable != SystemParams.AllowGPS)
+        {
+            if (SystemParams.AllowGPS && nextGPSEnableRetryAt != 0 && (int32_t)(now - nextGPSEnableRetryAt) < 0)
+            {
+                break;
+            }
+
+            SendGPSPowerCommand(SystemParams.AllowGPS, now);
+            break;
+        }
+
+        if (!TryDequeueNextSimCommand(&command))
+        {
+            break;
+        }
+
+        if (command == GPS && !SystemParams.AllowGPS)
+        {
+            break;
+        }
+
+        if (command != GPS && !CanDispatchNonGPSCommandNow(millis()))
+        {
+            QueueSimCommand(command);
+            break;
+        }
+
+        ResetSimResponseBuffer();
+        pendingCommand = command;
+        activeSimCommandType = SIM_ACTIVE_COMMAND_QUEUED;
+        SendSimCommand(command);
+        simCommandPending = true;
+        simCommandSentAt = now;
+        break;
+    }
 }
 
 void parseGPSData(const char *response)
 {
-    response += 27; // Skip "+CGNSSINFO: "
+    uint32_t now = millis();
+
+    if (response == nullptr)
+    {
+        return;
+    }
+
+    const char *payload = strstr(response, SIM7600_GNSSINFO_RESPONSE_TOKEN);
+    if (payload == nullptr)
+    {
+        return;
+    }
+
+    hasSeenGNSSResponse = true;
+
+    response = payload + strlen(SIM7600_GNSSINFO_RESPONSE_TOKEN);
+    while (*response == ' ' || *response == '\t')
+    {
+        response++;
+    }
 
     char buffer[100]; // Temporary buffer to modify the input string
     strncpy(buffer, response, sizeof(buffer) - 1);
@@ -245,7 +741,6 @@ void parseGPSData(const char *response)
 #ifdef DEBUG
         Serial.println("Incomplete GPS data");
 #endif
-        GPSFix = false; // No fix
         return;
     }
 
@@ -259,11 +754,8 @@ void parseGPSData(const char *response)
 
     if (fixStatus == 0)
     {
-        GPSFix = false; // No fix
-    }
-    else
-    {
-        GPSFix = true; // Valid fix
+        UpdateGPSFixState(false, now);
+        return;
     }
 
     // Convert DMM to Decimal Degrees
@@ -274,31 +766,63 @@ void parseGPSData(const char *response)
         float minutes = value - (deg * 100); // Extract minutes
         float decimalDegrees = deg + (minutes / 60.0);
 
-        // Apply hemisphere correction
         if (dir[0] == 'S' || dir[0] == 'W')
+        {
             decimalDegrees *= -1;
+        }
 
         return decimalDegrees;
     };
 
-    lat = convertToDecimalDegrees(tokens[4], tokens[5]); // Latitude
-    lon = convertToDecimalDegrees(tokens[6], tokens[7]); // Longitude
-    alt = atof(tokens[10]);
-    speed = atof(tokens[11]);
-    float course = atof(tokens[12]);
+    ParsedGPSFix candidate = {};
+    candidate.latitude = convertToDecimalDegrees(tokens[4], tokens[5]);
+    candidate.longitude = convertToDecimalDegrees(tokens[6], tokens[7]);
+    candidate.altitude = atof(tokens[10]);
+    candidate.speedKnots = atof(tokens[11]);
 
-    // Extract date (DDMMYY)
+    int parsedYear = 0;
     if (strlen(tokens[8]) == 6)
-        sscanf(tokens[8], "%2d%2d%2d", &day, &month, &year);
-    year += 2000; // Convert two-digit year to full year (e.g., 24 -> 2024)
+    {
+        sscanf(tokens[8], "%2d%2d%2d", &candidate.parsedDay, &candidate.parsedMonth, &parsedYear);
+        candidate.parsedYear = parsedYear + 2000;
+    }
+    else
+    {
+        candidate.parsedDay = day;
+        candidate.parsedMonth = month;
+        candidate.parsedYear = year;
+    }
 
-    // Extract time (HHMMSS.s)
     if (strlen(tokens[9]) >= 6)
-        sscanf(tokens[9], "%2d%2d%2d", &hour, &minute, &second);
+    {
+        sscanf(tokens[9], "%2d%2d%2d", &candidate.parsedHour, &candidate.parsedMinute, &candidate.parsedSecond);
+    }
+    else
+    {
+        candidate.parsedHour = hour;
+        candidate.parsedMinute = minute;
+        candidate.parsedSecond = second;
+    }
+
+    if (!IsCandidateFixPlausible(candidate, now))
+    {
+#ifdef DEBUG
+        Serial.println("Rejected implausible GPS fix");
+#endif
+        UpdateGPSFixState(false, now);
+        return;
+    }
+
+    AcceptCandidateFix(candidate, now);
 }
 
 uint8_t csq_to_bars()
 {
+    if (rssi < 0 || rssi > SIM7600_CSQ_RSSI_MAX)
+    {
+        return 0;
+    }
+
     if (rssi <= 3)
     {
         return 0;

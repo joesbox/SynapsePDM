@@ -25,7 +25,7 @@
   "name": "SynapsePDM - STM32F446ZE (128k RAM. 512k Flash)",
   "upload": {
     "maximum_ram_size": 131072,
-    "maximum_size": 524288,
+    "maximum_size": 458752,
     "protocol": "stlink",
     "protocols": [
       "blackmagic",

@@ -16,7 +16,7 @@
     all copies or substantial portions of the Software.
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
@@ -28,6 +28,29 @@
     Version history:
     Date              Version       Description
     ----              -------       ------------------------------------------------------------
+    2026-03-17        v0.8          - Added manual RTC update command over Cortex serial protocol for installations not using GPS.
+                                    - Run-on implementation
+                                    - Soft start & soft stop implementation
+                                    - Re-factor analogue input parameters. Now stored on a per-channel basis rather than in the analogue input structure. Allows for more flexible configuration of analogue inputs.
+                                    - Analogue threshold and PWM scaled outputs now implemented.
+                                    - Analogue inputs can be configured for different sensor types and units. Display and logging updated to show correct units.
+                                    - Added new parameters to CAN messages.
+                                    - PWM frequency changed to 150Hz to balance switching losses and heat dissipation.
+                                    - Added all inputs to logs.
+                                    - Minor EEPROM tweaks.
+                                    - Task scheduling re-factored to be more efficient and robust. Tasks now run on a best effort basis at their specified intervals rather than being strictly scheduled.
+                                    - Application now has two build options. Default is with the SD card bootloader.
+                                    - Start of firmware update implementation. Currently supports receiving firmware update packets over serial and writing to flash.
+                                    - Serial protocol refactor.
+                                    - Addition of BMM350 for supported boards.
+                                    - Temperature from SIM and IMU added to system parameters and logging.
+                                    - GPS plausibility filter. Helps stop outliers being logged due to bad GPS fixes.
+                                    - Channel categorisation and prioritisation for staged thermal shutdown.
+                                    - New channel type: intermittent.
+                                    - New input option: on with ignition/wake.
+                                    - Daylight saving time support for RTC.
+                                    - GPS wake AT command bug fix.
+                                    - Minor sleep/wake fixes and optimisations.
     2026-02-18        v0.7          - Fixed display config. Disabled warnings about (non-existent) touch screen.
                                     - Minor display tweaks.
     2026-01-21        v0.6          - Added watchdog timer. Different timings applied on boot and normal operation. Extended to 10 seconds during PC comms, 30 seconds during sleep.
@@ -78,145 +101,70 @@
 #include <GSM.h>
 #include <Display.h>
 
-constexpr int SPLASH_SCREEN_DELAY = 2000;
-constexpr int RTC_YEAR_THRESHOLD = 24;
-
-void SleepFunctions();
-void alarmMatch(void *data);
-
-// #define DEBUG
-
-void Debug()
+static void ResetLogScheduler()
 {
-#ifdef DEBUG
-  /* Serial.print("System temperature: ");
-   Serial.println(SystemParams.SystemTemperature);
-   Serial.print("System error flags: ");
-   Serial.println(SystemParams.ErrorFlags);
-   Serial.print("System voltage: ");
-   Serial.println(SystemParams.VBatt);
-   Serial.print("Log interval: ");
-   Serial.println(LogTask.getInterval());
-   Serial.print("RTC Set: ");
-   Serial.println(RTCSet);
-   Serial.print("System date: ");
-   Serial.print(rtc.getYear());
-   Serial.print("-");
-   Serial.print(rtc.getMonth());
-   Serial.print("-");
-   Serial.println(rtc.getDay());
-   Serial.print("System time: ");
-   Serial.print(rtc.getHours());
-   Serial.print(":");
-   Serial.print(rtc.getMinutes());
-   Serial.print(":");
-   Serial.println(rtc.getSeconds());
-   Serial.print("System CRC Valid: ");
-   Serial.println(SystemCRCValid);
-   Serial.print("Channel CRC Valid: ");
-   Serial.println(ChannelCRCValid);
-   Serial.print("Storage CRC Valid: ");
-   Serial.println(StorageCRCValid);
-   Serial.print("Power state: ");
-   Serial.println(PowerState);
-   Serial.print("System error flags: ");
-   Serial.println(SystemParams.ErrorFlags, HEX);
-  Serial.print("IMU OK: ");
-  Serial.println(IMUOK);
+  uint32_t nowMs = millis();
+  LogTimer = micros() + LOG_INTERVAL_US;
+  GPSTimer = nowMs + GPS_INTERVAL;
+  signalTimer = nowMs + SIGNAL_QUALITY_INTERVAL;
+  simTemperatureTimer = nowMs + SIM_TEMPERATURE_INTERVAL;
+}
 
-  const float imuData[] = {accelX, accelY, accelZ, gyroX, gyroY, gyroZ};
-  const char *imuLabels[] = {"Accel X", "Accel Y", "Accel Z", "Rotation X", "Rotation Y", "Rotation Z"};
-  for (int i = 0; i < 6; ++i)
-  {
-    Serial.print(imuLabels[i]);
-    Serial.print(": ");
-    Serial.println(imuData[i], 3);
-  }
+static bool runOnEligibilityCaptured = false;
 
-  /*Serial.print("Latitude: ");
-  Serial.println(lat, 6);
-  Serial.print("Longitude: ");
-  Serial.println(lon, 6);
-  Serial.print("Speed: ");
-  Serial.println(speed);
-  Serial.print("Altitude: ");
-  Serial.println(alt);
-  Serial.print("Visible satellites: ");
-  Serial.println(vsat);
-  Serial.print("Used satellites: ");
-  Serial.println(usat);
-  Serial.print("Accuracy: ");
-  Serial.println(accuracy);
-  Serial.print("Year: ");
-  Serial.println(year);
-  Serial.print("Month: ");
-  Serial.println(month);
-  Serial.print("Day: ");
-  Serial.println(day);
-  Serial.print("Hour: ");
-  Serial.println(hour);
-  Serial.print("Minute: ");
-  Serial.println(minute);
-  Serial.print("Second: ");
-  Serial.println(second);
-  //printBatteryStats();*/
-
-  /*const float imuData[] = {accelX, accelY, accelZ, gyroX, gyroY, gyroZ};
-  const char *imuLabels[] = {"Accel X", "Accel Y", "Accel Z", "Rotation X", "Rotation Y", "Rotation Z"};
-  for (int i = 0; i < 6; ++i)
-  {
-    Serial.print(imuLabels[i]);
-    Serial.print(": ");
-    Serial.println(imuData[i], 3);
-  }
-
-  Serial.print("Log file bytes stored: ");
-  Serial.println(BytesStored);
-  Serial.print("Log lines, freq:");
-  Serial.print(StorageParams.MaxLogLength);
-  Serial.print(", ");
-  Serial.println(StorageParams.LogFrequency);
-  Serial.print("Battery SOC: ");
-  Serial.println(SOC);
-  Serial.print("Analogue raw current: ");
+static void CaptureRunOnState(uint32_t now)
+{
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    Serial.print(ChannelRuntime[i].AnalogRaw);
-    Serial.print(", ");
+    runOnEligible[i] = Channels[i].RunOn && Channels[i].Enabled;
+    runOnDeadline[i] = runOnEligible[i] ? (now + Channels[i].RunOnTime) : 0;
   }
 
-  Serial.println();
+  runOnEligibilityCaptured = true;
+}
 
-  Serial.print("Analogue calculated current: ");
+static void ResetRunOnState()
+{
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    Serial.print(ChannelRuntime[i].CurrentValue);
-    Serial.print(", ");
+    runOnEligible[i] = false;
+    runOnDeadline[i] = 0;
   }
 
-  Serial.println();
-  Serial.print("Error flags: ");*/
-  Serial.print("EEPROM flags: ");
-  Serial.print(SystemCRCValid ? "Valid" : "Invalid");
-  Serial.print(", ");
-  Serial.print(ChannelCRCValid ? "Valid" : "Invalid");
-  Serial.print(", ");
-  Serial.print(StorageCRCValid ? "Valid" : "Invalid");
-  Serial.print(", ");
-  Serial.print(AnalogueCRCValid ? "Valid" : "Invalid");
-  Serial.print(", ");
+  runOnEligibilityCaptured = false;
+}
 
-  Serial.print(hitInit ? "Yep" : "Nope");
-  Serial.print(", ");
+void SleepFunctions()
+{
+  if (saveEEPROMOnTimeout)
+  {
+    // Do it now.
+    SaveChannelConfig();
+    SaveSystemConfig();
+    saveEEPROMOnTimeout = false;
+    EEPROMSaveTimout = 0;
+  }
+  ResetGPSPlausibilityFilter();
+  analogWrite(TFT_BL, 0);
+  PullResistorSleep();
+  SleepIMU(SystemParams.AllowMotionDetect != 0);
+  SleepSD();
+  OutputsOff();
+  SleepOutputs();
+  SleepComms();
+  StopDisplay();
+  SleepSystem();
+  IMUWakeMode = false;
+  invalidateDisplay = true;
+}
 
-  Serial.println(SystemRuntimeParams.ErrorFlags, HEX);
-
-#endif
+void alarmMatch(void *data)
+{
+  // Do nothing, just wake the MCU
 }
 
 void setup()
 {
-
   IWatchdog.begin(5000 * 1000); // 5 second watchdog (microseconds) on boot.
 
   InitialiseSystem();
@@ -230,6 +178,24 @@ void setup()
   InitialiseStorageData();
   InitialiseDisplay();
   InitialiseChannelData();
+
+  if (FORCE_EEPROM_WIPE_ON_BOOT)
+  {
+    CleanEEPROM();
+
+    InitialiseChannelData();
+    SaveChannelConfig();
+
+    InitialiseSystemData();
+    SaveSystemConfig();
+
+    InitialiseStorageData();
+    SaveStorageConfig();
+
+    InitialiseAnalogueData();
+    SaveAnalogueConfig();
+  }
+
   IWatchdog.reload();
 
   // Load channel data first
@@ -239,15 +205,17 @@ void setup()
     // CRC wasn't valid on the EEPROM channel data. Save the default values to EEPROM now.
     InitialiseChannelData();
     SaveChannelConfig();
+    ChannelCRCValid = LoadChannelConfig();
   }
 
   // Load system data
   SystemCRCValid = LoadSystemConfig();
   if (!SystemCRCValid)
   {
-    // CRC wasn't valid on the EEPROM system data. Save the default values to EEPROM now.
+    // CRC wasn't valid on EEPROM system data. Save defaults once and re-check.
     InitialiseSystemData();
     SaveSystemConfig();
+    SystemCRCValid = LoadSystemConfig();
   }
 
   // Load storage data
@@ -257,6 +225,7 @@ void setup()
     // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.
     InitialiseStorageData();
     SaveStorageConfig();
+    StorageCRCValid = LoadStorageConfig();
   }
 
   // Load analogue input data
@@ -266,12 +235,13 @@ void setup()
     // CRC wasn't valid on the EEPROM system data. Save the default vales to EEPROM now.
     InitialiseAnalogueData();
     SaveAnalogueConfig();
+    AnalogueCRCValid = LoadAnalogueConfig();
   }
 
   InitialiseInputs();
 
   // Only initialise the SD card if we've got an accurate RTC
-  if (rtc.isTimeSet() && rtc.getYear() > 24)
+  if (HasUsableRtcTime())
   {
     InitialiseSD();
     RTCSet = true;
@@ -298,6 +268,7 @@ void setup()
   SystemParams.MotionDeadTime = 1;
 
   LowPower.enableWakeupFrom(&rtc, alarmMatch);
+  ResetLogScheduler();
   IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) on boot.
 }
 
@@ -311,11 +282,85 @@ void handlePowerState()
       delay(WAKE_DEBOUNCE_TIME); // Debounce
       if (!digitalRead(IGN_INPUT) && bootToSleep)
       {
+        CaptureRunOnState(millis());
         PowerState = PREPARE_SLEEP;
       }
     }
+    else if (runOnEligibilityCaptured)
+    {
+      ResetRunOnState();
+    }
     break;
   case PREPARE_SLEEP:
+  {
+    // Delay sleep if any channel with RunOn flag is still within its RunOnTime
+    bool runOnActive = false;
+    uint32_t now = millis();
+
+    if (digitalRead(IGN_INPUT))
+    {
+      ResetRunOnState();
+      analogWrite(TFT_BL, 1023);
+      invalidateDisplay = true;
+      PowerState = RUN;
+      break;
+    }
+
+    // Fallback capture in case PREPARE_SLEEP is entered from a path other than RUN.
+    if (!runOnEligibilityCaptured)
+    {
+      CaptureRunOnState(now);
+    }
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+      if (Channels[i].RunOn && runOnEligible[i])
+      {
+        analogWrite(TFT_BL, 0);
+
+        // Check if RunOnTime has elapsed
+        if (runOnDeadline[i] != 0 && (int32_t)(now - runOnDeadline[i]) < 0)
+        {
+          runOnActive = true;
+        }
+        else
+        {
+          runOnEligible[i] = false;
+          runOnDeadline[i] = 0;
+        }
+      }
+      else
+      {
+        runOnDeadline[i] = 0;
+      }
+    }
+    if (runOnActive)
+    {
+      // Wait until all RunOn channels have expired, do not call any sleep functions yet
+      IWatchdog.reload();
+      HandleInputs();
+      UpdateOutputs();
+      break;
+    }
+    else
+    {
+      // Reset eligibility capture for next PREPARE_SLEEP event
+      ResetRunOnState();
+    }
+
+    if (digitalRead(IGN_INPUT))
+    {
+      ResetRunOnState();
+      analogWrite(TFT_BL, 1023);
+      invalidateDisplay = true;
+      PowerState = RUN;
+      break;
+    }
+
+    // The sleep teardown path can take longer than the normal 2 second run watchdog.
+    IWatchdog.begin(32000 * 1000);
+    IWatchdog.reload();
+
+    // Only call sleep functions after all RunOn channels have finished
     if (SystemParams.AllowMotionDetect)
     {
       EnableMotionDetect();
@@ -327,12 +372,25 @@ void handlePowerState()
     SleepFunctions();
     GPSFix = false;
     PowerState = SLEEPING;
-    break;
+  }
+  break;
   case SLEEPING:
+    // Treat ignition-high as a pending wake even if the rising edge arrived during sleep teardown.
+    if (digitalRead(IGN_INPUT))
+    {
+      PowerState = IGNITION_WAKING;
+      break;
+    }
+
     if (imuWakePending)
     {
       imuWakePending = false;
       PowerState = IMU_WAKING;
+    }
+
+    if (PowerState != SLEEPING)
+    {
+      break;
     }
 
     IWatchdog.begin(32000 * 1000); // 32 second watchdog (microseconds) during sleep.
@@ -340,18 +398,33 @@ void handlePowerState()
     rtc.setAlarmEpoch(rtc.getEpoch() + 30); // Wake every 30 seconds to feed the watchdog
     rtc.enableAlarm(rtc.MATCH_DHHMMSS);
 
+    if (PowerState != SLEEPING)
+    {
+      break;
+    }
+
+    if (digitalRead(IGN_INPUT))
+    {
+      PowerState = IGNITION_WAKING;
+      break;
+    }
+
+    if (imuWakePending)
+    {
+      imuWakePending = false;
+      PowerState = IMU_WAKING;
+      break;
+    }
+
     // Enter STOP mode
     HAL_SuspendTick();
     HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+
     break;
   case IGNITION_WAKING:
-    if (!IMUWakeMode)
-    {
-      // Only call these if we haven't woken from the IMU
-      HAL_ResumeTick();
-      SystemClock_Config();
-      rtc.begin();
-    }
+    HAL_ResumeTick();
+    SystemClock_Config();
+    rtc.begin();
     IWatchdog.reload();
     wakeDebounceTimer = millis();
     PowerState = IGNITION_WAKE;
@@ -359,9 +432,16 @@ void handlePowerState()
   case IGNITION_WAKE:
     if (millis() - wakeDebounceTimer > WAKE_DEBOUNCE_TIME)
     {
+      if (!digitalRead(IGN_INPUT))
+      {
+        PowerState = SLEEPING;
+        break;
+      }
+
       IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) during run.
       IWatchdog.reload();
       WakeSystem();
+      ReinitialiseIMUAfterWake();
       InitialiseInputs();
       InitialiseOutputs();
       HandleInputs();
@@ -374,6 +454,14 @@ void handlePowerState()
       DrawBackground();
       analogWrite(TFT_BL, 1023);
       ResumeSD();
+      ResetLogScheduler();
+      // Reset RunOn eligibility and timers on wake
+      for (int i = 0; i < NUM_CHANNELS; i++)
+      {
+        enabledTimers[i] = 0;
+      }
+      ResetRunOnState();
+
       PowerState = RUN;
     }
     break;
@@ -394,13 +482,15 @@ void handlePowerState()
         // Motion dead time has elapsed. Disable motion detection, wake the system.
         IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) during run.
         IWatchdog.reload();
+        WakeSystem();
+        ReinitialiseIMUAfterWake();
         InitialiseInputs();
         DisableMotionDetect();
         InitialiseSerial();
-        WakeSystem();
         InitialiseCAN();
         InitialiseGSM(false);
         ResumeSD();
+        ResetLogScheduler();
         imuWWtimer = millis() + SystemParams.IMUwakeWindow;
         PowerState = IMU_WAKE_WINDOW;
       }
@@ -413,7 +503,7 @@ void handlePowerState()
     }
     break;
   case IMU_WAKE_WINDOW:
-    if (millis() < imuWWtimer)
+    if ((int32_t)(millis() - imuWWtimer) < 0)
     {
       // TODO: work out what to do if the IMU has woken the controller
     }
@@ -429,11 +519,24 @@ void handlePowerState()
 void loop()
 {
   IWatchdog.reload();
-  if (PowerState == RUN)
+  uint8_t powerStateBefore = PowerState;
+  handlePowerState();
+
+  if (powerStateBefore == RUN && PowerState == RUN)
   {
-    if (millis() > DisplayTimer)
+    CheckSerial();
+    bool logTransferActive = IsLogTransferActive();
+    uint32_t now = millis();
+    uint32_t logNow = micros();
+
+    if ((int32_t)(now - DisplayTimer) >= 0)
     {
-      DisplayTimer = millis() + DISPLAY_INTERVAL;
+      DisplayTimer += DISPLAY_INTERVAL;
+      if ((int32_t)(now - DisplayTimer) >= 0)
+      {
+        DisplayTimer = now + DISPLAY_INTERVAL;
+      }
+
       // Update channel outputs
       UpdateOutputs();
 
@@ -445,94 +548,109 @@ void loop()
       {
         UpdateDisplay();
       }
+
       UpdateSystem();
     }
 
-    if (millis() > CommsTimer)
+    if (!logTransferActive && (int32_t)(now - CommsTimer) >= 0)
     {
-      CommsTimer = millis() + COMMS_INTERVAL;
+      CommsTimer += COMMS_INTERVAL;
+      if ((int32_t)(now - CommsTimer) >= 0)
+      {
+        CommsTimer = now + COMMS_INTERVAL;
+      }
+
       ReadIMU();
     }
 
-    if (millis() > LogTimer)
+    if ((int32_t)(logNow - LogTimer) >= 0)
     {
-      LogTimer = millis() + LOG_INTERVAL;
-
-      if (!RTCSet && year > RTC_YEAR_THRESHOLD)
+      LogTimer += LOG_INTERVAL_US;
+      if ((int32_t)(logNow - LogTimer) >= 0)
       {
-        RTCSet = true;        
-        // GPS time must be updated, use that
-        rtc.setDate(day, month, (year % 100));
-        rtc.setTime(hour, minute, second);
-        InitialiseSD();
+        LogTimer = logNow + LOG_INTERVAL_US;
       }
-      else if (RTCSet)
+
+      if (GPSFix)
+      {
+        ApplyUtcRtcDateTime((uint16_t)year, (uint8_t)month, (uint8_t)day, (uint8_t)hour, (uint8_t)minute, (uint8_t)second);
+      }
+
+      if (RTCSet)
       {
         // RTC is set. log SD card data
         LogData();
       }
     }
 
-    if (millis() > GPSTimer)
+    if (!logTransferActive && (int32_t)(now - GPSTimer) >= 0)
     {
-      GPSTimer = millis() + GPS_INTERVAL;
+      GPSTimer += GPS_INTERVAL;
+      if ((int32_t)(now - GPSTimer) >= 0)
+      {
+        GPSTimer = now + GPS_INTERVAL;
+      }
+
       UpdateSIM7600(GPS);
-      Debug();
     }
 
-    if (millis() > signalTimer)
+    if (!logTransferActive && (int32_t)(now - signalTimer) >= 0)
     {
-      signalTimer = millis() + SIGNAL_QUALITY_INTERVAL;
+      signalTimer += SIGNAL_QUALITY_INTERVAL;
+      if ((int32_t)(now - signalTimer) >= 0)
+      {
+        signalTimer = now + SIGNAL_QUALITY_INTERVAL;
+      }
+
       UpdateSIM7600(SIGNAL_QUALITY);
     }
 
-    if (millis() > systemCANTimer)
+    if (!logTransferActive && (int32_t)(now - simTemperatureTimer) >= 0)
     {
-      systemCANTimer = millis() + SYSTEM_CAN_INTERVAL; 
+      simTemperatureTimer += SIM_TEMPERATURE_INTERVAL;
+      if ((int32_t)(now - simTemperatureTimer) >= 0)
+      {
+        simTemperatureTimer = now + SIM_TEMPERATURE_INTERVAL;
+      }
+
+      UpdateSIM7600(MODULE_TEMPERATURE);
+    }
+
+    if (!logTransferActive)
+    {
+      UpdateSIM7600();
+    }
+
+    if ((int32_t)(now - systemCANTimer) >= 0)
+    {
+      systemCANTimer += SYSTEM_CAN_INTERVAL;
+      if ((int32_t)(now - systemCANTimer) >= 0)
+      {
+        systemCANTimer = now + SYSTEM_CAN_INTERVAL;
+      }
+
       BroadcastSystemStatus();
     }
 
-    if (millis() > splashCounter && !backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
+    if (!logTransferActive && (int32_t)(now - splashCounter) >= 0 && !backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
     {
       DrawBackground();
       bootToSleep = true;
     }
-    CheckSerial();
+
+    if (logTransferActive)
+    {
+      CheckSerial();
+    }
+
     ReadCANMessages();
   }
-  handlePowerState();
-  
-  if(millis() > EEPROMSaveTimout && saveEEPROMOnTimeout)
-  {    
-    saveEEPROMOnTimeout = false;
-    EEPROMSaveTimout = 0;   
-    SaveChannelConfig();    
-    SaveSystemConfig();
-  }
-}
 
-void SleepFunctions()
-{
-  if (saveEEPROMOnTimeout)
+  if (saveEEPROMOnTimeout && (int32_t)(millis() - EEPROMSaveTimout) >= 0)
   {
-    // Do it now.
-    SaveChannelConfig();
     saveEEPROMOnTimeout = false;
     EEPROMSaveTimout = 0;
+    SaveChannelConfig();
+    SaveSystemConfig();
   }
-  analogWrite(TFT_BL, 0);
-  PullResistorSleep();
-  SleepSD();
-  OutputsOff();
-  SleepOutputs();
-  SleepComms();
-  StopDisplay();
-  SleepSystem();
-  IMUWakeMode = false;
-  invalidateDisplay = true;
-}
-
-void alarmMatch(void *data)
-{
-  // Do nothing, just wake the MCU
 }

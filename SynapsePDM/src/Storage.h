@@ -71,6 +71,9 @@ extern StorageConfigUnion StorageConfigData;
 /// @brief Log file object
 extern File dataFile;
 
+/// @brief Track whether the current log file is open.
+extern bool SDFileOpen;
+
 /// @brief Current log file name in use
 extern char fileName[];
 
@@ -143,5 +146,48 @@ void CloseSDFile();
 
 /// @brief Resumes logging after sleep
 void ResumeSD();
+
+/// @brief Number of available log files tracked in storage.
+/// @return Number of log files.
+uint8_t GetAvailableLogFileCount();
+
+/// @brief Copy a log filename by index.
+/// @param index Log index (0 = newest)
+/// @param outFileName Destination buffer
+/// @param outSize Destination buffer size
+/// @return True if file name copied.
+bool GetLogFileNameByIndex(uint8_t index, char *outFileName, size_t outSize);
+
+/// @brief Get log file size in bytes by index.
+/// @param index Log index (0 = newest)
+/// @param outSizeBytes Destination for size in bytes
+/// @return True if size retrieved.
+bool GetLogFileSizeByIndex(uint8_t index, uint32_t *outSizeBytes);
+
+/// @brief Open a stored log file for chunked transfer.
+/// @param index Log index (0 = newest)
+/// @return True if transfer opened.
+bool BeginLogTransfer(uint8_t index);
+
+/// @brief Read next chunk of log text (line-batched) for non-blocking transfer.
+/// @param outBuffer Destination data buffer
+/// @param outBufferSize Destination buffer size in bytes
+/// @param maxLines Maximum lines to emit this chunk
+/// @param outBytesWritten Number of bytes written to outBuffer
+/// @param outProgress Percent complete (0-100)
+/// @param outDone True when transfer complete
+/// @return True if transfer chunk generated.
+bool ReadLogTransferChunk(char *outBuffer, size_t outBufferSize, uint16_t maxLines, uint16_t *outBytesWritten, uint8_t *outProgress, bool *outDone);
+
+/// @brief Check whether a log transfer currently owns the SD card.
+/// @return True if a log transfer is active.
+bool IsLogTransferActive();
+
+/// @brief Cancel and close any active log transfer.
+void CancelLogTransfer();
+
+/// @brief Remove all log files from SD and clear stored log history metadata.
+/// @return True if reset completed successfully.
+bool ResetAllLogs();
 
 #endif

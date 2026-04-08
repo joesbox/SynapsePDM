@@ -27,21 +27,44 @@
 #include <Arduino.h>
 #include <Globals.h>
 
+#define GSM_BAUD_RATE 115200
+#define SIM7600_RESPONSE_TIMEOUT_MS 750
+#define SIM7600_POWER_KEY_SETTLE_MS 50UL
+#define SIM7600_REGULATOR_STABLE_MS 150UL
+#define SIM7600_BOOT_WAIT_MS 5000UL
+#define SIM7600_GPS_ENABLE_RETRY_MS 2000UL
+#define SIM7600_TEMP_RESPONSE_TOKEN "+CPMUTEMP"
+#define SIM7600_GNSSINFO_RESPONSE_TOKEN "+CGNSSINFO:"
+#define SIM7600_CSQ_RSSI_MAX 31
+#define SIM7600_CSQ_RSSI_UNKNOWN 99
+#define SIM_NON_GPS_GUARD_TIME_MS (SIM7600_RESPONSE_TIMEOUT_MS + 100UL)
+#define GPS_FILTER_MAX_SPEED_MPS 120.0f
+#define GPS_FILTER_MAX_ACCEL_MPS2 12.0f
+#define GPS_FILTER_SPEED_MARGIN_MPS 5.0f
+#define GPS_FILTER_RESET_INTERVAL_MS 10000UL
+#define GPS_FIX_GRACE_PERIOD_MS 3000UL
+#define EARTH_RADIUS_METRES 6371000.0f
+#define SIM_ACTIVE_COMMAND_NONE 0
+#define SIM_ACTIVE_COMMAND_AT 1
+#define SIM_ACTIVE_COMMAND_GPS_POWER 2
+#define SIM_ACTIVE_COMMAND_QUEUED 3
+
 enum SIM7600Commands
 {
-  GPS,              // Retrieve GPS data
-  HTTP,             // Perform HTTP GET request
-  SMS,              // Send SMS
-  MQTT,             // MQTT commands
-  MQTT_PUBLISH,     // Publish MQTT message
-  MQTT_SUBSCRIBE,   // Subscribe to MQTT topic
-  MQTT_UNSUBSCRIBE, // Unsubscribe from MQTT topic
-  MQTT_CONNECT,     // Connect to MQTT server
-  MQTT_DISCONNECT,  // Disconnect from MQTT server
-  MQTT_PING,        // Ping MQTT server
-  MQTT_STATUS,      // Get MQTT status
-  SIGNAL_QUALITY,   // Get signal quality
-  NETWORK_MODE      // Get network mode
+  GPS,               // Retrieve GPS data
+  HTTP,              // Perform HTTP GET request
+  SMS,               // Send SMS
+  MQTT,              // MQTT commands
+  MQTT_PUBLISH,      // Publish MQTT message
+  MQTT_SUBSCRIBE,    // Subscribe to MQTT topic
+  MQTT_UNSUBSCRIBE,  // Unsubscribe from MQTT topic
+  MQTT_CONNECT,      // Connect to MQTT server
+  MQTT_DISCONNECT,   // Disconnect from MQTT server
+  MQTT_PING,         // Ping MQTT server
+  MQTT_STATUS,       // Get MQTT status
+  SIGNAL_QUALITY,    // Get signal quality
+  NETWORK_MODE,      // Get network mode
+  MODULE_TEMPERATURE // Get SIM module temperature
 };
 
 /// @brief Initialise GSM/GPS
@@ -51,9 +74,15 @@ void InitialiseGSM(bool enableData);
 /// @param command Command to execute
 void UpdateSIM7600(SIM7600Commands command);
 
+/// @brief Service SIM7600 state machine and process queued commands
+void UpdateSIM7600();
+
 /// @brief Parse GPS response data
 /// @param response Response data
 void parseGPSData(const char *response);
+
+/// @brief Reset cached GPS plausibility state after GPS power-down or long gaps
+void ResetGPSPlausibilityFilter();
 
 /// @brief Convert signal quality to bars
 /// @return Signal strength in bars
@@ -103,5 +132,8 @@ extern int minute;
 
 /// @brief GPS Second
 extern int second;
+
+/// @brief SIM7600 internal module temperature in degrees C
+extern float simModuleTemp;
 
 #endif // GSM_H

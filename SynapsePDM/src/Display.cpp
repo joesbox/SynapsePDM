@@ -22,6 +22,7 @@
 */
 
 #include <Display.h>
+#include <OutputHandler.h>
 
 #define SCREENWIDTH 320
 #define SCREENHEIGHT 240
@@ -42,7 +43,8 @@ static int prevErrorFlags[NUM_CHANNELS] = {0};
 static float prevCurrentValues[NUM_CHANNELS] = {0.0F};
 static bool prevSDOK = false, prevGPSOK = false, initIcons = false, prevGPSEnable = false, previousConnectionStatus = false;
 static uint8_t prevMotionStatus = 0;
-static int prevMin = 0;
+static int prevHour = -1;
+static int prevMin = -1;
 static uint16_t systemErrorFlags = 0;
 static uint8_t prevBars = 0;
 
@@ -183,8 +185,6 @@ void StopDisplay()
   digitalWrite(SCK2, LOW);
   digitalWrite(TFT_DC, LOW);
   digitalWrite(TFT_RST, LOW);
-  digitalWrite(PWR_EN_5V, LOW);
-  digitalWrite(PWR_EN_3V3, LOW);
   digitalWrite(PB10, LOW);
 }
 
@@ -214,8 +214,13 @@ void DrawBackground()
   {
     tft.setCursor(textCoordinates[i][0], textCoordinates[i][1]);
     tft.print(i + 1);
-    tft.setCursor(currentReadingCoordinates[i][0], currentReadingCoordinates[i][1]);
-    tft.print("0.0A");
+
+    int ledCenterX = lights[i][0] + 2;
+    int currentTextY = currentReadingCoordinates[i][1];
+    String initialCurrentText = "0A";
+    int initialTextWidth = tft.textWidth(initialCurrentText);
+    tft.setCursor(ledCenterX - (initialTextWidth / 2), currentTextY);
+    tft.print(initialCurrentText);
 
     // Calculate the width of the channel name
     int chanNameWidth = tft.textWidth(Channels[i].ChannelName);
@@ -241,12 +246,14 @@ void UpdateDisplay()
 {
   spix.begin();
   tft.startWrite();
+  bool outputsInhibited = AreOutputsInhibited();
 
   if (invalidateDisplay)
   {
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
-      prevEnabled[i] = !Channels[i].Enabled;
+      bool effectiveEnabled = Channels[i].Enabled && !outputsInhibited;
+      prevEnabled[i] = !effectiveEnabled;
       prevErrorFlags[i] = -1;
       prevCurrentValues[i] = -1.0F;
 
@@ -319,16 +326,21 @@ void UpdateDisplay()
     snprintf(timeString, sizeof(timeString), "%02d:%02d", rtc.getHours(), rtc.getMinutes());
     tft.setCursor(271, 21);
     tft.print(timeString);
+    prevHour = rtc.getHours();
+    prevMin = rtc.getMinutes();
   }
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    if (Channels[i].Enabled != prevEnabled[i] || ChannelRuntime[i].ErrorFlags != prevErrorFlags[i])
+    bool effectiveEnabled = Channels[i].Enabled && !outputsInhibited;
+    int effectiveErrorFlags = outputsInhibited ? 0 : ChannelRuntime[i].ErrorFlags;
+
+    if (effectiveEnabled != prevEnabled[i] || effectiveErrorFlags != prevErrorFlags[i])
     {
-      if (Channels[i].Enabled && ChannelRuntime[i].ErrorFlags == 0)
+      if (effectiveEnabled && effectiveErrorFlags == 0)
       {
         tft.pushImage(lights[i][0] - 10, lights[i][1] - 8, 24, 24, (uint16_t *)greenLED);
       }
-      else if (Channels[i].Enabled && ChannelRuntime[i].ErrorFlags != 0)
+      else if (effectiveEnabled && effectiveErrorFlags != 0)
       {
         tft.pushImage(lights[i][0] - 10, lights[i][1] - 8, 24, 24, (uint16_t *)redLED);
       }
@@ -338,29 +350,29 @@ void UpdateDisplay()
       }
 
       // Update previous states
-      prevEnabled[i] = Channels[i].Enabled;
-      prevErrorFlags[i] = ChannelRuntime[i].ErrorFlags;
+      prevEnabled[i] = effectiveEnabled;
+      prevErrorFlags[i] = effectiveErrorFlags;
     }
 
     // Update current values
-    float currentValueRounded = round(ChannelRuntime[i].CurrentValue * 10) / 10.0;
-    float prevValueRounded = round(prevCurrentValues[i] * 10) / 10.0;
+    int currentValueRoundedUp = (ChannelRuntime[i].CurrentValue <= 0.0F) ? 0 : (int)ceil(ChannelRuntime[i].CurrentValue);
+    int prevValueRoundedUp = (prevCurrentValues[i] <= 0.0F) ? 0 : (int)ceil(prevCurrentValues[i]);
 
-    if (currentValueRounded != prevValueRounded)
+    if (currentValueRoundedUp != prevValueRoundedUp)
     {
-      // Clear the previous text
-      tft.fillRect(currentReadingCoordinates[i][0] - 10, currentReadingCoordinates[i][1], 45, 15, TFT_BLACK);
+      int ledCenterX = lights[i][0] + 2;
+      int currentTextY = currentReadingCoordinates[i][1];
 
-      // Calculate the width of the text
-      int textWidth = tft.textWidth(String(currentValueRounded, 1) + "A");
+      // Keep clear area inside the cell so grid boundary lines are not overwritten.
+      tft.fillRect(ledCenterX - 17, currentTextY, 34, tft.fontHeight(), TFT_BLACK);
 
-      // Adjust the x-coordinate to center the text
-      int xCoordinate = currentReadingCoordinates[i][0] + (30 - textWidth) / 2;
+      String currentText = String(currentValueRoundedUp) + "A";
+      int textWidth = tft.textWidth(currentText);
+      int xCoordinate = ledCenterX - (textWidth / 2);
 
       // Print the new value
-      tft.setCursor(xCoordinate, currentReadingCoordinates[i][1]);
-      tft.print(currentValueRounded, 1);
-      tft.print("A");
+      tft.setCursor(xCoordinate, currentTextY);
+      tft.print(currentText);
       prevCurrentValues[i] = ChannelRuntime[i].CurrentValue;
     }
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
@@ -478,13 +490,16 @@ void UpdateDisplay()
     prevBars = bars;
   }
 
-  if (prevMin != rtc.getMinutes())
+  int currentHour = rtc.getHours();
+  int currentMinute = rtc.getMinutes();
+  if (prevHour != currentHour || prevMin != currentMinute)
   {
     char timeString[6];
-    snprintf(timeString, sizeof(timeString), "%02d:%02d", rtc.getHours(), rtc.getMinutes());
+    snprintf(timeString, sizeof(timeString), "%02d:%02d", currentHour, currentMinute);
     tft.fillRect(271, 21, 40, 15, TFT_BLACK);
     tft.setTextColor(TFT_WHITE, TFT_BLACK);
-    prevMin = rtc.getMinutes();
+    prevHour = currentHour;
+    prevMin = currentMinute;
     tft.setCursor(271, 21);
     tft.print(timeString);
   }

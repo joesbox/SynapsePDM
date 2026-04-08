@@ -13,15 +13,13 @@ See https://wiki.joeblogs.uk/ for more info.
 + CAN channel control and diagnostics.
 + SD card logging.
 + Configuration and monitoring via USB.
-+ 6-DOF on-board IMU.
++ 9-DOF on-board IMU.
 + SIM card slot for tracking and telemetry.
 
 ## License
 This work is licensed under a GPL-3.0 license.
 
 ### Disclaimer 
-This hardware and software are experimental, may have bugs, and are not guaranteed to be reliable.
-
 Please don’t use this in safety-critical systems.
 
 Use it at your own risk.

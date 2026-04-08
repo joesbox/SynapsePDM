@@ -21,9 +21,442 @@
 */
 
 #include "InputHandler.h"
+#include <math.h>
+
+static bool intermittentInputActive[NUM_CHANNELS] = {false};
+static bool intermittentOutputActive[NUM_CHANNELS] = {false};
+static uint32_t intermittentPhaseTimers[NUM_CHANNELS] = {0};
+
+float CalculateLinear(float x, float x1, float y1, float x2, float y2)
+{
+    float dx = x2 - x1;
+    if (fabsf(dx) < MIN_DENOMINATOR)
+    {
+        return y1;
+    }
+    return y1 + ((x - x1) * (y2 - y1) / dx);
+}
+
+float CalculateQuadraticLagrange(float x, float x1, float y1, float x2, float y2, float x3, float y3)
+{
+    float d1 = (x1 - x2) * (x1 - x3);
+    float d2 = (x2 - x1) * (x2 - x3);
+    float d3 = (x3 - x1) * (x3 - x2);
+
+    if (fabsf(d1) < MIN_DENOMINATOR || fabsf(d2) < MIN_DENOMINATOR || fabsf(d3) < MIN_DENOMINATOR)
+    {
+        return CalculateLinear(x, x1, y1, x2, y2);
+    }
+
+    float l1 = ((x - x2) * (x - x3)) / d1;
+    float l2 = ((x - x1) * (x - x3)) / d2;
+    float l3 = ((x - x1) * (x - x2)) / d3;
+    return (l1 * y1) + (l2 * y2) + (l3 * y3);
+}
+
+bool IsTemperatureUnits(uint8_t units)
+{
+    return units == ANA_UNITS_CELSIUS || units == ANA_UNITS_FAHRENHEIT;
+}
+
+void SanitizeAnalogueInputConfig(AnalogueInputs &input)
+{
+    if (input.CalibrationPoints < 2)
+    {
+        input.CalibrationPoints = 2;
+    }
+    if (input.CalibrationPoints > 3)
+    {
+        input.CalibrationPoints = 3;
+    }
+
+    if (input.NTCBeta < 1.0f)
+    {
+        input.NTCBeta = 3950.0f;
+    }
+    if (input.NTCNominalResistance < 1.0f)
+    {
+        input.NTCNominalResistance = 10000.0f;
+    }
+
+    switch (input.ChanType)
+    {
+    case RAW_VOLTAGE:
+        input.PullUpEnable = false;
+        input.PullDownEnable = false;
+        input.Units = ANA_UNITS_VOLTS;
+        break;
+    case ACTIVE:
+        input.PullUpEnable = false;
+        input.PullDownEnable = false;
+        break;
+    case PASSIVE:
+        if (!input.PullUpEnable && !input.PullDownEnable)
+        {
+            input.PullUpEnable = true;
+        }
+        if (input.PullUpEnable && input.PullDownEnable)
+        {
+            input.PullDownEnable = false;
+        }
+        break;
+    case NTC:
+        if (!input.PullUpEnable && !input.PullDownEnable)
+        {
+            input.PullUpEnable = true;
+        }
+        if (input.PullUpEnable && input.PullDownEnable)
+        {
+            input.PullDownEnable = false;
+        }
+        if (!IsTemperatureUnits(input.Units))
+        {
+            input.Units = ANA_UNITS_CELSIUS;
+        }
+        break;
+    case DIGITAL:
+        if (!input.PullUpEnable && !input.PullDownEnable)
+        {
+            input.PullDownEnable = true;
+        }
+        if (input.PullUpEnable && input.PullDownEnable)
+        {
+            input.PullDownEnable = false;
+        }
+        input.Units = ANA_UNITS_VOLTS;
+        break;
+    default:
+        input.ChanType = RAW_VOLTAGE;
+        input.PullUpEnable = false;
+        input.PullDownEnable = false;
+        input.Units = ANA_UNITS_VOLTS;
+        break;
+    }
+}
+
+float ConvertUsingCalibration(const AnalogueInputs &input, float sourceVoltage)
+{
+    if (input.CalibrationPoints >= 3)
+    {
+        return CalculateQuadraticLagrange(
+            sourceVoltage,
+            input.CalibrationVolt1, input.CalibrationValue1,
+            input.CalibrationVolt2, input.CalibrationValue2,
+            input.CalibrationVolt3, input.CalibrationValue3);
+    }
+
+    return CalculateLinear(
+        sourceVoltage,
+        input.CalibrationVolt1,
+        input.CalibrationValue1,
+        input.CalibrationVolt2,
+        input.CalibrationValue2);
+}
+
+float ConvertUsingNTC(const AnalogueInputs &input, float sourceVoltage)
+{
+    float voltage = sourceVoltage;
+    if (voltage < 0.001f)
+    {
+        voltage = 0.001f;
+    }
+    if (voltage > (ANALOG_SENSOR_SUPPLY_VOLTAGE - 0.001f))
+    {
+        voltage = ANALOG_SENSOR_SUPPLY_VOLTAGE - 0.001f;
+    }
+
+    float resistance = input.NTCNominalResistance;
+    if (input.PullUpEnable)
+    {
+        resistance = ANALOG_PULL_RESISTOR_OHMS * voltage / (ANALOG_SENSOR_SUPPLY_VOLTAGE - voltage);
+    }
+    else if (input.PullDownEnable)
+    {
+        resistance = ANALOG_PULL_RESISTOR_OHMS * (ANALOG_SENSOR_SUPPLY_VOLTAGE - voltage) / voltage;
+    }
+
+    if (resistance < 1.0f)
+    {
+        resistance = 1.0f;
+    }
+
+    float invT = (1.0f / NTC_T0_KELVIN) + (logf(resistance / input.NTCNominalResistance) / input.NTCBeta);
+    if (fabsf(invT) < MIN_DENOMINATOR)
+    {
+        return 0.0f;
+    }
+
+    float tempC = (1.0f / invT) - 273.15f;
+    if (input.Units == ANA_UNITS_FAHRENHEIT)
+    {
+        return (tempC * 1.8f) + 32.0f;
+    }
+
+    return tempC;
+}
+
+float ReadAnalogueInputValue(int inputIndex)
+{
+    float sourceVoltage = analogRead(AnalogueIns[inputIndex].InputPin) * (V_REF / ADCres);
+    sourceVoltage *= ANALOG_INPUT_PIN_TO_SOURCE_GAIN;
+    AnalogueIns[inputIndex].InputVoltage = sourceVoltage;
+
+    float converted = sourceVoltage;
+    switch (AnalogueIns[inputIndex].ChanType)
+    {
+    case RAW_VOLTAGE:
+        converted = sourceVoltage;
+        break;
+    case ACTIVE:
+    case PASSIVE:
+        converted = ConvertUsingCalibration(AnalogueIns[inputIndex], sourceVoltage);
+        break;
+    case NTC:
+        converted = ConvertUsingNTC(AnalogueIns[inputIndex], sourceVoltage);
+        break;
+    case DIGITAL:
+        converted = sourceVoltage;
+        break;
+    default:
+        converted = sourceVoltage;
+        break;
+    }
+
+    AnalogueIns[inputIndex].InputValue = converted;
+    return converted;
+}
+
+static bool ReadAnalogueInputHighState(int inputIndex)
+{
+    float sourceVoltage = ReadAnalogueInputValue(inputIndex);
+    return sourceVoltage >= ANALOG_DIGITAL_THRESHOLD_VOLTS;
+}
+
+bool ReadAnalogueInputAsDigital(int inputIndex)
+{
+    bool high = ReadAnalogueInputHighState(inputIndex);
+
+    // Pull-up means active low at the connector; pull-down means active high.
+    if (AnalogueIns[inputIndex].PullUpEnable)
+    {
+        return !high;
+    }
+
+    return high;
+}
+
+bool SyncChannelTypeForAssignedInput(uint8_t channelIndex)
+{
+    if (channelIndex >= NUM_CHANNELS)
+    {
+        return false;
+    }
+
+    int inputIndex = -1;
+    for (int i = 0; i < NUM_ANA_CHANNELS; i++)
+    {
+        if (Channels[channelIndex].InputControlPin == ANAchannelInputPins[i])
+        {
+            inputIndex = i;
+            break;
+        }
+    }
+
+    if (inputIndex < 0)
+    {
+        return false;
+    }
+
+    if (AnalogueIns[inputIndex].ChanType == DIGITAL)
+    {
+        if (Channels[channelIndex].ChanType == ANA)
+        {
+            Channels[channelIndex].ChanType = DIG;
+            return true;
+        }
+        if (Channels[channelIndex].ChanType == ANA_PWM)
+        {
+            Channels[channelIndex].ChanType = DIG_PWM;
+            return true;
+        }
+        return false;
+    }
+
+    if (Channels[channelIndex].ChanType == DIG)
+    {
+        Channels[channelIndex].ChanType = ANA;
+        return true;
+    }
+    if (Channels[channelIndex].ChanType == DIG_PWM)
+    {
+        Channels[channelIndex].ChanType = ANA_PWM;
+        return true;
+    }
+
+    return false;
+}
+
+bool SyncChannelTypesForAnalogueInput(uint8_t inputIndex)
+{
+    if (inputIndex >= NUM_ANA_CHANNELS)
+    {
+        return false;
+    }
+
+    bool changedAny = false;
+    for (int channelIndex = 0; channelIndex < NUM_CHANNELS; channelIndex++)
+    {
+        if (Channels[channelIndex].InputControlPin != ANAchannelInputPins[inputIndex])
+        {
+            continue;
+        }
+
+        if (SyncChannelTypeForAssignedInput(channelIndex))
+        {
+            changedAny = true;
+        }
+    }
+
+    return changedAny;
+}
+
+static void ResetIntermittentState(uint8_t channelIndex)
+{
+    intermittentInputActive[channelIndex] = false;
+    intermittentOutputActive[channelIndex] = false;
+    intermittentPhaseTimers[channelIndex] = 0;
+}
+
+static void ResolveChannelInputSource(uint8_t channelIndex, int *inputPin, bool *inputIsDigital)
+{
+    if (inputPin == nullptr || inputIsDigital == nullptr)
+    {
+        return;
+    }
+
+    *inputPin = -1;
+    *inputIsDigital = false;
+
+    if (channelIndex >= NUM_CHANNELS)
+    {
+        return;
+    }
+
+    if (Channels[channelIndex].InputControlPin == IGN_INPUT)
+    {
+        *inputIsDigital = true;
+        return;
+    }
+
+    for (int i = 0; i < NUM_DI_CHANNELS; i++)
+    {
+        if (Channels[channelIndex].InputControlPin == DIchannelInputPins[i])
+        {
+            *inputPin = i;
+            *inputIsDigital = true;
+            return;
+        }
+    }
+
+    for (int i = 0; i < NUM_ANA_CHANNELS; i++)
+    {
+        if (Channels[channelIndex].InputControlPin == ANAchannelInputPins[i])
+        {
+            *inputPin = i;
+            return;
+        }
+    }
+}
+
+static bool ReadChannelDigitalInputState(uint8_t channelIndex, int inputPin, bool inputIsDigital, bool requireDigitalAnalogueConfig)
+{
+    extern volatile uint8_t PowerState;
+    extern bool runOnEligible[NUM_CHANNELS];
+    extern uint32_t runOnDeadline[NUM_CHANNELS];
+
+    if ((PowerState == 1 /*PREPARE_SLEEP*/ || PowerState == 2 /*SLEEPING*/) &&
+        Channels[channelIndex].RunOn &&
+        runOnEligible[channelIndex] &&
+        runOnDeadline[channelIndex] != 0 &&
+        (int32_t)(millis() - runOnDeadline[channelIndex]) < 0)
+    {
+        return true;
+    }
+
+    if (ChannelRuntime[channelIndex].Override)
+    {
+        return true;
+    }
+
+    if (inputIsDigital)
+    {
+        return digitalRead(Channels[channelIndex].InputControlPin);
+    }
+
+    if (inputPin < 0)
+    {
+        return false;
+    }
+
+    if (requireDigitalAnalogueConfig && AnalogueIns[inputPin].ChanType != DIGITAL)
+    {
+        return false;
+    }
+
+    return ReadAnalogueInputAsDigital(inputPin);
+}
+
+static bool ComputeIntermittentOutputState(uint8_t channelIndex, bool inputActive)
+{
+    uint32_t now = millis();
+    uint32_t onTime = Channels[channelIndex].IntermittentOnTime;
+    uint32_t offTime = Channels[channelIndex].IntermittentOffTime;
+
+    if (!inputActive)
+    {
+        ResetIntermittentState(channelIndex);
+        return false;
+    }
+
+    if (!intermittentInputActive[channelIndex])
+    {
+        intermittentInputActive[channelIndex] = true;
+        intermittentOutputActive[channelIndex] = true;
+        intermittentPhaseTimers[channelIndex] = now;
+    }
+
+    if (onTime == 0 && offTime == 0)
+    {
+        intermittentOutputActive[channelIndex] = true;
+        return true;
+    }
+
+    if (onTime == 0)
+    {
+        intermittentOutputActive[channelIndex] = false;
+        return false;
+    }
+
+    if (offTime == 0)
+    {
+        intermittentOutputActive[channelIndex] = true;
+        return true;
+    }
+
+    uint32_t phaseDuration = intermittentOutputActive[channelIndex] ? onTime : offTime;
+    if ((now - intermittentPhaseTimers[channelIndex]) >= phaseDuration)
+    {
+        intermittentOutputActive[channelIndex] = !intermittentOutputActive[channelIndex];
+        intermittentPhaseTimers[channelIndex] = now;
+    }
+
+    return intermittentOutputActive[channelIndex];
+}
 
 void InitialiseInputs()
 {
+    analogReadResolution(12);
+
     // Ignition inout is used for wake/sleep
     pinMode(IGN_INPUT, INPUT_PULLDOWN);
 
@@ -38,127 +471,42 @@ void InitialiseInputs()
         AnalogueIns[i].InputPin = ANAchannelInputPins[i];
         AnalogueIns[i].PullDownPin = ANAchannelInputPullDowns[i];
         AnalogueIns[i].PullUpPin = ANAchannelInputPullUps[i];
+        SanitizeAnalogueInputConfig(AnalogueIns[i]);
 
         pinMode(AnalogueIns[i].PullDownPin, OUTPUT);
         pinMode(AnalogueIns[i].PullUpPin, OUTPUT);
 
-        if (AnalogueIns[i].PullDownEnable)
-        {
-            digitalWrite(AnalogueIns[i].PullDownPin, HIGH);
+        digitalWrite(AnalogueIns[i].PullDownPin, AnalogueIns[i].PullDownEnable ? HIGH : LOW);
+        digitalWrite(AnalogueIns[i].PullUpPin, AnalogueIns[i].PullUpEnable ? HIGH : LOW);
 
-            // Internal pull-down for digital inputs prevents floating inputs on boot/resume
-            if (AnalogueIns[i].IsDigital)
-            {
-                pinMode(AnalogueIns[i].InputPin, INPUT_PULLDOWN);
-            }
-            else
-            {
-                pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
-            }
-        }
-        else
-        {
-            digitalWrite(AnalogueIns[i].PullDownPin, LOW);
-            pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
-        }
-
-        if (AnalogueIns[i].PullUpEnable)
-        {
-            digitalWrite(AnalogueIns[i].PullUpPin, HIGH);
-
-            // Internal pull-up for digital inputs prevents floating inputs on boot/resume
-            if (AnalogueIns[i].IsDigital)
-            {
-                pinMode(AnalogueIns[i].InputPin, INPUT_PULLUP);
-            }
-            else
-            {
-                pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
-            }
-        }
-        else
-        {
-            digitalWrite(AnalogueIns[i].PullUpPin, LOW);
-            pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
-        }
-
-        if (AnalogueIns[i].IsDigital)
-        {
-            pinMode(AnalogueIns[i].InputPin, INPUT);
-        }
-        else
-        {
-            pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
-        }
+        // Analogue-capable inputs are always sampled through the ADC path, even when used logically as digital.
+        pinMode(AnalogueIns[i].InputPin, INPUT_ANALOG);
     }
 }
 
 void HandleInputs()
 {
+    analogReadResolution(12);
+
     // Check channel type and enable for active level
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
+        if (Channels[i].ChanType != DIG_INTERMITTENT)
+        {
+            ResetIntermittentState(i);
+        }
+
         // Find the input pin index first and what type it is
         int inputPin = -1;
         bool inputIsDigital = false;
-
-        for (int j = 0; j < NUM_DI_CHANNELS; j++)
-        {
-            if (Channels[i].InputControlPin == DIchannelInputPins[j])
-            {
-                inputPin = j;
-                inputIsDigital = true;
-                break;
-            }
-        }
-
-        if (inputPin == -1)
-        {
-            for (int j = 0; j < NUM_ANA_CHANNELS; j++)
-            {
-                if (Channels[i].InputControlPin == ANAchannelInputPins[j])
-                {
-                    inputPin = j;
-                    inputIsDigital = false;
-                    break;
-                }
-            }
-        }
+        ResolveChannelInputSource(i, &inputPin, &inputIsDigital);
         switch (Channels[i].ChanType)
         {
+
         case DIG:
         case DIG_PWM:
-
-            // Override takes precedence over input control pin
-            if (ChannelRuntime[i].Override)
-            {
-                Channels[i].Enabled = true;
-            }
-            else
-            {
-                if (inputIsDigital)
-                {
-                    Channels[i].Enabled = digitalRead(Channels[i].InputControlPin);
-                }
-                else
-                {
-                    // Analogue input used as digital
-                    if (AnalogueIns[inputPin].IsDigital)
-                    {
-                        if (AnalogueIns[inputPin].PullUpEnable)
-                        {
-                            // Active low
-                            Channels[i].Enabled = !digitalRead(AnalogueIns[inputPin].InputPin);
-                        }
-                        else
-                        {
-                            // Active high
-                            Channels[i].Enabled = digitalRead(AnalogueIns[inputPin].InputPin);
-                        }
-                    }
-                }
-            }
-
+        {
+            Channels[i].Enabled = ReadChannelDigitalInputState(i, inputPin, inputIsDigital, false);
             // Used for inrush delay timing
             if (enabledFlags[i] != Channels[i].Enabled)
             {
@@ -169,29 +517,129 @@ void HandleInputs()
                 }
             }
             break;
+        }
+        case DIG_INTERMITTENT:
+        {
+            bool inputActive = ReadChannelDigitalInputState(i, inputPin, inputIsDigital, true);
+            Channels[i].Enabled = ComputeIntermittentOutputState(i, inputActive);
 
-        case CAN_DIGITAL:
-        case CAN_PWM:
-            // Override takes precedence over CAN message
-            if (ChannelRuntime[i].Override)
+            if (enabledFlags[i] != Channels[i].Enabled)
             {
-                Channels[i].Enabled = true;
-            }
-            else
-            {
-                Channels[i].Enabled = CANChannelEnableFlags[i];
-
-                // Used for inrush delay timing
-                if (enabledFlags[i] != Channels[i].Enabled)
+                enabledFlags[i] = Channels[i].Enabled;
+                if (Channels[i].Enabled)
                 {
-                    enabledFlags[i] = Channels[i].Enabled;
-                    if (Channels[i].Enabled)
-                    {
-                        enabledTimers[i] = millis();
-                    }
+                    enabledTimers[i] = millis();
                 }
             }
             break;
+        }
+        case ANA:
+        {
+            if (inputPin < 0)
+            {
+                Channels[i].Enabled = false;
+                break;
+            }
+
+            // Threshold-based analogue input
+            SanitizeAnalogueInputConfig(AnalogueIns[inputPin]);
+            float value = ReadAnalogueInputValue(inputPin);
+            bool negativeGoingThreshold = Channels[i].OnThreshold < Channels[i].OffThreshold;
+            if ((!negativeGoingThreshold && value >= Channels[i].OnThreshold) ||
+                (negativeGoingThreshold && value <= Channels[i].OnThreshold))
+            {
+                Channels[i].Enabled = true;
+            }
+            else if ((!negativeGoingThreshold && value < Channels[i].OffThreshold) ||
+                     (negativeGoingThreshold && value > Channels[i].OffThreshold))
+            {
+                Channels[i].Enabled = false;
+            }
+            // Used for inrush delay timing
+            if (enabledFlags[i] != Channels[i].Enabled)
+            {
+                enabledFlags[i] = Channels[i].Enabled;
+                if (Channels[i].Enabled)
+                {
+                    enabledTimers[i] = millis();
+                }
+            }
+            break;
+        }
+        case ANA_PWM:
+        {
+            if (inputPin < 0)
+            {
+                Channels[i].Enabled = false;
+                Channels[i].PWMSetDuty = 0;
+                break;
+            }
+
+            // Scaled PWM analogue input
+            SanitizeAnalogueInputConfig(AnalogueIns[inputPin]);
+            float value = ReadAnalogueInputValue(inputPin);
+            float scaleMin = Channels[i].ScaleMin;
+            float scaleMax = Channels[i].ScaleMax;
+            float scaleRange = scaleMax - scaleMin;
+            if (fabsf(scaleRange) < MIN_DENOMINATOR)
+            {
+                scaleRange = (scaleRange < 0.0f) ? -MIN_DENOMINATOR : MIN_DENOMINATOR;
+            }
+            float norm = (value - scaleMin) / scaleRange;
+            if (norm < 0.0f)
+            {
+                norm = 0.0f;
+            }
+            if (norm > 1.0f)
+            {
+                norm = 1.0f;
+            }
+            uint8_t pwmMin = Channels[i].PWMMin;
+            uint8_t pwmMax = Channels[i].PWMMax;
+            float dutyFloat = ((float)pwmMin) + (((float)pwmMax - (float)pwmMin) * norm);
+            int dutyInt = (int)lroundf(dutyFloat);
+            if (dutyInt < 0)
+            {
+                dutyInt = 0;
+            }
+            if (dutyInt > 100)
+            {
+                dutyInt = 100;
+            }
+            Channels[i].PWMSetDuty = (uint8_t)dutyInt;
+            Channels[i].Enabled = (dutyInt > 0);
+            // Used for inrush delay timing
+            if (enabledFlags[i] != Channels[i].Enabled)
+            {
+                enabledFlags[i] = Channels[i].Enabled;
+                if (Channels[i].Enabled)
+                {
+                    enabledTimers[i] = millis();
+                }
+            }
+            break;
+        }
+        case CAN_DIGITAL:
+        case CAN_PWM:
+        {
+            // Override takes precedence over CAN message
+            if (!Channels[i].Enabled)
+            {
+                // Clear error flags on disable
+                ChannelRuntime[i].ErrorFlags = 0;
+            }
+            Channels[i].Enabled = CANChannelEnableFlags[i];
+            // Used for inrush delay timing
+            if (enabledFlags[i] != Channels[i].Enabled)
+            {
+                enabledFlags[i] = Channels[i].Enabled;
+                if (Channels[i].Enabled)
+                {
+                    enabledTimers[i] = millis();
+                }
+            }
+            break;
+        }
         default:
             break;
         }
@@ -206,6 +654,7 @@ void HandleInputs()
     // Check analogue inputs. Set pull-ups/pull-downs
     for (int i = 0; i < NUM_ANA_CHANNELS; i++)
     {
+        SanitizeAnalogueInputConfig(AnalogueIns[i]);
         digitalWrite(AnalogueIns[i].PullDownPin, AnalogueIns[i].PullDownEnable);
         digitalWrite(AnalogueIns[i].PullUpPin, AnalogueIns[i].PullUpEnable);
     }

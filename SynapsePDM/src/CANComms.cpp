@@ -21,6 +21,7 @@
 */
 
 #include "CANComms.h"
+#include "InputHandler.h"
 
 // Use CAN1 with ALT_2 pin configuration (PD0/PD1)
 STM32_CAN Can(CAN1, ALT_2);
@@ -58,6 +59,7 @@ void InitialiseCAN()
 void ReadCANMessages()
 {
     CAN_message_t msg;
+    bool inputConfigChanged = false;
     while (Can.read(msg))
     {
         if (msg.id == SystemParams.ChannelDataCANID)
@@ -145,7 +147,7 @@ void ReadCANMessages()
                     // Channel type
                     if ((paramMask) & 0x01)
                     {
-                        if (msg.buf[1] <= 5)
+                        if (msg.buf[1] <= 6)
                         {
                             ChannelType newType;
                             switch (msg.buf[1])
@@ -173,12 +175,22 @@ void ReadCANMessages()
                             case 5: // CAN PWM
                                 newType = CAN_PWM;
                                 break;
+
+                            case 6: // Digital intermittent
+                                newType = DIG_INTERMITTENT;
+                                break;
                             }
-                            
+
                             if (newType != Channels[i].ChanType)
                             {
-                                Channels[i].ChanType = newType;                                
+                                if (Channels[i].ChanType != DIG_INTERMITTENT && newType == DIG_INTERMITTENT)
+                                {
+                                    Channels[i].IntermittentOnTime = 1000;
+                                    Channels[i].IntermittentOffTime = 1000;
+                                }
+                                Channels[i].ChanType = newType;
                                 pendingEEPROMSave = true;
+                                inputConfigChanged = true;
                             }
                         }
                     }
@@ -192,10 +204,10 @@ void ReadCANMessages()
                         newName[1] = ((packedName >> 5) & 0x1F) + 'A';
                         newName[2] = (packedName & 0x1F) + 'A';
                         newName[3] = 0;
-                        
+
                         if (memcmp(newName, Channels[i].ChannelName, 3) != 0)
                         {
-                            memcpy(Channels[i].ChannelName, newName, sizeof(Channels[i].ChannelName));                            
+                            memcpy(Channels[i].ChannelName, newName, sizeof(Channels[i].ChannelName));
                             pendingEEPROMSave = true;
                         }
                     }
@@ -208,7 +220,7 @@ void ReadCANMessages()
                             uint8_t newThreshold = msg.buf[4] / 10;
                             if (newThreshold != Channels[i].CurrentThresholdLow)
                             {
-                                Channels[i].CurrentThresholdLow = newThreshold;                                
+                                Channels[i].CurrentThresholdLow = newThreshold;
                                 pendingEEPROMSave = true;
                             }
                         }
@@ -222,7 +234,7 @@ void ReadCANMessages()
                             uint8_t newThreshold = msg.buf[5] / 10;
                             if (newThreshold != Channels[i].CurrentThresholdHigh)
                             {
-                                Channels[i].CurrentThresholdHigh = newThreshold;                                
+                                Channels[i].CurrentThresholdHigh = newThreshold;
                                 pendingEEPROMSave = true;
                             }
                         }
@@ -233,7 +245,18 @@ void ReadCANMessages()
                     {
                         if (msg.buf[6] != Channels[i].RetryCount)
                         {
-                            Channels[i].RetryCount = msg.buf[6];                            
+                            Channels[i].RetryCount = msg.buf[6];
+                            pendingEEPROMSave = true;
+                        }
+                    }
+
+                    // Inrush current threshold
+                    if (paramMask >> 6 & 0x01)
+                    {
+                        float newInrushCurrentThreshold = (float)msg.buf[7];
+                        if (newInrushCurrentThreshold != Channels[i].InrushCurrentThreshold)
+                        {
+                            Channels[i].InrushCurrentThreshold = newInrushCurrentThreshold;
                             pendingEEPROMSave = true;
                         }
                     }
@@ -261,7 +284,7 @@ void ReadCANMessages()
 
                         if (inrush <= MAX_INRUSH_DELAY && inrush != Channels[i].InrushDelay)
                         {
-                            Channels[i].InrushDelay = inrush;                            
+                            Channels[i].InrushDelay = inrush;
                             pendingEEPROMSave = true;
                         }
                     }
@@ -272,7 +295,7 @@ void ReadCANMessages()
                         bool newActiveHigh = (msg.buf[5] != 0);
                         if (newActiveHigh != Channels[i].ActiveHigh)
                         {
-                            Channels[i].ActiveHigh = newActiveHigh;                            
+                            Channels[i].ActiveHigh = newActiveHigh;
                             pendingEEPROMSave = true;
                         }
                     }
@@ -283,7 +306,7 @@ void ReadCANMessages()
                         bool newRunOn = (msg.buf[6] != 0);
                         if (newRunOn != Channels[i].RunOn)
                         {
-                            Channels[i].RunOn = newRunOn;                            
+                            Channels[i].RunOn = newRunOn;
                             pendingEEPROMSave = true;
                         }
                     }
@@ -310,11 +333,34 @@ void ReadCANMessages()
 
                         if (runOn <= MAX_RUN_ON_TIME && runOn != Channels[i].RunOnTime)
                         {
-                            Channels[i].RunOnTime = runOn;                            
+                            Channels[i].RunOnTime = runOn;
                             pendingEEPROMSave = true;
                         }
                     }
-                }
+
+                    // Soft start enable
+                    if ((paramMask >> 2) & 0x01)
+                    {
+                        bool newSoftStart = (msg.buf[5] != 0);
+                        if (newSoftStart != Channels[i].SoftStart)
+                        {
+                            Channels[i].SoftStart = newSoftStart;
+                            pendingEEPROMSave = true;
+                        }
+                    }
+
+                    // Soft start time
+                    if ((paramMask >> 3) & 0x01)
+                    {
+                        uint32_t softStartTime = (msg.buf[6] * 1000); // Convert seconds to milliseconds
+
+                        if (softStartTime <= MAX_SOFT_START_TIME && softStartTime != Channels[i].SoftStartTime)
+                        {
+                            Channels[i].SoftStartTime = softStartTime;
+                            pendingEEPROMSave = true;
+                        }
+                    }
+                                }
             }
         }
 
@@ -326,7 +372,7 @@ void ReadCANMessages()
 
             // System current limit
             if (paramMask & 0x01)
-            {   
+            {
                 if (msg.buf[0] <= SYSTEM_CURRENT_MAX && msg.buf[0] != SystemParams.SystemCurrentLimit)
                 {
                     SystemParams.SystemCurrentLimit = msg.buf[0];
@@ -349,7 +395,7 @@ void ReadCANMessages()
             {
                 if (msg.buf[2] <= 1 && msg.buf[2] != SystemParams.DistanceUnitPref)
                 {
-                    SystemParams.DistanceUnitPref = msg.buf[2];                    
+                    SystemParams.DistanceUnitPref = msg.buf[2];
                     pendingEEPROMSave = true;
                 }
             }
@@ -359,7 +405,7 @@ void ReadCANMessages()
             {
                 if (msg.buf[3] <= 1 && msg.buf[3] != SystemParams.AllowData)
                 {
-                    SystemParams.AllowData = msg.buf[3];                    
+                    SystemParams.AllowData = msg.buf[3];
                     pendingEEPROMSave = true;
                 }
             }
@@ -369,7 +415,7 @@ void ReadCANMessages()
             {
                 if (msg.buf[4] <= 1 && msg.buf[4] != SystemParams.AllowGPS)
                 {
-                    SystemParams.AllowGPS = msg.buf[4];                    
+                    SystemParams.AllowGPS = msg.buf[4];
                     pendingEEPROMSave = true;
                 }
             }
@@ -379,7 +425,7 @@ void ReadCANMessages()
             {
                 if (msg.buf[5] <= 1 && msg.buf[5] != SystemParams.AllowMotionDetect)
                 {
-                    SystemParams.AllowMotionDetect = msg.buf[5];                    
+                    SystemParams.AllowMotionDetect = msg.buf[5];
                     pendingEEPROMSave = true;
                 }
             }
@@ -389,7 +435,7 @@ void ReadCANMessages()
             {
                 if (msg.buf[6] <= MAX_MOTION_DEAD_TIME && msg.buf[6] != SystemParams.MotionDeadTime)
                 {
-                    SystemParams.MotionDeadTime = msg.buf[6];                    
+                    SystemParams.MotionDeadTime = msg.buf[6];
                     pendingEEPROMSave = true;
                 }
             }
@@ -402,6 +448,11 @@ void ReadCANMessages()
             invalidateDisplay = true;
             EEPROMSaveTimout = millis() + EEPROM_WRITE_DELAY;
         }
+    }
+
+    if (inputConfigChanged)
+    {
+        InitialiseInputs();
     }
 }
 

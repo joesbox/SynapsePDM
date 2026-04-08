@@ -1,3 +1,4 @@
+
 /*  OutputHandler.cpp Output handler deals with channel output control.
     Specifically applies to the Infineon BTS50010 High-Side Driver
     Copyright (c) 2023 Joe Mann.  All right reserved.
@@ -42,6 +43,15 @@ uint8_t dutyCycles[14] = {0};
 TIM_HandleTypeDef htim8;
 TIM_HandleTypeDef htim1;
 
+// Soft start tracking (must be after NUM_CHANNELS is defined in Globals.h)
+
+static uint32_t softStartTimers[NUM_CHANNELS] = {0};
+static bool softStartActive[NUM_CHANNELS] = {false};
+static uint32_t softStopTimers[NUM_CHANNELS] = {0};
+static bool softStopActive[NUM_CHANNELS] = {false};
+static uint8_t softStopStartDuty[NUM_CHANNELS] = {0};
+static bool previousEnabled[NUM_CHANNELS] = {false};
+
 volatile uint8_t analogCounter;
 uint analogValues[NUM_CHANNELS][ANALOG_READ_SAMPLES];
 
@@ -59,6 +69,127 @@ bool channelLocked[NUM_CHANNELS] = {false};
 
 // per-channel counters
 uint8_t retryCount[NUM_CHANNELS] = {0};
+
+// Per-channel EMA filter state for PWM current readback
+static float pwmCurrentFiltered[NUM_CHANNELS] = {0.0f};
+static bool pwmCurrentFilterPrimed[NUM_CHANNELS] = {false};
+static bool outputsInhibited = false;
+
+bool IsChannelThermallyShed(uint8_t channelIndex)
+{
+  if (channelIndex >= NUM_CHANNELS)
+  {
+    return false;
+  }
+
+  if (ActiveThermalProtectionStage == THERMAL_PROTECTION_NONE)
+  {
+    return false;
+  }
+
+  ChannelPriority priority = GetChannelPriority(Channels[channelIndex].Category);
+  if (ActiveThermalProtectionStage == THERMAL_PROTECTION_WARNING)
+  {
+    return priority == CHANNEL_PRIORITY_LOW;
+  }
+
+  return priority != CHANNEL_PRIORITY_CRITICAL;
+}
+
+bool IsChannelEffectivelyEnabled(uint8_t channelIndex)
+{
+  if (channelIndex >= NUM_CHANNELS)
+  {
+    return false;
+  }
+
+  return Channels[channelIndex].Enabled && !outputsInhibited && !IsChannelThermallyShed(channelIndex);
+}
+
+static bool ApplySoftStartRamp(uint8_t channelIndex, bool triggerRamp, int targetDuty, int &rampDuty)
+{
+  if (Channels[channelIndex].SoftStart && Channels[channelIndex].SoftStartTime > 0)
+  {
+    if (triggerRamp)
+    {
+      softStartActive[channelIndex] = true;
+      softStartTimers[channelIndex] = millis();
+    }
+
+    if (softStartActive[channelIndex])
+    {
+      uint32_t elapsed = millis() - softStartTimers[channelIndex];
+      if (elapsed < Channels[channelIndex].SoftStartTime)
+      {
+        float ramp = (float)elapsed / (float)Channels[channelIndex].SoftStartTime;
+        rampDuty = (int)(ramp * targetDuty);
+        if (rampDuty > 100)
+        {
+          rampDuty = 100;
+        }
+        if (rampDuty < 0)
+        {
+          rampDuty = 0;
+        }
+        return true;
+      }
+
+      softStartActive[channelIndex] = false;
+    }
+  }
+  else
+  {
+    softStartActive[channelIndex] = false;
+  }
+
+  rampDuty = targetDuty;
+  return false;
+}
+
+static bool ApplySoftStopRamp(uint8_t channelIndex, bool triggerRamp, int &rampDuty)
+{
+  if (triggerRamp)
+  {
+    softStartActive[channelIndex] = false;
+
+    if (Channels[channelIndex].SoftStop && Channels[channelIndex].SoftStopTime > 0 && dutyCycles[channelIndex] > 0)
+    {
+      softStopActive[channelIndex] = true;
+      softStopTimers[channelIndex] = millis();
+      softStopStartDuty[channelIndex] = dutyCycles[channelIndex];
+    }
+    else
+    {
+      softStopActive[channelIndex] = false;
+      softStopStartDuty[channelIndex] = 0;
+    }
+  }
+
+  if (softStopActive[channelIndex])
+  {
+    uint32_t elapsed = millis() - softStopTimers[channelIndex];
+    if (elapsed < Channels[channelIndex].SoftStopTime)
+    {
+      float ramp = 1.0f - ((float)elapsed / (float)Channels[channelIndex].SoftStopTime);
+      rampDuty = (int)(ramp * softStopStartDuty[channelIndex]);
+      if (rampDuty > 100)
+      {
+        rampDuty = 100;
+      }
+      if (rampDuty < 0)
+      {
+        rampDuty = 0;
+      }
+      return true;
+    }
+
+    softStopActive[channelIndex] = false;
+    softStopStartDuty[channelIndex] = 0;
+  }
+
+  rampDuty = 0;
+  return false;
+}
 
 /// @brief Handle output control
 void InitialiseOutputs()
@@ -78,11 +209,11 @@ void InitialiseOutputs()
 
 void SleepOutputs()
 {
-  __HAL_RCC_GPIOA_CLK_SLEEP_DISABLE();
   __HAL_RCC_GPIOB_CLK_SLEEP_DISABLE();
   __HAL_RCC_GPIOC_CLK_SLEEP_DISABLE();
   __HAL_RCC_GPIOD_CLK_SLEEP_DISABLE();
-  __HAL_RCC_GPIOE_CLK_SLEEP_DISABLE();
+  // Keep GPIOE clocked in STOP mode because the wake sources live on PE2 and PE4.
+  __HAL_RCC_GPIOE_CLK_SLEEP_ENABLE();
   __HAL_RCC_GPIOF_CLK_SLEEP_DISABLE();
   __HAL_RCC_GPIOG_CLK_SLEEP_DISABLE();
 
@@ -160,9 +291,9 @@ void configureTimer()
   __HAL_RCC_TIM8_CLK_ENABLE();
 
   htim8.Instance = TIM8;
-  htim8.Init.Prescaler = 84 - 1; // 84MHz / 84 = 1MHz
+  htim8.Init.Prescaler = 84 - 1; // TIM8 clock 168MHz / 84 = 2MHz timer tick
   htim8.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim8.Init.Period = 100 - 1; // 1MHz / 100 = 10kHz
+  htim8.Init.Period = 133 - 1; // 2MHz / 133 ~= 15.0kHz update => ~150Hz PWM (100-step buffer)
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 
@@ -174,9 +305,9 @@ void configureTimer()
   __HAL_RCC_TIM1_CLK_ENABLE();
 
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 84 - 1; // 84MHz / 84 = 1MHz
+  htim1.Init.Prescaler = 84 - 1; // TIM1 clock 168MHz / 84 = 2MHz timer tick
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 100 - 1; // 1MHz / 100 = 10kHz
+  htim1.Init.Period = 133 - 1; // 2MHz / 133 ~= 15.0kHz update => ~150Hz PWM (100-step buffer)
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
 
@@ -235,30 +366,62 @@ void updatePWMDutyCycle(uint8_t pinIndex, uint8_t dutyCycle)
 /// @brief Update PWM or digital outputs
 void UpdateOutputs()
 {
+  if (outputsInhibited)
+  {
+    OutputsOff();
+    return;
+  }
+
   // Check the type of channel we're dealing with (digital or PWM) and handle output accordingly
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
+    bool thermallyShed = Channels[i].Enabled && IsChannelThermallyShed(i);
+
+    // Detect rising edge of enable
+    bool risingEdge = Channels[i].Enabled && !previousEnabled[i];
+    bool fallingEdge = !Channels[i].Enabled && previousEnabled[i];
+    previousEnabled[i] = Channels[i].Enabled;
+
+    if (!thermallyShed)
+    {
+      ChannelRuntime[i].ErrorFlags &= (uint8_t)~CHN_TEMP_SHUTDOWN;
+    }
+
+    // Only perform current measurement and fault diagnosis if channel is enabled
+
+    if (Channels[i].Enabled)
+    {
+    }
+    else
+    {
+      ChannelRuntime[i].CurrentValue = 0.0;
+      pwmCurrentFiltered[i] = 0.0f;
+      pwmCurrentFilterPrimed[i] = false;
+    }
+
+    if (thermallyShed)
+    {
+      updatePWMDutyCycle(i, 0);
+      ChannelRuntime[i].CurrentValue = 0.0f;
+      ChannelRuntime[i].ErrorFlags |= CHN_TEMP_SHUTDOWN;
+      retriesPending[i] = false;
+      softStartActive[i] = false;
+      softStopActive[i] = false;
+      softStopStartDuty[i] = 0;
+      pwmCurrentFiltered[i] = 0.0f;
+      pwmCurrentFilterPrimed[i] = false;
+      continue;
+    }
+
     switch (Channels[i].ChanType)
     {
     case DIG_PWM:
+    case ANA_PWM:
       if (Channels[i].Enabled)
       {
-        // Calculate the adjusted PWM for volage/average power
-        float squared = (VBATT_NOMINAL / SystemRuntimeParams.VBatt) * (VBATT_NOMINAL / SystemRuntimeParams.VBatt);
-        int pwmActual = round(Channels[i].PWMSetDuty * squared);
-
-        // PWM range check
-        if (pwmActual > 100)
-        {
-          pwmActual = 100;
-        }
-        else if (pwmActual < 0)
-        {
-          pwmActual = 0;
-        }
-        updatePWMDutyCycle(i, pwmActual);
-
-        // TODO: Calibrate current readings for the BTS50025
+        softStopActive[i] = false;
+        softStopStartDuty[i] = 0;
+        bool criticalFault = false;
         int sum = 0;
         uint8_t total = 0;
         for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
@@ -274,22 +437,68 @@ void UpdateOutputs()
         }
 
         float isVoltage = (ChannelRuntime[i].AnalogRaw / ADCres) * V_REF;
-        float amps = (PWM_M * ChannelRuntime[i].AnalogRaw) + PWM_C;
+        float measuredAmps = (PWM_M * ChannelRuntime[i].AnalogRaw) + PWM_C;
 
         if (ChannelRuntime[i].AnalogRaw < 5)
         {
-          // No current detected, set to 0
-          amps = 0.0;
+          measuredAmps = 0.0;
         }
 
-        // Check for fault condition and current thresholds
+        float squared = (VBATT_NOMINAL / SystemRuntimeParams.VBatt) * (VBATT_NOMINAL / SystemRuntimeParams.VBatt);
+        int pwmActual = round(Channels[i].PWMSetDuty * squared);
+        if (pwmActual > 100)
+        {
+          pwmActual = 100;
+        }
+        if (pwmActual < 0)
+        {
+          pwmActual = 0;
+        }
+
+        float amps = measuredAmps;
+        if (pwmActual <= 0)
+        {
+          // Keep true zero when duty is effectively off.
+          pwmCurrentFiltered[i] = 0.0f;
+          pwmCurrentFilterPrimed[i] = false;
+          amps = 0.0f;
+        }
+        else
+        {
+          if (!pwmCurrentFilterPrimed[i])
+          {
+            pwmCurrentFiltered[i] = measuredAmps;
+            pwmCurrentFilterPrimed[i] = true;
+          }
+          else
+          {
+            pwmCurrentFiltered[i] += PWM_CURRENT_FILTER_ALPHA * (measuredAmps - pwmCurrentFiltered[i]);
+          }
+
+          if ((measuredAmps <= 0.0f) && (pwmCurrentFiltered[i] < PWM_CURRENT_ZERO_SNAP_AMPS))
+          {
+            pwmCurrentFiltered[i] = 0.0f;
+          }
+          amps = pwmCurrentFiltered[i];
+        }
+
+        bool inrushPeriod = (millis() - enabledTimers[i]) <= (unsigned long)(Channels[i].InrushDelay);
+
+        float overCurrentThreshold = Channels[i].CurrentThresholdHigh;
+        if (inrushPeriod)
+        {
+          overCurrentThreshold = Channels[i].InrushCurrentThreshold;
+        }
+
         if (isVoltage > FAULT_THRESHOLD)
         {
           ChannelRuntime[i].ErrorFlags |= IS_FAULT;
+          criticalFault = true;
         }
-        else if (amps > Channels[i].CurrentThresholdHigh)
+        else if (amps > overCurrentThreshold)
         {
           ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT;
+          criticalFault = true;
         }
         else if (amps < Channels[i].CurrentThresholdLow)
         {
@@ -297,7 +506,6 @@ void UpdateOutputs()
         }
         else
         {
-          // No conditions found. Clear flag
           if (!channelLocked[i])
           {
             ChannelRuntime[i].ErrorFlags = 0;
@@ -305,21 +513,62 @@ void UpdateOutputs()
         }
 
         ChannelRuntime[i].CurrentValue = amps;
+
+        int targetDuty = pwmActual;
+        int rampDuty = targetDuty;
+        bool ramping = false;
+        bool anaPwmDutyRiseFromZero = (Channels[i].ChanType == ANA_PWM) && !softStartActive[i] && (dutyCycles[i] == 0) && (targetDuty > 0);
+        ramping = ApplySoftStartRamp(i, risingEdge || anaPwmDutyRiseFromZero, targetDuty, rampDuty);
+
+        if (rampDuty > 100)
+        {
+          rampDuty = 100;
+        }
+        if (rampDuty < 0)
+        {
+          rampDuty = 0;
+        }
+
+        if (ramping)
+        {
+          if (criticalFault)
+          {
+            updatePWMDutyCycle(i, 0);
+            softStartActive[i] = false;
+            pwmCurrentFiltered[i] = 0.0f;
+            pwmCurrentFilterPrimed[i] = false;
+            break;
+          }
+          updatePWMDutyCycle(i, rampDuty);
+          continue;
+        }
+        updatePWMDutyCycle(i, targetDuty);
       }
       else
       {
-        updatePWMDutyCycle(i, 0);
-        ChannelRuntime[i].CurrentValue = 0.0;
+        int rampDuty = 0;
+        if (ApplySoftStopRamp(i, fallingEdge, rampDuty))
+        {
+          updatePWMDutyCycle(i, rampDuty);
+        }
+        else
+        {
+          updatePWMDutyCycle(i, 0);
+          pwmCurrentFiltered[i] = 0.0f;
+          pwmCurrentFilterPrimed[i] = false;
+        }
       }
       break;
     case DIG:
+    case DIG_INTERMITTENT:
+    case ANA:
     case CAN_DIGITAL:
       if (Channels[i].Enabled)
       {
+        softStopActive[i] = false;
+        softStopStartDuty[i] = 0;
         static uint8_t trySampleCount[NUM_CHANNELS] = {0};
         static float tryCurrentSum[NUM_CHANNELS] = {0.0f};
-
-        // Read analog values first
         int sum = 0;
         uint8_t total = 0;
         for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
@@ -335,106 +584,111 @@ void UpdateOutputs()
         }
 
         float milliVolts = (analogMean / (float)ADCres) * V_REF;
-
         float I_IS = milliVolts / R_IS;
         ChannelRuntime[i].CurrentValue = k_ILIS * I_IS;
-
         if (ChannelRuntime[i].AnalogRaw < 5)
         {
-          // No current detected, set to 0
           ChannelRuntime[i].CurrentValue = 0.0;
         }
 
-        // Inrush delay expired. Now start evaluating current samples
-        if (millis() - enabledTimers[i] > (unsigned long)(Channels[i].InrushDelay))
+        int targetDuty = 100;
+        int rampDuty = targetDuty;
+        bool ramping = false;
+        ramping = ApplySoftStartRamp(i, risingEdge, targetDuty, rampDuty);
+        if (rampDuty > 100)
         {
-          // Add to rolling sum
-          tryCurrentSum[i] += ChannelRuntime[i].CurrentValue;
-          trySampleCount[i]++;
+          rampDuty = 100;
+        }
+        if (rampDuty < 0)
+        {
+          rampDuty = 0;
+        }
 
-          // Only evaluate once every 3 calls (~150ms)
-          if (trySampleCount[i] >= 3)
+        if (ramping)
+        {
+          updatePWMDutyCycle(i, rampDuty);
+          // Continue ramping (do not overwrite current value)
+          continue;
+        }
+
+        // Determine which threshold to use based on inrush delay
+        bool inrushPeriod = (millis() - enabledTimers[i]) <= (unsigned long)(Channels[i].InrushDelay);
+        tryCurrentSum[i] += ChannelRuntime[i].CurrentValue;
+        trySampleCount[i]++;
+        if (trySampleCount[i] >= 3)
+        {
+          float avgCurrent = tryCurrentSum[i] / trySampleCount[i];
+          trySampleCount[i] = 0;
+          tryCurrentSum[i] = 0.0f;
+          if (!channelLocked[i])
           {
-            float avgCurrent = tryCurrentSum[i] / trySampleCount[i];
-            trySampleCount[i] = 0;
-            tryCurrentSum[i] = 0.0f;
-
-            // --- Fault checks using avgCurrent ---
+            ChannelRuntime[i].ErrorFlags = 0;
+          }
+          float overCurrentThreshold = inrushPeriod ? Channels[i].InrushCurrentThreshold : Channels[i].CurrentThresholdHigh;
+          if (avgCurrent > overCurrentThreshold)
+          {
+            ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT;
+          }
+          else if (avgCurrent < Channels[i].CurrentThresholdLow)
+          {
+            ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT;
+          }
+          if (ChannelRuntime[i].ErrorFlags == 0)
+          {
             if (!channelLocked[i])
             {
-              ChannelRuntime[i].ErrorFlags = 0; // reset before checks
-            }
-
-            if (avgCurrent > Channels[i].CurrentThresholdHigh)
-            {
-              ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT;
-            }
-            else if (avgCurrent < Channels[i].CurrentThresholdLow)
-            {
-              ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT;
-            }
-
-            // --- Retry / lockout handling ---
-            if (ChannelRuntime[i].ErrorFlags == 0)
-            {
-              // Only re-enable if not permanently locked
-              if (!channelLocked[i])
-              {
-                updatePWMDutyCycle(i, 255);
-              }
-              else
-              {
-                updatePWMDutyCycle(i, 0); // Keep it off if locked
-              }
-              retriesPending[i] = false;
+              updatePWMDutyCycle(i, 100);
             }
             else
             {
-              if (!channelLocked[i])
-              {
-                retryCount[i]++;
-                updatePWMDutyCycle(i, 0); // turn off this try
-
-                if (retryCount[i] > Channels[i].RetryCount)
-                {
-                  channelLocked[i] = true;
-                  ChannelRuntime[i].ErrorFlags |= RETRY_LOCKOUT;
-                  updatePWMDutyCycle(i, 0);
-                }
-              }
-              else
-              {
-                updatePWMDutyCycle(i, 0); // locked
-              }
+              updatePWMDutyCycle(i, 0);
             }
-          }
-        }
-        else
-        {
-          // Collecting samples: only keep channel ON if not permanently locked
-          if (!channelLocked[i])
-          {
-            updatePWMDutyCycle(i, 255); // keep channel ON so current can stabilise
+            retriesPending[i] = false;
           }
           else
           {
-            updatePWMDutyCycle(i, 0); // keep locked channels OFF
+            if (!channelLocked[i])
+            {
+              retryCount[i]++;
+              updatePWMDutyCycle(i, 0);
+              if (retryCount[i] > Channels[i].RetryCount)
+              {
+                channelLocked[i] = true;
+                ChannelRuntime[i].ErrorFlags |= RETRY_LOCKOUT;
+                updatePWMDutyCycle(i, 0);
+              }
+            }
+            else
+            {
+              updatePWMDutyCycle(i, 0);
+            }
           }
         }
       }
       else
       {
-        updatePWMDutyCycle(i, 0);
-        // Reset retry state
+        int rampDuty = 0;
+        if (ApplySoftStopRamp(i, fallingEdge, rampDuty))
+        {
+          updatePWMDutyCycle(i, rampDuty);
+        }
+        else
+        {
+          updatePWMDutyCycle(i, 0);
+        }
         retriesPending[i] = false;
         retryCount[i] = 0;
         channelLocked[i] = false;
         ChannelRuntime[i].CurrentValue = 0.0;
+        pwmCurrentFiltered[i] = 0.0f;
+        pwmCurrentFilterPrimed[i] = false;
       }
       break;
     default:
       updatePWMDutyCycle(i, 0);
       ChannelRuntime[i].CurrentValue = 0.0;
+      pwmCurrentFiltered[i] = 0.0f;
+      pwmCurrentFilterPrimed[i] = false;
       break;
     }
   }
@@ -450,5 +704,26 @@ void OutputsOff()
     retriesPending[i] = false;
     retryCount[i] = 0;
     channelLocked[i] = false;
+    softStartActive[i] = false;
+    softStopActive[i] = false;
+    softStopStartDuty[i] = 0;
+    pwmCurrentFiltered[i] = 0.0f;
+    pwmCurrentFilterPrimed[i] = false;
   }
+}
+
+void SetOutputsInhibited(bool inhibited)
+{
+  outputsInhibited = inhibited;
+  invalidateDisplay = true;
+
+  if (outputsInhibited)
+  {
+    OutputsOff();
+  }
+}
+
+bool AreOutputsInhibited()
+{
+  return outputsInhibited;
 }

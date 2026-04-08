@@ -23,8 +23,21 @@
 #ifndef IMU_H
 #define IMU_H
 
+#define BMM350_ZERO_RECOVERY_THRESHOLD 3
+#define BMM350_RECOVERY_RETRY_MS 1000UL
+#define BMM350_WAKE_RECOVERY_DELAY_MS 250UL
+
 /// @brief Initialise the IMU
 void InitialiseIMU();
+
+/// @brief Reinitialise the shared IMU I2C devices after wake
+void ReinitialiseIMUAfterWake();
+
+/// @brief Reinitialise the BMM350 after the switched 3.3V rail returns
+void ReinitialiseMagnetometer();
+
+/// @brief Put the BMI270 into a low-power sleep profile while optionally keeping motion wake active
+void SleepIMU(bool allowMotionWake);
 
 /// @brief Read the IMU
 void ReadIMU();
@@ -55,5 +68,20 @@ extern float gyroY;
 
 /// @brief Z-axis rotation in deg/sec
 extern float gyroZ;
+
+/// @brief BMM350 initialisation status
+extern bool BMM350OK;
+
+/// @brief X-axis magnetic field in uT
+extern float magX;
+
+/// @brief Y-axis magnetic field in uT
+extern float magY;
+
+/// @brief Z-axis magnetic field in uT
+extern float magZ;
+
+/// @brief BMI270 temperature in degrees C
+extern float imuTemp;
 
 #endif

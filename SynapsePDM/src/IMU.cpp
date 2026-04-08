@@ -21,10 +21,20 @@
 
 */
 
+#include <Arduino.h>
 #include <IMU.h>
+#include <Globals.h>
 #include <SparkFun_BMI270_Arduino_Library.h>
+#include <Wire.h>
+#include <bmm350.h>
 
-BMI270 imu;
+static BMI270 imu;
+static struct bmm350_dev magnetometer;
+static uint8_t magnetometerAddress = BMM350_I2C_ADSEL_SET_LOW;
+static bool bmm350PresentAtStartup = false;
+static bool bmm350StartupDetectionComplete = false;
+static uint8_t bmm350ConsecutiveZeroReads = 0;
+static uint32_t nextMagnetometerRecoveryAt = 0;
 
 float accelX;
 float accelY;
@@ -32,22 +42,55 @@ float accelZ;
 float gyroX;
 float gyroY;
 float gyroZ;
+float magX;
+float magY;
+float magZ;
+float imuTemp;
 bool IMUOK;
+bool BMM350OK;
 
-void InitialiseIMU()
+static void ClearImuData()
+{
+  accelX = 0.0f;
+  accelY = 0.0f;
+  accelZ = 0.0f;
+  gyroX = 0.0f;
+  gyroY = 0.0f;
+  gyroZ = 0.0f;
+  imuTemp = 0.0f;
+}
+
+static void ClearMagData()
+{
+  magX = 0.0f;
+  magY = 0.0f;
+  magZ = 0.0f;
+}
+
+static void ScheduleMagnetometerRecovery(uint32_t delayMs)
+{
+  nextMagnetometerRecoveryAt = millis() + delayMs;
+}
+
+static bool InitialisePrimaryIMU()
 {
   IMUOK = false;
+
+  Wire.begin();
+  Wire.setClock(I2C_BUS_SPEED);
+
   int8_t err = BMI2_OK;
-
-
   IMUOK = !imu.beginI2C(BMI2_I2C_PRIM_ADDR);
 
-  // Enable IMU features
+  if (!IMUOK)
+  {
+    return false;
+  }
+
   err |= imu.enableFeature(BMI2_ACCEL);
   err |= imu.enableFeature(BMI2_GYRO);
   err |= imu.enableFeature(BMI2_ANY_MOTION);
 
-  // Set accelerometer config
   bmi2_sens_config accelConfig;
   accelConfig.type = BMI2_ACCEL;
   accelConfig.cfg.acc.odr = BMI2_ACC_ODR_50HZ;
@@ -56,7 +99,6 @@ void InitialiseIMU()
   accelConfig.cfg.acc.range = BMI2_ACC_RANGE_2G;
   err = imu.setConfig(accelConfig);
 
-  // Set gyroscope config
   bmi2_sens_config gyroConfig;
   gyroConfig.type = BMI2_GYRO;
   gyroConfig.cfg.gyr.odr = BMI2_GYR_ODR_50HZ;
@@ -68,18 +110,288 @@ void InitialiseIMU()
   err = imu.setConfig(gyroConfig);
 
   IMUOK = !err;
+  return IMUOK;
+}
+
+static bool IsZeroMagReading(const struct bmm350_mag_temp_data &magData)
+{
+  return magData.x == 0.0f && magData.y == 0.0f && magData.z == 0.0f;
+}
+
+static BMM350_INTF_RET_TYPE Bmm350ReadRegister(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr)
+{
+  if (reg_data == nullptr || intf_ptr == nullptr)
+  {
+    return BMM350_E_NULL_PTR;
+  }
+
+  uint8_t deviceAddress = *static_cast<uint8_t *>(intf_ptr);
+
+  Wire.beginTransmission(deviceAddress);
+  Wire.write(reg_addr);
+  if (Wire.endTransmission(false) != 0)
+  {
+    return BMM350_E_COM_FAIL;
+  }
+
+  if (Wire.requestFrom(static_cast<int>(deviceAddress), static_cast<int>(len)) != static_cast<int>(len))
+  {
+    while (Wire.available())
+    {
+      Wire.read();
+    }
+
+    return BMM350_E_COM_FAIL;
+  }
+
+  for (uint32_t index = 0; index < len; index++)
+  {
+    if (!Wire.available())
+    {
+      return BMM350_E_COM_FAIL;
+    }
+
+    reg_data[index] = static_cast<uint8_t>(Wire.read());
+  }
+
+  return BMM350_INTF_RET_SUCCESS;
+}
+
+static BMM350_INTF_RET_TYPE Bmm350WriteRegister(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr)
+{
+  if (reg_data == nullptr || intf_ptr == nullptr)
+  {
+    return BMM350_E_NULL_PTR;
+  }
+
+  uint8_t deviceAddress = *static_cast<uint8_t *>(intf_ptr);
+
+  Wire.beginTransmission(deviceAddress);
+  Wire.write(reg_addr);
+  for (uint32_t index = 0; index < len; index++)
+  {
+    Wire.write(reg_data[index]);
+  }
+
+  if (Wire.endTransmission() != 0)
+  {
+    return BMM350_E_COM_FAIL;
+  }
+
+  return BMM350_INTF_RET_SUCCESS;
+}
+
+static void Bmm350DelayUs(uint32_t period, void *intf_ptr)
+{
+  (void)intf_ptr;
+
+  if (period >= 1000)
+  {
+    delay(period / 1000);
+    period %= 1000;
+  }
+
+  if (period > 0)
+  {
+    delayMicroseconds(period);
+  }
+}
+
+static void InitialiseMagnetometer()
+{
+  ClearMagData();
+  bmm350ConsecutiveZeroReads = 0;
+  BMM350OK = false;
+  magnetometer = {};
+  magnetometer.intf_ptr = &magnetometerAddress;
+  magnetometer.read = Bmm350ReadRegister;
+  magnetometer.write = Bmm350WriteRegister;
+  magnetometer.delay_us = Bmm350DelayUs;
+
+  int8_t err = bmm350_init(&magnetometer);
+  if (err == BMM350_OK)
+  {
+    err = bmm350_set_odr_performance(BMM350_DATA_RATE_50HZ, BMM350_AVERAGING_4, &magnetometer);
+  }
+
+  if (err == BMM350_OK)
+  {
+    err = bmm350_enable_axes(BMM350_X_EN, BMM350_Y_EN, BMM350_Z_EN, &magnetometer);
+  }
+
+  if (err == BMM350_OK)
+  {
+    err = bmm350_set_powermode(BMM350_NORMAL_MODE, &magnetometer);
+  }
+
+  BMM350OK = (err == BMM350_OK);
+
+  if (BMM350OK)
+  {
+    nextMagnetometerRecoveryAt = 0;
+  }
+  else
+  {
+    ScheduleMagnetometerRecovery(BMM350_RECOVERY_RETRY_MS);
+  }
+
+  if (!bmm350StartupDetectionComplete)
+  {
+    bmm350PresentAtStartup = BMM350OK;
+  }
+}
+
+static bool AttemptMagnetometerRecovery(bool force)
+{
+  if (!bmm350PresentAtStartup)
+  {
+    BMM350OK = false;
+    ClearMagData();
+    return false;
+  }
+
+  if (!force && nextMagnetometerRecoveryAt != 0 && (int32_t)(millis() - nextMagnetometerRecoveryAt) < 0)
+  {
+    return false;
+  }
+
+  InitialiseMagnetometer();
+  return BMM350OK;
+}
+
+void ReinitialiseMagnetometer()
+{
+  ClearMagData();
+  bmm350ConsecutiveZeroReads = 0;
+  BMM350OK = false;
+  ScheduleMagnetometerRecovery(BMM350_WAKE_RECOVERY_DELAY_MS);
+}
+
+void InitialiseIMU()
+{
+  ClearImuData();
+  nextMagnetometerRecoveryAt = 0;
+  InitialiseMagnetometer();
+  bmm350StartupDetectionComplete = true;
+  InitialisePrimaryIMU();
+}
+
+void ReinitialiseIMUAfterWake()
+{
+  ClearImuData();
+  InitialisePrimaryIMU();
+  ReinitialiseMagnetometer();
+}
+
+void SleepIMU(bool allowMotionWake)
+{
+  if (!IMUOK)
+  {
+    return;
+  }
+
+  int8_t err = BMI2_OK;
+
+  err |= imu.enableAdvancedPowerSave();
+
+  if (allowMotionWake)
+  {
+    err |= imu.enableFeature(BMI2_ACCEL);
+    err |= imu.enableFeature(BMI2_ANY_MOTION);
+    err |= imu.disableFeature(BMI2_GYRO);
+    err |= imu.setAccelPowerMode(BMI2_POWER_OPT_MODE);
+    err |= imu.setAccelODR(BMI2_ACC_ODR_25HZ);
+    err |= imu.setAccelFilterBandwidth(BMI2_ACC_NORMAL_AVG4);
+  }
+  else
+  {
+    err |= imu.disableFeature(BMI2_ANY_MOTION);
+    err |= imu.disableFeature(BMI2_GYRO);
+    err |= imu.disableFeature(BMI2_ACCEL);
+  }
+
+  if (err == BMI2_OK)
+  {
+    gyroX = 0.0f;
+    gyroY = 0.0f;
+    gyroZ = 0.0f;
+  }
+
+  IMUOK = (err == BMI2_OK);
 }
 
 void ReadIMU()
 {
-  imu.getSensorData();
+  if (IMUOK)
+  {
+    imu.getSensorData();
 
-  accelX = imu.data.accelX;
-  accelY = imu.data.accelY;
-  accelZ = imu.data.accelZ;
-  gyroX = imu.data.gyroX;
-  gyroY = imu.data.gyroY;
-  gyroZ = imu.data.gyroZ;
+    accelX = imu.data.accelX;
+    accelY = imu.data.accelY;
+    accelZ = imu.data.accelZ;
+    gyroX = imu.data.gyroX;
+    gyroY = imu.data.gyroY;
+    gyroZ = imu.data.gyroZ;
+
+    float measuredTemperature = 0.0f;
+    if (imu.getTemperature(&measuredTemperature) == BMI2_OK)
+    {
+      imuTemp = measuredTemperature;
+    }
+  }
+  else
+  {
+    ClearImuData();
+  }
+
+  if (BMM350OK)
+  {
+    struct bmm350_mag_temp_data magData = {0};
+    if (bmm350_get_compensated_mag_xyz_temp_data(&magData, &magnetometer) == BMM350_OK)
+    {
+      if (IsZeroMagReading(magData))
+      {
+        bmm350ConsecutiveZeroReads++;
+        if (bmm350ConsecutiveZeroReads >= BMM350_ZERO_RECOVERY_THRESHOLD && AttemptMagnetometerRecovery(false))
+        {
+          if (bmm350_get_compensated_mag_xyz_temp_data(&magData, &magnetometer) == BMM350_OK && !IsZeroMagReading(magData))
+          {
+            magX = magData.x;
+            magY = magData.y;
+            magZ = magData.z;
+            bmm350ConsecutiveZeroReads = 0;
+          }
+          else
+          {
+            ClearMagData();
+          }
+        }
+        else
+        {
+          ClearMagData();
+        }
+      }
+      else
+      {
+        magX = magData.x;
+        magY = magData.y;
+        magZ = magData.z;
+        bmm350ConsecutiveZeroReads = 0;
+      }
+    }
+    else
+    {
+      ClearMagData();
+      BMM350OK = false;
+      ScheduleMagnetometerRecovery(BMM350_RECOVERY_RETRY_MS);
+      AttemptMagnetometerRecovery(false);
+    }
+  }
+  else
+  {
+    ClearMagData();
+    AttemptMagnetometerRecovery(false);
+  }
 }
 
 void EnableMotionDetect()

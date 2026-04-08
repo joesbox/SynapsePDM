@@ -1,0 +1,7 @@
+{
+  "name": "BMM350_SensorAPI",
+  "version": "1.10.0",
+  "build": {
+    "srcDir": "src"
+  }
+}

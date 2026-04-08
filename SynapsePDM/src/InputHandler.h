@@ -26,11 +26,23 @@
 #include <Arduino.h>
 #include <Globals.h>
 
+#define ANALOG_PULL_RESISTOR_OHMS 2490.0f
+#define ANALOG_SENSOR_SUPPLY_VOLTAGE 5.0f
+#define ANALOG_DIGITAL_THRESHOLD_VOLTS 2.5f
+#define NTC_T0_KELVIN 298.15f
+#define MIN_DENOMINATOR 0.0001f
+
 /// @brief Initialise inputs
 void InitialiseInputs();
 
 /// @brief Handles reading of inputs
 void HandleInputs();
+
+/// @brief Coerces channel types to match the assigned analogue input mode.
+bool SyncChannelTypeForAssignedInput(uint8_t channelIndex);
+
+/// @brief Coerces all channels bound to an analogue input to match that input's mode.
+bool SyncChannelTypesForAnalogueInput(uint8_t inputIndex);
 
 /// @brief Disables all pull-up and pull-down resistor outputs
 void PullResistorSleep();

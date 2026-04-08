@@ -27,17 +27,16 @@
 #include <Globals.h>
 #include <ChannelConfig.h>
 #include "STM32_CAN.h"
-#include <CANDB.h>
 
 #define MAX_CURRENT_X10 170
 
-// Initialise CAN bus
+/// @brief Initialise CAN bus and related timers/interrupts
 void InitialiseCAN();
 
 /// @brief Read CAN messages
 void ReadCANMessages();
 
-// Broadcast system status CAN update
+/// @brief Broadcast current system status on the CAN bus.
 void BroadcastSystemStatus();
 
 #endif

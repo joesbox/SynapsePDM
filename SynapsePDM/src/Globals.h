@@ -36,7 +36,7 @@
 #include <backup.h>
 
 // Firmware version
-#define FW_VER "v0.7"
+#define FW_VER "v0.8"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -54,12 +54,16 @@
 // TODO: measure actual turn on delay and adjust this value
 #define ANALOG_DELAY 100
 
+// Gain to convert measured MCU analog pin voltage to source/input voltage
+// Example calibration: 5.00V source -> 3.265V at MCU pin => gain ~= 1.5314
+#define ANALOG_INPUT_PIN_TO_SOURCE_GAIN 1.5314F
+
 // Maximum PWM duty accounting for turn off delay. Above this value, a PWM channel will be set to 100% duty
-// BTS50010-1LUA max turn off time is 220µs. Default PWM frequency is 200Hz (5000µs period). Therefore, max. PWM duty is limited to about 95%, 4750µs
+// BTS50010-1LUA max turn off time is 220µs. Default PWM frequency is 150Hz (~6667µs period). Configured max PWM duty remains conservatively limited to 95%.
 #define MAX_DUTY 95
 
 // Min duty accounting for turn on delay. Above this value, a PWM channel will be set to 0% duty.
-// BTS50010-1LUA max turn on delay is 190µs. Default PWM frequency is 200Hz (5000µs period). Therefore, min. PWM duty is limited to about 10% (500µs, 190µs turn-on delay + analog read)
+// BTS50010-1LUA max turn on delay is 190µs. Default PWM frequency is 150Hz (~6667µs period). Configured min PWM duty remains conservatively limited to 10%.
 #define MIN_DUTY 10
 
 // IS current fault threshold voltage. Above this threshold, the channel is either open circuit, short circuit or over temperature
@@ -77,6 +81,9 @@
 // Maximum inrush delay (milliseconds). This has to be balanced with what the wiring harness can support
 #define INRUSH_MAX 2000
 
+// Maximum inrush current threshold (Amps). This has to be balanced with what the wiring harness can support
+#define INRUSH_CURRENT_MAX 50.0
+
 // Sytem current max (total). Should never reach this as each channel is independantly monitored
 #define SYSTEM_CURRENT_MAX 150
 
@@ -87,12 +94,20 @@
 #define DISPLAY_INTERVAL 50
 #define COMMS_INTERVAL 100
 #define LOG_INTERVAL 100
+#define LOG_INTERVAL_US ((uint32_t)LOG_INTERVAL * 1000UL)
 #define GPS_INTERVAL 1000
 #define SIGNAL_QUALITY_INTERVAL 5000
+#define SIM_TEMPERATURE_INTERVAL 15000
 #define SYSTEM_CAN_INTERVAL 100
 #define BL_FADE_INTRVAL 0
 
+#define SPLASH_SCREEN_DELAY 2000
+#define FORCE_EEPROM_WIPE_ON_BOOT false
+
 #define DEBUG_INTERVAL 1000
+
+// I2C bus speed
+#define I2C_BUS_SPEED 400000UL
 
 // Watchdog timer interval (microseconds)
 #define WATCHDOG_INTERVAL 2000000
@@ -122,6 +137,11 @@
 // Maximum permissible system temperature
 #define SYSTEM_TEMP_LIMIT 80.0
 
+#define SYSTEM_TEMP_WARNING_THRESHOLD 70.0f
+#define SYSTEM_TEMP_WARNING_CLEAR_THRESHOLD 68.0f
+#define SYSTEM_TEMP_ERROR_THRESHOLD 75.0f
+#define SYSTEM_TEMP_ERROR_CLEAR_THRESHOLD 73.0f
+
 // System error bitmasks
 #define OVERCURRENT 0x0001
 #define OVERTEMP 0x0002
@@ -130,12 +150,14 @@
 #define SDCARD_ERROR 0x0010
 #define PC_COMMS_CHECKSUM_ERROR 0x0020
 #define GPS_ERROR 0x0040
+#define TEMP_WARNING 0x0080
 
 // Channel error bitmasks
 #define CHN_OVERCURRENT 0x01
 #define CHN_UNDERCURRENT 0x02
 #define IS_FAULT 0x04
 #define RETRY_LOCKOUT 0x08
+#define CHN_TEMP_SHUTDOWN 0x10
 
 // ECU CAN addresses
 #define CHAN_CAN_ID 0x700
@@ -179,6 +201,9 @@
 #define CHARGE_EN PG0
 #define BATT_INT PG1
 
+// SIM module power enable
+#define SIM_REGULATOR PD13
+
 // Battery states
 #define COMMSOK 0
 #define BATTERY_CHARGED 1
@@ -216,11 +241,26 @@
 // Maximum inrush delay in milliseconds
 #define MAX_INRUSH_DELAY 2000
 
+// Maximum soft start time in milliseconds
+#define MAX_SOFT_START_TIME 5000
+
+// Maximum soft stop time in milliseconds
+#define MAX_SOFT_STOP_TIME 5000
+
 // Max run on time in milliseconds
 #define MAX_RUN_ON_TIME 3600000
 
+// Maximum intermittent on/off time in milliseconds
+#define MAX_INTERMITTENT_TIME 10000
+
 // EEPROM write delay (milliseconds) after a change is made to allow time for multiple changes to be made without writing to EEPROM after each change
 #define EEPROM_WRITE_DELAY 5000
+
+/// @brief Tracks which channels are eligible for RunOn (were enabled at PREPARE_SLEEP entry)
+extern bool runOnEligible[NUM_CHANNELS];
+
+/// @brief Absolute millis deadline for each active RunOn window. Zero means inactive.
+extern uint32_t runOnDeadline[NUM_CHANNELS];
 
 /// @brief Output enabled flags
 extern bool enabledFlags[NUM_CHANNELS];
@@ -258,29 +298,58 @@ extern bool invalidateDisplay;
 /// @brief EEPROM save timeout. Set to a future time (millis) when a change is made that requires saving to EEPROM. When millis exceeds this value, the config will be saved and this reset to 0.
 extern uint32_t EEPROMSaveTimout;
 
-/// @brief Save to EEPROM flag. Set to true when a change is made that requires saving to EEPROM. 
+/// @brief Save to EEPROM flag. Set to true when a change is made that requires saving to EEPROM.
 extern bool pendingEEPROMSave;
 
 /// @brief Flag to indicate to the main look that the channel config needs to be saved to EEPROM. When EEPROMSaveTimout is exceeded, the config will be saved and this reset to false.
 extern bool saveEEPROMOnTimeout;
 
+/// @brief Defines available analogue channel types
+enum AnalogueChannelType
+{
+  RAW_VOLTAGE, // Raw voltage input
+  ACTIVE,      // Active input
+  PASSIVE,     // Passive input
+  NTC,         // NTC thermistor input
+  DIGITAL      // Digital use of analogue-capable input pin
+};
+
+/// @brief Analogue units options
+enum AnalogueUnits
+{
+  ANA_UNITS_VOLTS = 0,
+  ANA_UNITS_AMPS = 1,
+  ANA_UNITS_CELSIUS = 2,
+  ANA_UNITS_FAHRENHEIT = 3,
+  ANA_UNITS_PERCENT = 4,
+  ANA_UNITS_RPM = 5,
+  ANA_UNITS_KPH = 6,
+  ANA_UNITS_MPH = 7,
+  ANA_UNITS_BAR = 8,
+  ANA_UNITS_PSI = 9
+};
+
 /// @brief Analogue input config structure
 struct __attribute__((packed)) AnalogueInputs
 {
-  uint8_t InputPin;     // Input pin
-  uint8_t PullUpPin;    // Pull-up enable pin
-  uint8_t PullDownPin;  // Pull-down enable pin
-  bool PullUpEnable;    // Pull-up enable flag
-  bool PullDownEnable;  // Pull-down enable flag
-  bool IsDigital;       // True if the input is to be treated as a digital input
-  bool IsThreshold;     // True if the input is to be treated as a thresholded input or PWM input (false = scaled PWM). Only applies to analogue inputs
-  float OnThreshold;    // On threshold (Voltage)
-  float OffThreshold;   // Off threshold (Voltage)
-  float ScaleMin;       // Minimum scale value (Used for PWM scaled inputs)
-  float ScaleMax;       // Maximum scale value (Used for PWM scaled inputs)
-  uint8_t PWMMin;       // Minimum PWM value (0-100%)
-  uint8_t PWMMax;       // Maximum PWM value (0-100%)
-  uint8_t Reserved[32]; // Reserved for future use
+  AnalogueChannelType ChanType; // Channel type
+  uint8_t InputPin;             // Input pin
+  uint8_t PullUpPin;            // Pull-up enable pin
+  uint8_t PullDownPin;          // Pull-down enable pin
+  bool PullUpEnable;            // Pull-up enable flag
+  bool PullDownEnable;          // Pull-down enable flag
+  float InputVoltage;           // Live input voltage at source/input connector
+  float InputValue;             // Live converted value in selected units
+  AnalogueUnits Units;          // Units for display
+  uint8_t CalibrationPoints;    // 2 or 3 point calibration for ACTIVE/PASSIVE
+  float CalibrationVolt1;       // Calibration point 1 voltage
+  float CalibrationValue1;      // Calibration point 1 value
+  float CalibrationVolt2;       // Calibration point 2 voltage
+  float CalibrationValue2;      // Calibration point 2 value
+  float CalibrationVolt3;       // Calibration point 3 voltage
+  float CalibrationValue3;      // Calibration point 3 value
+  float NTCBeta;                // NTC beta value
+  float NTCNominalResistance;   // NTC nominal resistance at 25C (ohms)
 };
 
 /// @brief Channel digital input pins (defaults)
@@ -312,6 +381,7 @@ extern uint32_t BattTimer;
 extern uint32_t LogTimer;
 extern uint32_t GPSTimer;
 extern uint32_t signalTimer;
+extern uint32_t simTemperatureTimer;
 extern uint32_t BLTimer;
 extern uint32_t wakeDebounceTimer;
 extern uint32_t systemCANTimer;
