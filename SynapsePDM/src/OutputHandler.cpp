@@ -24,13 +24,16 @@
 */
 
 #include "OutputHandler.h"
+#include "SerialComms.h"
 
 // Pins to update
 const uint16_t GPIOG_PINS[] = {GPIO_PIN_10, GPIO_PIN_9, GPIO_PIN_6, GPIO_PIN_5, GPIO_PIN_4, GPIO_PIN_3, GPIO_PIN_2}; // Outputs 1 to 7
 const uint8_t NUM_PINS_G = sizeof(GPIOG_PINS) / sizeof(GPIOG_PINS[0]);
+const uint16_t GPIOG_ALL_PINS = GPIO_PIN_10 | GPIO_PIN_9 | GPIO_PIN_6 | GPIO_PIN_5 | GPIO_PIN_4 | GPIO_PIN_3 | GPIO_PIN_2;
 
 const uint16_t GPIOF_PINS[] = {GPIO_PIN_15, GPIO_PIN_14, GPIO_PIN_13, GPIO_PIN_12, GPIO_PIN_2, GPIO_PIN_1, GPIO_PIN_0}; // Outputs 8 to 14
 const uint8_t NUM_PINS_F = sizeof(GPIOF_PINS) / sizeof(GPIOF_PINS[0]);
+const uint16_t GPIOF_ALL_PINS = GPIO_PIN_15 | GPIO_PIN_14 | GPIO_PIN_13 | GPIO_PIN_12 | GPIO_PIN_2 | GPIO_PIN_1 | GPIO_PIN_0;
 
 // DMA buffer for multiple pins
 uint32_t pwmBufferG[100] = {0};
@@ -42,6 +45,10 @@ uint8_t dutyCycles[14] = {0};
 // Timer and DMA handles
 TIM_HandleTypeDef htim8;
 TIM_HandleTypeDef htim1;
+
+// DMA handles at file scope so sleep can stop the active streams cleanly
+static DMA_HandleTypeDef hdma_tim8_up;
+static DMA_HandleTypeDef hdma_tim1_up;
 
 // Soft start tracking (must be after NUM_CHANNELS is defined in Globals.h)
 
@@ -73,6 +80,8 @@ uint8_t retryCount[NUM_CHANNELS] = {0};
 // Per-channel EMA filter state for PWM current readback
 static float pwmCurrentFiltered[NUM_CHANNELS] = {0.0f};
 static bool pwmCurrentFilterPrimed[NUM_CHANNELS] = {false};
+static uint8_t digitalTrySampleCount[NUM_CHANNELS] = {0};
+static float digitalTryCurrentSum[NUM_CHANNELS] = {0.0f};
 static bool outputsInhibited = false;
 
 bool IsChannelThermallyShed(uint8_t channelIndex)
@@ -103,7 +112,7 @@ bool IsChannelEffectivelyEnabled(uint8_t channelIndex)
     return false;
   }
 
-  return Channels[channelIndex].Enabled && !outputsInhibited && !IsChannelThermallyShed(channelIndex);
+  return IsChannelRuntimeEnabled(channelIndex) && !outputsInhibited && !IsChannelThermallyShed(channelIndex);
 }
 
 static bool ApplySoftStartRamp(uint8_t channelIndex, bool triggerRamp, int targetDuty, int &rampDuty)
@@ -209,6 +218,20 @@ void InitialiseOutputs()
 
 void SleepOutputs()
 {
+  // Stop PWM DMA activity before STOP mode; otherwise repeated wake cycles can
+  // leave the timer/DMA pair active and block deep sleep entry.
+  __HAL_TIM_DISABLE_DMA(&htim8, TIM_DMA_UPDATE);
+  __HAL_TIM_DISABLE_DMA(&htim1, TIM_DMA_UPDATE);
+  HAL_TIM_Base_Stop(&htim8);
+  HAL_TIM_Base_Stop(&htim1);
+  HAL_DMA_Abort(&hdma_tim8_up);
+  HAL_DMA_Abort(&hdma_tim1_up);
+
+  // Explicitly clear the GPIO output latches once DMA is stopped so no channel
+  // can remain physically high when we drop into sleep.
+  HAL_GPIO_WritePin(GPIOG, GPIOG_ALL_PINS, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOF, GPIOF_ALL_PINS, GPIO_PIN_RESET);
+
   __HAL_RCC_GPIOB_CLK_SLEEP_DISABLE();
   __HAL_RCC_GPIOC_CLK_SLEEP_DISABLE();
   __HAL_RCC_GPIOD_CLK_SLEEP_DISABLE();
@@ -250,25 +273,23 @@ void configureDMA()
   __HAL_RCC_DMA2_CLK_ENABLE();
 
   // First DMA (Stream 1, Channel 7)
-  static DMA_HandleTypeDef hdma;
-  hdma.Instance = DMA2_Stream1;
-  hdma.Init.Channel = DMA_CHANNEL_7;
-  hdma.Init.Direction = DMA_MEMORY_TO_PERIPH;
-  hdma.Init.PeriphInc = DMA_PINC_DISABLE;
-  hdma.Init.MemInc = DMA_MINC_ENABLE;
-  hdma.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-  hdma.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-  hdma.Init.Mode = DMA_CIRCULAR;
-  hdma.Init.Priority = DMA_PRIORITY_HIGH;
-  hdma.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+  hdma_tim8_up.Instance = DMA2_Stream1;
+  hdma_tim8_up.Init.Channel = DMA_CHANNEL_7;
+  hdma_tim8_up.Init.Direction = DMA_MEMORY_TO_PERIPH;
+  hdma_tim8_up.Init.PeriphInc = DMA_PINC_DISABLE;
+  hdma_tim8_up.Init.MemInc = DMA_MINC_ENABLE;
+  hdma_tim8_up.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+  hdma_tim8_up.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+  hdma_tim8_up.Init.Mode = DMA_CIRCULAR;
+  hdma_tim8_up.Init.Priority = DMA_PRIORITY_HIGH;
+  hdma_tim8_up.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
 
-  HAL_DMA_Init(&hdma);
-  htim8.hdma[TIM_DMA_ID_UPDATE] = &hdma;
+  HAL_DMA_Init(&hdma_tim8_up);
+  htim8.hdma[TIM_DMA_ID_UPDATE] = &hdma_tim8_up;
 
-  HAL_DMA_Start(&hdma, (uint32_t)pwmBufferG, (uint32_t)&GPIOG->BSRR, 100);
+  HAL_DMA_Start(&hdma_tim8_up, (uint32_t)pwmBufferG, (uint32_t)&GPIOG->BSRR, 100);
 
   // Second DMA (Stream 5, Channel 6)
-  static DMA_HandleTypeDef hdma_tim1_up;
   hdma_tim1_up.Instance = DMA2_Stream5;
   hdma_tim1_up.Init.Channel = DMA_CHANNEL_6;
   hdma_tim1_up.Init.Direction = DMA_MEMORY_TO_PERIPH;
@@ -281,7 +302,7 @@ void configureDMA()
   hdma_tim1_up.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
 
   HAL_DMA_Init(&hdma_tim1_up);
-  htim1.hdma[TIM_DMA_ID_UPDATE] = &hdma;
+  htim1.hdma[TIM_DMA_ID_UPDATE] = &hdma_tim1_up;
 
   HAL_DMA_Start(&hdma_tim1_up, (uint32_t)pwmBufferF, (uint32_t)&GPIOF->BSRR, 100);
 }
@@ -372,15 +393,18 @@ void UpdateOutputs()
     return;
   }
 
+  const int currentSenseSamples = IsCortexConfigSaveActive() ? 1 : ANALOG_READ_SAMPLES;
+
   // Check the type of channel we're dealing with (digital or PWM) and handle output accordingly
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    bool thermallyShed = Channels[i].Enabled && IsChannelThermallyShed(i);
+    bool runtimeEnabled = IsChannelRuntimeEnabled(i);
+    bool thermallyShed = runtimeEnabled && IsChannelThermallyShed(i);
 
     // Detect rising edge of enable
-    bool risingEdge = Channels[i].Enabled && !previousEnabled[i];
-    bool fallingEdge = !Channels[i].Enabled && previousEnabled[i];
-    previousEnabled[i] = Channels[i].Enabled;
+    bool risingEdge = runtimeEnabled && !previousEnabled[i];
+    bool fallingEdge = !runtimeEnabled && previousEnabled[i];
+    previousEnabled[i] = runtimeEnabled;
 
     if (!thermallyShed)
     {
@@ -389,7 +413,7 @@ void UpdateOutputs()
 
     // Only perform current measurement and fault diagnosis if channel is enabled
 
-    if (Channels[i].Enabled)
+    if (runtimeEnabled)
     {
     }
     else
@@ -404,6 +428,8 @@ void UpdateOutputs()
       updatePWMDutyCycle(i, 0);
       ChannelRuntime[i].CurrentValue = 0.0f;
       ChannelRuntime[i].ErrorFlags |= CHN_TEMP_SHUTDOWN;
+      digitalTrySampleCount[i] = 0;
+      digitalTryCurrentSum[i] = 0.0f;
       retriesPending[i] = false;
       softStartActive[i] = false;
       softStopActive[i] = false;
@@ -417,14 +443,14 @@ void UpdateOutputs()
     {
     case DIG_PWM:
     case ANA_PWM:
-      if (Channels[i].Enabled)
+      if (runtimeEnabled)
       {
         softStopActive[i] = false;
         softStopStartDuty[i] = 0;
         bool criticalFault = false;
         int sum = 0;
         uint8_t total = 0;
-        for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
+        for (int j = 0; j < currentSenseSamples; j++)
         {
           sum += analogRead(Channels[i].CurrentSensePin);
           total++;
@@ -500,7 +526,7 @@ void UpdateOutputs()
           ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT;
           criticalFault = true;
         }
-        else if (amps < Channels[i].CurrentThresholdLow)
+        else if (!inrushPeriod && amps < Channels[i].CurrentThresholdLow)
         {
           ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT;
         }
@@ -563,15 +589,13 @@ void UpdateOutputs()
     case DIG_INTERMITTENT:
     case ANA:
     case CAN_DIGITAL:
-      if (Channels[i].Enabled)
+      if (runtimeEnabled)
       {
         softStopActive[i] = false;
         softStopStartDuty[i] = 0;
-        static uint8_t trySampleCount[NUM_CHANNELS] = {0};
-        static float tryCurrentSum[NUM_CHANNELS] = {0.0f};
         int sum = 0;
         uint8_t total = 0;
-        for (int j = 0; j < ANALOG_READ_SAMPLES; j++)
+        for (int j = 0; j < currentSenseSamples; j++)
         {
           sum += analogRead(Channels[i].CurrentSensePin);
           total++;
@@ -585,7 +609,7 @@ void UpdateOutputs()
 
         float milliVolts = (analogMean / (float)ADCres) * V_REF;
         float I_IS = milliVolts / R_IS;
-        ChannelRuntime[i].CurrentValue = k_ILIS * I_IS;
+        ChannelRuntime[i].CurrentValue = Channels[i].CurrentSenseKILIS * I_IS;
         if (ChannelRuntime[i].AnalogRaw < 5)
         {
           ChannelRuntime[i].CurrentValue = 0.0;
@@ -611,15 +635,26 @@ void UpdateOutputs()
           continue;
         }
 
+        if (risingEdge)
+        {
+          digitalTrySampleCount[i] = 0;
+          digitalTryCurrentSum[i] = 0.0f;
+
+          if (!channelLocked[i])
+          {
+            updatePWMDutyCycle(i, targetDuty);
+          }
+        }
+
         // Determine which threshold to use based on inrush delay
         bool inrushPeriod = (millis() - enabledTimers[i]) <= (unsigned long)(Channels[i].InrushDelay);
-        tryCurrentSum[i] += ChannelRuntime[i].CurrentValue;
-        trySampleCount[i]++;
-        if (trySampleCount[i] >= 3)
+        digitalTryCurrentSum[i] += ChannelRuntime[i].CurrentValue;
+        digitalTrySampleCount[i]++;
+        if (digitalTrySampleCount[i] >= 3)
         {
-          float avgCurrent = tryCurrentSum[i] / trySampleCount[i];
-          trySampleCount[i] = 0;
-          tryCurrentSum[i] = 0.0f;
+          float avgCurrent = digitalTryCurrentSum[i] / digitalTrySampleCount[i];
+          digitalTrySampleCount[i] = 0;
+          digitalTryCurrentSum[i] = 0.0f;
           if (!channelLocked[i])
           {
             ChannelRuntime[i].ErrorFlags = 0;
@@ -629,7 +664,7 @@ void UpdateOutputs()
           {
             ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT;
           }
-          else if (avgCurrent < Channels[i].CurrentThresholdLow)
+          else if (!inrushPeriod && avgCurrent < Channels[i].CurrentThresholdLow)
           {
             ChannelRuntime[i].ErrorFlags |= CHN_UNDERCURRENT;
           }
@@ -679,6 +714,8 @@ void UpdateOutputs()
         retriesPending[i] = false;
         retryCount[i] = 0;
         channelLocked[i] = false;
+        digitalTrySampleCount[i] = 0;
+        digitalTryCurrentSum[i] = 0.0f;
         ChannelRuntime[i].CurrentValue = 0.0;
         pwmCurrentFiltered[i] = 0.0f;
         pwmCurrentFilterPrimed[i] = false;
@@ -699,11 +736,16 @@ void OutputsOff()
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
     updatePWMDutyCycle(i, 0);
+    previousEnabled[i] = false;
+    enabledFlags[i] = false;
+    ChannelRuntime[i].Enabled = false;
     ChannelRuntime[i].CurrentValue = 0.0;
     ChannelRuntime[i].ErrorFlags = 0;
     retriesPending[i] = false;
     retryCount[i] = 0;
     channelLocked[i] = false;
+    digitalTrySampleCount[i] = 0;
+    digitalTryCurrentSum[i] = 0.0f;
     softStartActive[i] = false;
     softStopActive[i] = false;
     softStopStartDuty[i] = 0;

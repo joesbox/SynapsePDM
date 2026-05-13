@@ -36,122 +36,148 @@ BS_:
 BU_: ECU PDM
 
 
-BO_ 3221225472 VECTOR__INDEPENDENT_SIG_MSG: 0 Vector__XXX
- SG_ Reserved : 8|56@1+ (1,0) [0|0] "" Vector__XXX
- SG_ Preferences : 0|8@1+ (1,0) [0|255] "" Vector__XXX
- SG_ MotionDeadTIme : 23|8@0+ (1,0) [0|255] "Minutes" Vector__XXX
- SG_ CurrentThresholdHigh : 31|8@0+ (1,0) [0|255] "Amps x10" Vector__XXX
- SG_ CurrentThresholdLow : 23|8@0+ (1,0) [0|255] "Amps x10" Vector__XXX
- SG_ NewSignal_0005 : 40|8@1+ (1,0) [0|0] "" Vector__XXX
- SG_ EEPROMUpdated : 56|8@1+ (1,0) [0|0] "" Vector__XXX
+BO_ 1792 ChannelStatusRequest: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+
+BO_ 1793 ChannelStatusResponse: 8 PDM
+ SG_ FrameIndex M : 7|8@0+ (1,0) [0|2] "" Vector__XXX
+ SG_ ChannelType m0 : 15|8@0+ (1,0) [0|6] "" Vector__XXX
+ SG_ ChannelCurrent m0 : 23|8@0+ (0.1,0) [0|25.5] "Amps" Vector__XXX
+ SG_ Enabled m0 : 31|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ChannelName m0 : 39|16@0+ (1,0) [0|32767] "PackedLetters" Vector__XXX
+ SG_ CurrentThresholdLow m0 : 55|8@0+ (0.1,0) [0|17] "Amps" Vector__XXX
+ SG_ CurrentThresholdHigh m0 : 63|8@0+ (0.1,0) [0|17] "Amps" Vector__XXX
+ SG_ RetryCount m1 : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ InrushDelay m1 : 23|32@0+ (1,0) [0|2000] "Milliseconds" Vector__XXX
+ SG_ ActiveHigh m1 : 55|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ RunOn m1 : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ RunOnTime m2 : 15|32@0+ (1,0) [0|3600000] "Milliseconds" Vector__XXX
+ SG_ InrushCurrentThreshold m2 : 47|8@0+ (1,0) [0|50] "Amps" Vector__XXX
+
+BO_ 1808 DigitalInputStatusRequest: 8 ECU
+ SG_ Reserved : 7|8@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1809 DigitalInputStatusResponse: 8 PDM
+ SG_ DigitalInputMask : 7|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 1810 AnalogueInputStatusRequest: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+
+BO_ 1811 AnalogueInputStatusResponse: 8 PDM
+ SG_ FrameIndex M : 7|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ InputType m0 : 15|8@0+ (1,0) [0|4] "" Vector__XXX
+ SG_ Units m0 : 23|8@0+ (1,0) [0|9] "" Vector__XXX
+ SG_ Flags m0 : 31|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ InputVoltage m0 : 39|16@0+ (0.001,0) [0|65.535] "Volts" Vector__XXX
+ SG_ ConvertedValue m1 : 15|32@0- (0.001,0) [-2147483.648|2147483.647] "EngineeringUnits" Vector__XXX
 
 BO_ 1824 SystemStatus1: 8 PDM
  SG_ AliveCounter : 7|8@0+ (1,0) [0|255] "" Vector__XXX
- SG_ SystemCurrentLimit : 15|16@0+ (1,0) [0|255] "Amps x10" Vector__XXX
- SG_ SystemTemp : 31|8@0+ (1,0) [0|255] "Celcius" Vector__XXX
- SG_ ECUVoltage : 39|8@0+ (1,0) [0|255] "Volts x10" Vector__XXX
- SG_ SystemCurrent : 47|8@0+ (1,0) [0|255] "Amps x10" Vector__XXX
- SG_ ErrorFlags : 55|16@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ SystemCurrentLimit : 15|8@0+ (1,0) [0|150] "Amps" Vector__XXX
+ SG_ SystemTemp : 23|8@0+ (1,0) [0|255] "Celsius" Vector__XXX
+ SG_ ECUVoltage : 31|8@0+ (0.1,0) [0|25.5] "Volts" Vector__XXX
+ SG_ SystemCurrent : 39|16@0+ (0.1,0) [0|6553.5] "Amps" Vector__XXX
+ SG_ ErrorFlags : 55|16@0+ (1,0) [0|65535] "" Vector__XXX
 
 BO_ 1825 SystemStatus2: 8 PDM
+ SG_ AliveCounter : 7|8@0+ (1,0) [0|255] "" Vector__XXX
  SG_ SpeedUnits : 15|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ DistanceUnits : 23|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ AllowData : 31|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ AllowGPS : 39|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ AllowMotionDetect : 47|8@0+ (1,0) [0|1] "" Vector__XXX
- SG_ MotionDeadTime : 55|8@0+ (1,0) [0|255] "Minutes" Vector__XXX
- SG_ AliveCounter : 7|8@0+ (1,0) [0|255] "" Vector__XXX
-
-BO_ 1792 ChannelStatusRequest: 8 ECU
- SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
- SG_ RESERVED : 15|56@0+ (1,0) [0|0] "" Vector__XXX
-
-BO_ 1793 ChannelStatusResponseF0: 8 PDM
- SG_ FrameIndex : 7|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ ChannelType : 15|8@0+ (1,0) [0|5] "" Vector__XXX
- SG_ ChannelCurrent : 47|8@0+ (1,0) [0|255] "Amps x10" Vector__XXX
- SG_ Enabled : 23|8@0+ (1,0) [0|1] "" Vector__XXX
- SG_ ChannelName : 31|16@0+ (1,0) [0|0] "" Vector__XXX
- SG_ CurrentLimitLow : 55|8@0+ (1,0) [0|255] "Amps x10" Vector__XXX
- SG_ CurrenLimitHigh : 63|8@0+ (1,0) [0|255] "Amps x10" Vector__XXX
-
-BO_ 1793 ChannelStatusResponseF1: 8 PDM
- SG_ FrameIndex : 7|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ RetryCount : 15|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ InrushDelay : 23|32@0+ (1,0) [0|0] "Milliseconds" Vector__XXX
- SG_ ActiveHigh : 55|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ RunOn : 63|8@0+ (1,0) [0|0] "" Vector__XXX
-
-BO_ 1793 ChannelStatusResponseF2: 8 PDM
- SG_ FrameIndex : 7|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ RunOnTime : 15|32@0+ (1,0) [0|0] "Milliseconds" Vector__XXX
-
-BO_ 1856 ChannelConfigF0: 8 ECU
- SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
- SG_ Enabled : 15|8@0+ (1,0) [0|1] "Bool" Vector__XXX
- SG_ PWM : 23|8@0+ (1,0) [0|100] "Percent" Vector__XXX
-
-BO_ 1857 ChannelConfigF1: 8 ECU
- SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
- SG_ ChannelType : 15|8@0+ (1,0) [0|5] "" Vector__XXX
- SG_ ChannelName : 15|16@0+ (1,0) [0|0] "" Vector__XXX
- SG_ CurrentThresholdLow : 31|8@0+ (1,0) [0|170] "Amps x10" Vector__XXX
- SG_ CurrentThresholdHigh : 39|8@0+ (1,0) [0|170] "Amps x10" Vector__XXX
- SG_ RetryCount : 47|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ WriteBitMask : 63|8@0+ (1,0) [0|31] "" Vector__XXX
-
-BO_ 1858 ChannelConfigF2: 8 ECU
- SG_ ChannelNumber : 7|8@0+ (1,0) [0|14] "" Vector__XXX
- SG_ InrushDelay : 15|32@0+ (1,0) [0|0] "Milliseconds" Vector__XXX
- SG_ ActiveHigh : 47|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ RunOn : 55|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ WriteBitMask : 63|8@0+ (1,0) [0|0] "" Vector__XXX
-
-BO_ 1859 ChannelConfigF3: 8 ECU
- SG_ ChannelNumber : 7|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ RunOnTime : 15|32@0+ (1,0) [0|0] "" Vector__XXX
- SG_ WriteBitMask : 63|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ MotionDeadTime : 55|8@0+ (1,0) [0|254] "Minutes" Vector__XXX
 
 BO_ 1840 SystemConfig: 8 ECU
  SG_ SystemCurrentLimit : 7|8@0+ (1,0) [0|150] "Amps" Vector__XXX
  SG_ SpeedUnits : 15|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ DistanceUnits : 23|8@0+ (1,0) [0|1] "" Vector__XXX
- SG_ AllowData : 31|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ AllowGPS : 39|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ AllowMotionDetect : 47|8@0+ (1,0) [0|0] "" Vector__XXX
- SG_ MotionDeadTIme : 55|8@0+ (1,0) [0|255] "Minutes" Vector__XXX
- SG_ WriteBitMask : 63|8@0+ (1,0) [0|0] "" Vector__XXX
+ SG_ AllowData : 31|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ AllowGPS : 39|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ AllowMotionDetect : 47|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ MotionDeadTime : 55|8@0+ (1,0) [0|254] "Minutes" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|127] "" Vector__XXX
+
+BO_ 1856 ChannelConfigF0: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ ControlValue : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 1857 ChannelConfigF1: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ ChannelType : 15|8@0+ (1,0) [0|6] "" Vector__XXX
+ SG_ ChannelName : 23|16@0+ (1,0) [0|32767] "PackedLetters" Vector__XXX
+ SG_ CurrentThresholdLow : 39|8@0+ (0.1,0) [0|17] "Amps" Vector__XXX
+ SG_ CurrentThresholdHigh : 47|8@0+ (0.1,0) [0|17] "Amps" Vector__XXX
+ SG_ RetryCount : 55|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|127] "" Vector__XXX
+
+BO_ 1858 ChannelConfigF2: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ InrushDelay : 15|32@0+ (1,0) [0|2000] "Milliseconds" Vector__XXX
+ SG_ ActiveHigh : 47|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ RunOn : 55|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|15] "" Vector__XXX
+
+BO_ 1859 ChannelConfigF3: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ RunOnTime : 15|32@0+ (1,0) [0|3600000] "Milliseconds" Vector__XXX
+ SG_ SoftStart : 47|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ SoftStartTime : 55|8@0+ (1,0) [0|5] "Seconds" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|15] "" Vector__XXX
+
+BO_ 1860 ChannelConfigF4: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ InrushCurrentThreshold : 15|8@0+ (1,0) [0|50] "Amps" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
 
 
-
-CM_ SG_ 1824 AliveCounter "Increments every status message, automatically overflows.
-";
-CM_ SG_ 1824 ECUVoltage "Vbatt
-";
-CM_ SG_ 1825 AliveCounter "Increments per frame, automatically overflows.
-";
-CM_ SG_ 1793 FrameIndex "Frame 0";
-CM_ SG_ 1793 ChannelName "5-bit letters in 2 bytes";
-CM_ BO_ 1856 "Basic channel control message";
-CM_ SG_ 1856 Enabled "Enabled flag is latched in the PDM controller. Only one message required to change state.";
-CM_ SG_ 1856 PWM "This is ignored unless the channel is configured as a CAN PWM type.";
-CM_ SG_ 1857 ChannelName "5-bit letters in 2 bytes";
-CM_ SG_ 1857 WriteBitMask "Bitmask representing the five configurable parameters in this message. Only parameters marked true are observed and saved to EEPROM. Channel type = LSB, retry count = MSB.";
-CM_ SG_ 1858 WriteBitMask "Bitmask representing the three configurable parameters in this message. Only parameters marked true are observed and saved to EEPROM. Inrush delay = LSB, run on = MSB.";
-CM_ SG_ 1859 WriteBitMask "Bitmask representing the configurable parameters in this message. Only parameters marked true are observed and saved to EEPROM. Run on time = LSB. Other bits reserved for future signals.";
-CM_ SG_ 1840 WriteBitMask "Bitmask representing the seven configurable parameters in this message. Only parameters marked true are observed and saved to EEPROM. System current limit = LSB, Motion dead time = MSB.";
+CM_ BO_ 1792 "Request a single channel status block. Set ChannelNumber to 1..14.";
+CM_ BO_ 1793 "Multiplexed 3-frame response on ChannelDataCANID + 1. FrameIndex selects the payload layout.";
+CM_ SG_ 1793 FrameIndex "0 = status/core config, 1 = timing/config, 2 = run-on/inrush config.";
+CM_ SG_ 1793 ChannelName "Three uppercase letters packed into 16 bits as ((c0-'A') << 10) | ((c1-'A') << 5) | (c2-'A').";
+CM_ BO_ 1808 "Digital input snapshot request. Payload is ignored by the controller.";
+CM_ BO_ 1809 "Digital input snapshot response.";
+CM_ SG_ 1809 DigitalInputMask "Bit 0 = DI1 through bit 7 = DI8. Set means the sampled input is logically high.";
+CM_ BO_ 1810 "Request a single analogue input snapshot. Set InputNumber to 1..8.";
+CM_ BO_ 1811 "Multiplexed 2-frame response on AnalogueInputDataCANID + 1. FrameIndex selects metadata or live value.";
+CM_ SG_ 1811 FrameIndex "0 = input metadata and source voltage, 1 = converted live engineering value.";
+CM_ SG_ 1811 Flags "Bit 0 = PullUpEnable, bit 1 = PullDownEnable, bit 2 = current logical digital state after pull-direction interpretation.";
+CM_ SG_ 1811 ConvertedValue "Signed engineering value scaled by 1000. Interpret using the Units signal from frame 0.";
+CM_ SG_ 1824 AliveCounter "Post-incrementing status counter. SystemStatus1 carries the pre-increment value.";
+CM_ SG_ 1824 ECUVoltage "Battery voltage encoded as VBatt * 10.";
+CM_ SG_ 1824 ErrorFlags "Bitmask: 0x0001 Overcurrent, 0x0002 Overtemp, 0x0004 Undervoltage, 0x0008 CRC check failed, 0x0010 SD card error, 0x0020 PC comms checksum error, 0x0040 GPS error, 0x0080 Temperature warning.";
+CM_ SG_ 1825 AliveCounter "Second status frame uses the incremented counter value from SystemStatus1.";
+CM_ BO_ 1840 "System configuration write message.";
+CM_ SG_ 1840 WriteBitMask "Bits 0..6 gate bytes 0..6 respectively. Bit 0 = SystemCurrentLimit, bit 6 = MotionDeadTime.";
+CM_ BO_ 1856 "Basic channel control message. Byte 1 is the only control byte used by firmware.";
+CM_ SG_ 1856 ControlValue "0 disables the channel. Any non-zero value enables it. For CAN_PWM channels, the same byte is also taken as the PWM duty when the value is 100 or below.";
+CM_ BO_ 1857 "Extended channel configuration write. Firmware reads byte 0 = ChannelNumber, byte 1 = ChannelType, bytes 2-3 = ChannelName, byte 4 = CurrentThresholdLow, byte 5 = CurrentThresholdHigh, byte 6 = RetryCount, byte 7 = WriteBitMask. Motorola start bits 23, 39, 47, and 55 therefore map to bytes 2, 4, 5, and 6 respectively.";
+CM_ SG_ 1857 ChannelName "Three uppercase letters packed into 16 bits as ((c0-'A') << 10) | ((c1-'A') << 5) | (c2-'A').";
+CM_ SG_ 1857 WriteBitMask "Bits 0,1,3,4,5 are implemented for ChannelType, ChannelName, CurrentThresholdLow, CurrentThresholdHigh, and RetryCount. Bit 2 is unused. Firmware also checks bit 6, but byte 7 is the mask itself, so use ChannelConfigF4 to set InrushCurrentThreshold.";
+CM_ SG_ 1858 WriteBitMask "Bits 1,2,3 gate InrushDelay, ActiveHigh, and RunOn respectively. Bit 0 is unused.";
+CM_ SG_ 1859 WriteBitMask "Bits 1,2,3 gate RunOnTime, SoftStart, and SoftStartTime respectively. Bit 0 is unused.";
+CM_ BO_ 1860 "Dedicated inrush current threshold write message. Firmware reads byte 0 = ChannelNumber, byte 1 = InrushCurrentThreshold, byte 7 = WriteBitMask, and ignores bytes 2-6.";
+CM_ SG_ 1860 WriteBitMask "Bit 0 gates InrushCurrentThreshold. When clear, the controller ignores byte 1. Bytes 2-6 are unused padding and should be sent as zero.";
+VAL_ 1793 FrameIndex 0 "Frame0" 1 "Frame1" 2 "Frame2" ;
+VAL_ 1793 ChannelType 0 "Digital" 1 "DigitalPWM" 2 "AnalogueThreshold" 3 "AnalogueScaled" 4 "CANDigital" 5 "CANPWM" 6 "DigitalIntermittent" ;
+VAL_ 1793 Enabled 0 "OutputOff" 1 "OutputOn" ;
+VAL_ 1793 ActiveHigh 0 "ActiveLow" 1 "ActiveHigh" ;
+VAL_ 1793 RunOn 0 "Disabled" 1 "Enabled" ;
+VAL_ 1811 FrameIndex 0 "Frame0" 1 "Frame1" ;
+VAL_ 1811 InputType 0 "RawVoltage" 1 "Active" 2 "Passive" 3 "NTC" 4 "Digital" ;
+VAL_ 1811 Units 0 "Volts" 1 "Amps" 2 "Celsius" 3 "Fahrenheit" 4 "Percent" 5 "RPM" 6 "KPH" 7 "MPH" 8 "Bar" 9 "PSI" ;
 VAL_ 1825 SpeedUnits 0 "Metric" 1 "Imperial" ;
 VAL_ 1825 DistanceUnits 0 "Metric" 1 "Imperial" ;
 VAL_ 1825 AllowData 0 "False" 1 "True" ;
 VAL_ 1825 AllowGPS 0 "False" 1 "True" ;
 VAL_ 1825 AllowMotionDetect 0 "False" 1 "True" ;
-VAL_ 1793 ChannelType 0 "Digital" 1 "DigitalPWM" 2 "AnalogueThreshold" 3 "AnalogueScaled" 4 "CANDigital" 5 "CANPWM" ;
-VAL_ 1793 Enabled 0 "OutputOff" 1 "OutputOn" ;
-VAL_ 1857 ChannelType 0 "Digital" 1 "DigitalPWM" 2 "AnalogueThreshold" 3 "AnalogueScaled" 4 "CANDigital" 5 "CANPWM" ;
-VAL_ 1858 ActiveHigh 0 "ActiveLow" 1 "ActiveHigh" ;
 VAL_ 1840 SpeedUnits 0 "Metric" 1 "Imperial" ;
 VAL_ 1840 DistanceUnits 0 "Metric" 1 "Imperial" ;
 VAL_ 1840 AllowData 0 "False" 1 "True" ;
 VAL_ 1840 AllowGPS 0 "False" 1 "True" ;
 VAL_ 1840 AllowMotionDetect 0 "False" 1 "True" ;
+VAL_ 1857 ChannelType 0 "Digital" 1 "DigitalPWM" 2 "AnalogueThreshold" 3 "AnalogueScaled" 4 "CANDigital" 5 "CANPWM" 6 "DigitalIntermittent" ;
+VAL_ 1858 ActiveHigh 0 "ActiveLow" 1 "ActiveHigh" ;
+VAL_ 1858 RunOn 0 "Disabled" 1 "Enabled" ;
+VAL_ 1859 SoftStart 0 "Disabled" 1 "Enabled" ;
 

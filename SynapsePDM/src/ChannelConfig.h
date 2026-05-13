@@ -26,6 +26,9 @@
 #include <Arduino.h>
 
 #define MAX_INTERMITTENT_TIME_MS 10000UL
+#define DEFAULT_CHANNEL_CURRENT_SENSE_KILIS 18407.72F
+#define MIN_CHANNEL_CURRENT_SENSE_KILIS 1000.0F
+#define MAX_CHANNEL_CURRENT_SENSE_KILIS 100000.0F
 
 /// @brief Defines available channel types
 enum ChannelType
@@ -102,7 +105,7 @@ struct __attribute__((packed)) ChannelConfig
   ChannelType ChanType;         // Channel type
   ChannelCategory Category;     // Output category
   uint8_t PWMSetDuty;           // Current duty set percentage (0 to 100)
-  uint8_t Enabled;              // Channel enabled flag
+  uint8_t Enabled;              // Persisted channel enable/config flag
   char ChannelName[3];          // Channel name
   float CurrentThresholdHigh;   // Turn off threshold high
   float CurrentThresholdLow;    // Turn off threshold low (open circuit detection)
@@ -129,7 +132,8 @@ struct __attribute__((packed)) ChannelConfig
   float InrushCurrentThreshold; // Inrush current threshold for soft start (in amps)
   uint32_t IntermittentOnTime;  // Intermittent on time in milliseconds
   uint32_t IntermittentOffTime; // Intermittent off time in milliseconds
-  uint8_t Reserved[18];         // Reserved for future use
+  float CurrentSenseKILIS;      // Per-channel current sense ratio calibration value
+  uint8_t Reserved[14];         // Reserved for future use
 };
 
 /// @brief Channel config runtime structure
@@ -139,6 +143,7 @@ struct __attribute__((packed)) ChannelConfigRuntime
   float CurrentValue;     // Active current value
   uint8_t ErrorFlags;     // Bitmask for channel error flags
   uint8_t Override;       // Override flag
+  uint8_t Enabled;        // Live runtime enable state
 };
 
 /// @brief Clamp a persisted category to a supported value.

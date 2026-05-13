@@ -79,5 +79,11 @@ void SanitizeChannelConfig(ChannelConfig &config)
     {
         config.IntermittentOffTime = MAX_INTERMITTENT_TIME_MS;
     }
+
+    if (!(config.CurrentSenseKILIS >= MIN_CHANNEL_CURRENT_SENSE_KILIS &&
+          config.CurrentSenseKILIS <= MAX_CHANNEL_CURRENT_SENSE_KILIS))
+    {
+        config.CurrentSenseKILIS = DEFAULT_CHANNEL_CURRENT_SENSE_KILIS;
+    }
 }
 

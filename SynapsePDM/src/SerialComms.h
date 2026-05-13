@@ -40,6 +40,9 @@ void SleepComms();
 /// @brief Check for incoming data
 void CheckSerial();
 
+/// @brief Returns true while Cortex config save traffic is in progress.
+bool IsCortexConfigSaveActive();
+
 // Serial comms header
 const uint16_t SERIAL_HEADER = 0x1984;
 
@@ -73,6 +76,11 @@ const byte COMMAND_ID_FW_INSTALL = 'I';
 const byte COMMAND_ID_FW_DIAGNOSTIC = 'Z';
 const byte COMMAND_ID_SET_RTC = 'T';
 const byte COMMAND_ID_FACTORY_RESET = 'P';
+const byte COMMAND_ID_CALIBRATION_MODE = 'A';
+const byte COMMAND_ID_CALIBRATION_SAMPLE = 'G';
+const byte COMMAND_ID_CALIBRATION_OVERRIDE = 'O';
+const byte COMMAND_ID_CALIBRATION_SET_KILIS = 'K';
+const byte COMMAND_ID_CONTROLLER_TELEMETRY = 'H';
 
 /// @brief Config type index, channel, input or system
 const byte CONFIG_TYPE_INDEX = 2;

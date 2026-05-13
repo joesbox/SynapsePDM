@@ -520,6 +520,8 @@ static void ProcessSimResponseBuffer()
 
 void InitialiseGSM(bool enableData)
 {
+    delay(SIM7600_REGULATOR_STABLE_MS);
+
     pinMode(SIM_PWR, OUTPUT);
     pinMode(SIM_RST, OUTPUT);
     pinMode(SIM_FLIGHT, OUTPUT);

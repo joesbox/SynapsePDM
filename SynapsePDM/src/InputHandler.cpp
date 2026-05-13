@@ -27,6 +27,25 @@ static bool intermittentInputActive[NUM_CHANNELS] = {false};
 static bool intermittentOutputActive[NUM_CHANNELS] = {false};
 static uint32_t intermittentPhaseTimers[NUM_CHANNELS] = {0};
 
+static void SetChannelRuntimeEnabledState(uint8_t channelIndex, bool enabled)
+{
+    if (channelIndex >= NUM_CHANNELS)
+    {
+        return;
+    }
+
+    ChannelRuntime[channelIndex].Enabled = enabled ? 1 : 0;
+
+    if (enabledFlags[channelIndex] != enabled)
+    {
+        enabledFlags[channelIndex] = enabled;
+        if (enabled)
+        {
+            enabledTimers[channelIndex] = millis();
+        }
+    }
+}
+
 float CalculateLinear(float x, float x1, float y1, float x2, float y2)
 {
     float dx = x2 - x1;
@@ -226,6 +245,11 @@ float ReadAnalogueInputValue(int inputIndex)
     return converted;
 }
 
+bool IsChannelRuntimeEnabled(uint8_t channelIndex)
+{
+    return (channelIndex < NUM_CHANNELS) && (ChannelRuntime[channelIndex].Enabled != 0);
+}
+
 static bool ReadAnalogueInputHighState(int inputIndex)
 {
     float sourceVoltage = ReadAnalogueInputValue(inputIndex);
@@ -406,6 +430,11 @@ static bool ReadChannelDigitalInputState(uint8_t channelIndex, int inputPin, boo
     return ReadAnalogueInputAsDigital(inputPin);
 }
 
+static bool IsChannelOverrideActive(uint8_t channelIndex)
+{
+    return (channelIndex < NUM_CHANNELS) && (ChannelRuntime[channelIndex].Override != 0);
+}
+
 static bool ComputeIntermittentOutputState(uint8_t channelIndex, bool inputActive)
 {
     uint32_t now = millis();
@@ -506,38 +535,28 @@ void HandleInputs()
         case DIG:
         case DIG_PWM:
         {
-            Channels[i].Enabled = ReadChannelDigitalInputState(i, inputPin, inputIsDigital, false);
-            // Used for inrush delay timing
-            if (enabledFlags[i] != Channels[i].Enabled)
-            {
-                enabledFlags[i] = Channels[i].Enabled;
-                if (Channels[i].Enabled)
-                {
-                    enabledTimers[i] = millis();
-                }
-            }
+            bool runtimeEnabled = ReadChannelDigitalInputState(i, inputPin, inputIsDigital, false);
+            SetChannelRuntimeEnabledState(i, runtimeEnabled);
             break;
         }
         case DIG_INTERMITTENT:
         {
             bool inputActive = ReadChannelDigitalInputState(i, inputPin, inputIsDigital, true);
-            Channels[i].Enabled = ComputeIntermittentOutputState(i, inputActive);
-
-            if (enabledFlags[i] != Channels[i].Enabled)
-            {
-                enabledFlags[i] = Channels[i].Enabled;
-                if (Channels[i].Enabled)
-                {
-                    enabledTimers[i] = millis();
-                }
-            }
+            bool runtimeEnabled = ComputeIntermittentOutputState(i, inputActive);
+            SetChannelRuntimeEnabledState(i, runtimeEnabled);
             break;
         }
         case ANA:
         {
+            if (IsChannelOverrideActive(i))
+            {
+                SetChannelRuntimeEnabledState(i, true);
+                break;
+            }
+
             if (inputPin < 0)
             {
-                Channels[i].Enabled = false;
+                SetChannelRuntimeEnabledState(i, false);
                 break;
             }
 
@@ -545,32 +564,31 @@ void HandleInputs()
             SanitizeAnalogueInputConfig(AnalogueIns[inputPin]);
             float value = ReadAnalogueInputValue(inputPin);
             bool negativeGoingThreshold = Channels[i].OnThreshold < Channels[i].OffThreshold;
+            bool runtimeEnabled = IsChannelRuntimeEnabled(i);
             if ((!negativeGoingThreshold && value >= Channels[i].OnThreshold) ||
                 (negativeGoingThreshold && value <= Channels[i].OnThreshold))
             {
-                Channels[i].Enabled = true;
+                runtimeEnabled = true;
             }
             else if ((!negativeGoingThreshold && value < Channels[i].OffThreshold) ||
                      (negativeGoingThreshold && value > Channels[i].OffThreshold))
             {
-                Channels[i].Enabled = false;
+                runtimeEnabled = false;
             }
-            // Used for inrush delay timing
-            if (enabledFlags[i] != Channels[i].Enabled)
-            {
-                enabledFlags[i] = Channels[i].Enabled;
-                if (Channels[i].Enabled)
-                {
-                    enabledTimers[i] = millis();
-                }
-            }
+            SetChannelRuntimeEnabledState(i, runtimeEnabled);
             break;
         }
         case ANA_PWM:
         {
+            if (IsChannelOverrideActive(i))
+            {
+                SetChannelRuntimeEnabledState(i, Channels[i].PWMSetDuty > 0);
+                break;
+            }
+
             if (inputPin < 0)
             {
-                Channels[i].Enabled = false;
+                SetChannelRuntimeEnabledState(i, false);
                 Channels[i].PWMSetDuty = 0;
                 break;
             }
@@ -607,36 +625,28 @@ void HandleInputs()
                 dutyInt = 100;
             }
             Channels[i].PWMSetDuty = (uint8_t)dutyInt;
-            Channels[i].Enabled = (dutyInt > 0);
-            // Used for inrush delay timing
-            if (enabledFlags[i] != Channels[i].Enabled)
-            {
-                enabledFlags[i] = Channels[i].Enabled;
-                if (Channels[i].Enabled)
-                {
-                    enabledTimers[i] = millis();
-                }
-            }
+            SetChannelRuntimeEnabledState(i, dutyInt > 0);
             break;
         }
         case CAN_DIGITAL:
         case CAN_PWM:
         {
-            // Override takes precedence over CAN message
-            if (!Channels[i].Enabled)
+            bool runtimeEnabled = false;
+            if (IsChannelOverrideActive(i))
+            {
+                runtimeEnabled = (Channels[i].ChanType == CAN_PWM) ? (Channels[i].PWMSetDuty > 0) : true;
+            }
+            else
+            {
+                runtimeEnabled = CANChannelEnableFlags[i];
+            }
+
+            SetChannelRuntimeEnabledState(i, runtimeEnabled);
+
+            if (!runtimeEnabled)
             {
                 // Clear error flags on disable
                 ChannelRuntime[i].ErrorFlags = 0;
-            }
-            Channels[i].Enabled = CANChannelEnableFlags[i];
-            // Used for inrush delay timing
-            if (enabledFlags[i] != Channels[i].Enabled)
-            {
-                enabledFlags[i] = Channels[i].Enabled;
-                if (Channels[i].Enabled)
-                {
-                    enabledTimers[i] = millis();
-                }
             }
             break;
         }
@@ -644,7 +654,7 @@ void HandleInputs()
             break;
         }
 
-        if (!Channels[i].Enabled)
+        if (!IsChannelRuntimeEnabled(i))
         {
             // Clear error flags on disable
             ChannelRuntime[i].ErrorFlags = 0;

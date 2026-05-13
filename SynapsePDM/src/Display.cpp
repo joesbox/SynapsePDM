@@ -222,14 +222,12 @@ void DrawBackground()
     tft.setCursor(ledCenterX - (initialTextWidth / 2), currentTextY);
     tft.print(initialCurrentText);
 
-    // Calculate the width of the channel name
-    int chanNameWidth = tft.textWidth(Channels[i].ChannelName);
-    int chanNameX = channelName[i][0] + (5 - chanNameWidth) / 2;
-
-    // Ensure channel name is null-terminated
     char safeName[4];
     memcpy(safeName, Channels[i].ChannelName, 3);
     safeName[3] = '\0';
+
+    int chanNameWidth = tft.textWidth(safeName);
+    int chanNameX = channelName[i][0] + (5 - chanNameWidth) / 2;
 
     tft.setCursor(chanNameX, channelName[i][1]);
     tft.print(safeName);
@@ -252,7 +250,7 @@ void UpdateDisplay()
   {
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
-      bool effectiveEnabled = Channels[i].Enabled && !outputsInhibited;
+      bool effectiveEnabled = IsChannelEffectivelyEnabled(i);
       prevEnabled[i] = !effectiveEnabled;
       prevErrorFlags[i] = -1;
       prevCurrentValues[i] = -1.0F;
@@ -269,14 +267,12 @@ void UpdateDisplay()
       tft.drawLine(270, 58, 270, 238, TFT_DARKGREY);
       tft.drawLine(319, 58, 319, 238, TFT_DARKGREY);
 
-      // Calculate the width of the channel name
-      int chanNameWidth = tft.textWidth(Channels[i].ChannelName);
-      int chanNameX = channelName[i][0] + (5 - chanNameWidth) / 2;
-
-      // Ensure channel name is null-terminated
       char safeName[4];
       memcpy(safeName, Channels[i].ChannelName, 3);
       safeName[3] = '\0';
+
+      int chanNameWidth = tft.textWidth(safeName);
+      int chanNameX = channelName[i][0] + (5 - chanNameWidth) / 2;
 
       tft.fillRect(chanNameX, channelName[i][1], chanNameWidth, tft.fontHeight(), TFT_BLACK);
       tft.setCursor(chanNameX, channelName[i][1]);
@@ -331,7 +327,7 @@ void UpdateDisplay()
   }
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    bool effectiveEnabled = Channels[i].Enabled && !outputsInhibited;
+    bool effectiveEnabled = IsChannelEffectivelyEnabled(i);
     int effectiveErrorFlags = outputsInhibited ? 0 : ChannelRuntime[i].ErrorFlags;
 
     if (effectiveEnabled != prevEnabled[i] || effectiveErrorFlags != prevErrorFlags[i])

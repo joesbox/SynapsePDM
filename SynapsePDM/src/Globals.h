@@ -36,7 +36,7 @@
 #include <backup.h>
 
 // Firmware version
-#define FW_VER "v0.8"
+#define FW_VER "v0.9"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -161,6 +161,8 @@
 
 // ECU CAN addresses
 #define CHAN_CAN_ID 0x700
+#define DIG_INPUT_CAN_ID 0x710
+#define ANA_INPUT_CAN_ID 0x712
 #define SYS_CAN_ID 0x720
 #define SYS_CONFIG_CAN_ID 0x730
 #define CONF_CAN_ID 0x740
@@ -288,6 +290,9 @@ extern bool bootToSleep;
 
 /// @brief IMU wake mode flag
 extern volatile bool IMUWakeMode;
+
+/// @brief Ignition wake pending flag
+extern volatile bool ignitionWakePending;
 
 /// @brief IMU wake pending flag
 extern volatile bool imuWakePending;

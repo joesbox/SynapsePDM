@@ -62,6 +62,8 @@ bool bootToSleep = false;
 
 volatile bool IMUWakeMode = false;
 
+volatile bool ignitionWakePending = false;
+
 volatile bool imuWakePending = false;
 
 bool CANChannelEnableFlags[NUM_CHANNELS] = {false};
@@ -112,7 +114,9 @@ void InitialiseChannelData()
     Channels[i].InrushCurrentThreshold = 1.0;
     Channels[i].IntermittentOnTime = 1000;
     Channels[i].IntermittentOffTime = 1000;
+    Channels[i].CurrentSenseKILIS = DEFAULT_CHANNEL_CURRENT_SENSE_KILIS;
     ChannelRuntime[i].Override = false;
+    ChannelRuntime[i].Enabled = false;
   } 
 }
 

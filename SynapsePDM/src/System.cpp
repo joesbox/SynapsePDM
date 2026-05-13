@@ -513,13 +513,16 @@ void IgnitionWake()
         return;
     }
 
-    IMUWakeMode = false;
-    imuWakePending = false;
-    PowerState = IGNITION_WAKING;
+    ignitionWakePending = true;
 }
 
 void IMUWake()
 {
+    if (PowerState != SLEEPING)
+    {
+        return;
+    }
+
     if (!IMUWakeMode)
     {
         IMUWakeMode = true;
@@ -592,6 +595,8 @@ void InitialiseSystemData()
     memset(&SystemParams, 0, sizeof(SystemParams));
     SystemParams.CANResEnabled = 1;
     SystemParams.ChannelDataCANID = CHAN_CAN_ID;
+    SystemParams.DigitalInputDataCANID = DIG_INPUT_CAN_ID;
+    SystemParams.AnalogueInputDataCANID = ANA_INPUT_CAN_ID;
     SystemParams.SystemDataCANID = SYS_CAN_ID;
     SystemParams.SystemConfigDataCANID = SYS_CONFIG_CAN_ID;
     SystemParams.ChannelConfigDataCANID = CONF_CAN_ID;
@@ -840,6 +845,10 @@ void WakeSystem()
     analogReadResolution(12);
     analogWriteResolution(10);
 
+    // Keep the display dark until a wake path explicitly enables it.
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, LOW);
+
     pinMode(SIM_PWR, OUTPUT);
     pinMode(SIM_RST, OUTPUT);
     pinMode(SIM_FLIGHT, OUTPUT);
@@ -855,8 +864,6 @@ void WakeSystem()
 
     // Power up SIM7600
     digitalWrite(SIM_REGULATOR, HIGH);
-
-    delay(SIM7600_REGULATOR_STABLE_MS);
 }
 
 static int32_t readTempSensor(int32_t VRef)

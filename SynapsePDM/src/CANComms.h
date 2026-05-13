@@ -33,6 +33,9 @@
 /// @brief Initialise CAN bus and related timers/interrupts
 void InitialiseCAN();
 
+/// @brief Put CAN-related outputs into their sleep state.
+void SleepCAN();
+
 /// @brief Read CAN messages
 void ReadCANMessages();
 

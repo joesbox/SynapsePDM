@@ -28,6 +28,16 @@
     Version history:
     Date              Version       Description
     ----              -------       ------------------------------------------------------------
+    2026-04-22        v0.9          - Wake/sleep bug fix.
+                                    - Increase system temperature limit to 100°C. Max. STM32 operating junction temp is 105°C.
+                                    - Further sleep current improvements down to ~1mA.
+                                    - Assert output on wake bug fix.
+                                    - Undercurrent lock out fix.
+                                    - Added new CAN messages for I/O status.
+                                    - Inrush current added to CAN configuration.
+                                    - Calibration added to serial protocol for automated testing purposes.
+                                    - Outputs now store per-channel current sense calibration values.
+                                    - Save changes while outputs active bug fix.
     2026-03-17        v0.8          - Added manual RTC update command over Cortex serial protocol for installations not using GPS.
                                     - Run-on implementation
                                     - Soft start & soft stop implementation
@@ -116,7 +126,7 @@ static void CaptureRunOnState(uint32_t now)
 {
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    runOnEligible[i] = Channels[i].RunOn && Channels[i].Enabled;
+    runOnEligible[i] = Channels[i].RunOn && IsChannelRuntimeEnabled(i);
     runOnDeadline[i] = runOnEligible[i] ? (now + Channels[i].RunOnTime) : 0;
   }
 
@@ -134,6 +144,12 @@ static void ResetRunOnState()
   runOnEligibilityCaptured = false;
 }
 
+static void ClearWakeRequests()
+{
+  ignitionWakePending = false;
+  imuWakePending = false;
+}
+
 void SleepFunctions()
 {
   if (saveEEPROMOnTimeout)
@@ -149,6 +165,7 @@ void SleepFunctions()
   PullResistorSleep();
   SleepIMU(SystemParams.AllowMotionDetect != 0);
   SleepSD();
+  SleepCAN();
   OutputsOff();
   SleepOutputs();
   SleepComms();
@@ -160,7 +177,8 @@ void SleepFunctions()
 
 void alarmMatch(void *data)
 {
-  // Do nothing, just wake the MCU
+  // Stop the alarm after it fires so it cannot keep retriggering later sleep entries.
+  rtc.disableAlarm();
 }
 
 void setup()
@@ -265,8 +283,6 @@ void setup()
   }
   digitalWrite(TFT_BL, HIGH);
 
-  SystemParams.MotionDeadTime = 1;
-
   LowPower.enableWakeupFrom(&rtc, alarmMatch);
   ResetLogScheduler();
   IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) on boot.
@@ -369,6 +385,7 @@ void handlePowerState()
       HAL_PWR_EnableBkUpAccess();
       setBackupRegister(BACKUP_REG_IGN_OFF_TIME, ignitionOffTime);
     }
+    ClearWakeRequests();
     SleepFunctions();
     GPSFix = false;
     PowerState = SLEEPING;
@@ -376,8 +393,10 @@ void handlePowerState()
   break;
   case SLEEPING:
     // Treat ignition-high as a pending wake even if the rising edge arrived during sleep teardown.
-    if (digitalRead(IGN_INPUT))
+    if (digitalRead(IGN_INPUT) || ignitionWakePending)
     {
+      ClearWakeRequests();
+      IMUWakeMode = false;
       PowerState = IGNITION_WAKING;
       break;
     }
@@ -395,6 +414,7 @@ void handlePowerState()
 
     IWatchdog.begin(32000 * 1000); // 32 second watchdog (microseconds) during sleep.
     IWatchdog.reload();
+    rtc.disableAlarm();
     rtc.setAlarmEpoch(rtc.getEpoch() + 30); // Wake every 30 seconds to feed the watchdog
     rtc.enableAlarm(rtc.MATCH_DHHMMSS);
 
@@ -403,8 +423,10 @@ void handlePowerState()
       break;
     }
 
-    if (digitalRead(IGN_INPUT))
+    if (digitalRead(IGN_INPUT) || ignitionWakePending)
     {
+      ClearWakeRequests();
+      IMUWakeMode = false;
       PowerState = IGNITION_WAKING;
       break;
     }
@@ -418,13 +440,30 @@ void handlePowerState()
 
     // Enter STOP mode
     HAL_SuspendTick();
+    __HAL_PWR_CLEAR_FLAG(PWR_FLAG_WU);
     HAL_PWR_EnterSTOPMode(PWR_LOWPOWERREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+
+    SystemClock_Config();
+    HAL_ResumeTick();
+
+    if (digitalRead(IGN_INPUT) || ignitionWakePending)
+    {
+      ClearWakeRequests();
+      IMUWakeMode = false;
+      PowerState = IGNITION_WAKING;
+      break;
+    }
+
+    if (imuWakePending)
+    {
+      imuWakePending = false;
+      PowerState = IMU_WAKING;
+    }
 
     break;
   case IGNITION_WAKING:
-    HAL_ResumeTick();
-    SystemClock_Config();
-    rtc.begin();
+    rtc.disableAlarm();
+    ClearWakeRequests();
     IWatchdog.reload();
     wakeDebounceTimer = millis();
     PowerState = IGNITION_WAKE;
@@ -432,43 +471,51 @@ void handlePowerState()
   case IGNITION_WAKE:
     if (millis() - wakeDebounceTimer > WAKE_DEBOUNCE_TIME)
     {
+      // pinMode(IGN_INPUT, INPUT_PULLDOWN);
       if (!digitalRead(IGN_INPUT))
       {
         PowerState = SLEEPING;
         break;
       }
 
-      IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) during run.
+      IWatchdog.begin(5000 * 1000); // Allow extra time for wake reinitialisation before returning to the run watchdog.
       IWatchdog.reload();
       WakeSystem();
-      ReinitialiseIMUAfterWake();
+      IWatchdog.reload();
       InitialiseInputs();
       InitialiseOutputs();
       HandleInputs();
       UpdateOutputs();
+      IWatchdog.reload();
+      ReinitialiseIMUAfterWake();
       DisableMotionDetect();
       InitialiseCAN();
       InitialiseSerial();
       InitialiseGSM(false);
+      IWatchdog.reload();
       StartDisplay();
       DrawBackground();
       analogWrite(TFT_BL, 1023);
+      IWatchdog.reload();
       ResumeSD();
       ResetLogScheduler();
+      IWatchdog.begin(2000 * 1000); // Restore the normal run watchdog once wake initialisation is complete.
+      IWatchdog.reload();
       // Reset RunOn eligibility and timers on wake
       for (int i = 0; i < NUM_CHANNELS; i++)
       {
         enabledTimers[i] = 0;
       }
       ResetRunOnState();
+      ClearWakeRequests();
+      IMUWakeMode = false;
 
       PowerState = RUN;
     }
     break;
   case IMU_WAKING:
-    HAL_ResumeTick();
-    SystemClock_Config();
-    rtc.begin();
+    rtc.disableAlarm();
+    ignitionWakePending = false;
     IWatchdog.reload();
     PowerState = IMU_WAKE;
     break;
@@ -480,17 +527,26 @@ void handlePowerState()
       if ((currentTime - ignitionOffTime) >= (SystemParams.MotionDeadTime * 60))
       {
         // Motion dead time has elapsed. Disable motion detection, wake the system.
-        IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) during run.
+        IWatchdog.begin(5000 * 1000); // Allow extra time for wake reinitialisation before returning to the run watchdog.
         IWatchdog.reload();
         WakeSystem();
+        pinMode(TFT_RST, OUTPUT);
+        digitalWrite(TFT_RST, LOW);
+        analogWrite(TFT_BL, 0);
+        IWatchdog.reload();
         ReinitialiseIMUAfterWake();
         InitialiseInputs();
         DisableMotionDetect();
         InitialiseSerial();
         InitialiseCAN();
         InitialiseGSM(false);
+        IWatchdog.reload();
         ResumeSD();
         ResetLogScheduler();
+        IWatchdog.begin(2000 * 1000); // Restore the normal run watchdog once wake initialisation is complete.
+        IWatchdog.reload();
+        ClearWakeRequests();
+        IMUWakeMode = false;
         imuWWtimer = millis() + SystemParams.IMUwakeWindow;
         PowerState = IMU_WAKE_WINDOW;
       }
@@ -509,6 +565,11 @@ void handlePowerState()
     }
     else
     {
+      if (SystemParams.AllowMotionDetect)
+      {
+        EnableMotionDetect();
+      }
+
       SleepFunctions();
       PowerState = SLEEPING;
     }

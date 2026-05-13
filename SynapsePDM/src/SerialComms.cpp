@@ -22,6 +22,8 @@
 */
 #include "SerialComms.h"
 #include "OutputHandler.h"
+#include "GSM.h"
+#include "IMU.h"
 
 ChannelConfigUnion SerialChannelData;
 byte configBuffer[1000] = {0};
@@ -37,6 +39,11 @@ bool pendingChannelConfigSave = false;
 bool pendingSystemConfigSave = false;
 bool pendingAnalogueConfigSave = false;
 
+bool IsCortexConfigSaveActive()
+{
+    return receivingConfig || pendingChannelConfigSave || pendingSystemConfigSave || pendingAnalogueConfigSave;
+}
+
 uint32_t lastComms = 0;
 
 unsigned int readBufIdx = 0;
@@ -50,6 +57,9 @@ static byte framedPacketBuffer[sizeof(logChunkPayloadBuffer) + 16] = {0};
 static byte rawBulkPacketBuffer[6 + sizeof(logChunkTextBuffer) + 4] = {0};
 static bool logTransferStreaming = false;
 static bool logTransferBulkStreaming = false;
+static bool serialCalibrationModeEnabled = false;
+
+static void SendFramedPacket(byte commandId, const byte *payload, uint16_t payloadLength);
 
 struct RtcCommandPayload
 {
@@ -62,6 +72,179 @@ struct RtcCommandPayload
 };
 
 static const uint8_t RTC_COMMAND_PAYLOAD_LENGTH = 7;
+
+struct __attribute__((packed)) CalibrationModePayload
+{
+    uint8_t Enabled;
+};
+
+struct __attribute__((packed)) CalibrationOverridePayload
+{
+    uint8_t ChannelNumber;
+    uint8_t Enabled;
+};
+
+struct __attribute__((packed)) CalibrationSetKilisPayload
+{
+    uint8_t ChannelNumber;
+    float CurrentSenseKILIS;
+};
+
+struct __attribute__((packed)) CalibrationSampleChannelPayload
+{
+    float CurrentValue;
+    int32_t AnalogRaw;
+    float CurrentSenseKILIS;
+};
+
+struct __attribute__((packed)) ControllerTelemetryPayload
+{
+    float SIMModuleTemp;
+    float IMUTemp;
+    int32_t SystemTemperature;
+    float AccelX;
+    float AccelY;
+    float AccelZ;
+    float GyroX;
+    float GyroY;
+    float GyroZ;
+    float MagX;
+    float MagY;
+    float MagZ;
+    float Latitude;
+    float Longitude;
+    float Speed;
+    float Altitude;
+    float Accuracy;
+    int16_t VisibleSatellites;
+    int16_t UsedSatellites;
+    uint16_t Year;
+    uint8_t Month;
+    uint8_t Day;
+    uint8_t Hour;
+    uint8_t Minute;
+    uint8_t Second;
+};
+
+static byte calibrationSamplePayload[2 + (NUM_CHANNELS * sizeof(CalibrationSampleChannelPayload))] = {0};
+
+static void ResetCalibrationOverrides()
+{
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+        ChannelRuntime[i].Override = false;
+        CANChannelEnableFlags[i] = false;
+    }
+}
+
+static void SetCalibrationModeEnabled(bool enabled)
+{
+    serialCalibrationModeEnabled = enabled;
+    ResetCalibrationOverrides();
+    OutputsOff();
+}
+
+static bool IsValidCalibrationChannelNumber(uint8_t channelNumber)
+{
+    return channelNumber >= 1 && channelNumber <= NUM_CHANNELS;
+}
+
+static void SendCalibrationSamplePacket()
+{
+    uint16_t writeIndex = 0;
+    calibrationSamplePayload[writeIndex++] = serialCalibrationModeEnabled ? 1 : 0;
+    calibrationSamplePayload[writeIndex++] = NUM_CHANNELS;
+
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+        CalibrationSampleChannelPayload sample = {
+            ChannelRuntime[i].CurrentValue,
+            ChannelRuntime[i].AnalogRaw,
+            Channels[i].CurrentSenseKILIS};
+        memcpy(&calibrationSamplePayload[writeIndex], &sample, sizeof(sample));
+        writeIndex += sizeof(sample);
+    }
+
+    SendFramedPacket(COMMAND_ID_CALIBRATION_SAMPLE, calibrationSamplePayload, writeIndex);
+}
+
+static void SendControllerTelemetryPacket()
+{
+    ControllerTelemetryPayload payload = {
+        simModuleTemp,
+        imuTemp,
+        SystemRuntimeParams.SystemTemperature,
+        accelX,
+        accelY,
+        accelZ,
+        gyroX,
+        gyroY,
+        gyroZ,
+        magX,
+        magY,
+        magZ,
+        lat,
+        lon,
+        speed,
+        alt,
+        accuracy,
+        (int16_t)vsat,
+        (int16_t)usat,
+        (uint16_t)year,
+        (uint8_t)month,
+        (uint8_t)day,
+        (uint8_t)hour,
+        (uint8_t)minute,
+        (uint8_t)second};
+
+    SendFramedPacket(COMMAND_ID_CONTROLLER_TELEMETRY, (const byte *)&payload, sizeof(payload));
+}
+
+static bool ApplyCalibrationOverride(const CalibrationOverridePayload &payload)
+{
+    if (!IsValidCalibrationChannelNumber(payload.ChannelNumber))
+    {
+        return false;
+    }
+
+    uint8_t channelIndex = payload.ChannelNumber - 1;
+    ChannelRuntime[channelIndex].Override = payload.Enabled ? 1 : 0;
+    CANChannelEnableFlags[channelIndex] = false;
+    ChannelRuntime[channelIndex].ErrorFlags = 0;
+
+    if (payload.Enabled)
+    {
+        enabledTimers[channelIndex] = millis();
+    }
+    else
+    {
+        ChannelRuntime[channelIndex].Enabled = false;
+        ChannelRuntime[channelIndex].CurrentValue = 0.0f;
+    }
+
+    return true;
+}
+
+static bool ApplyCalibrationKilis(const CalibrationSetKilisPayload &payload)
+{
+    if (!IsValidCalibrationChannelNumber(payload.ChannelNumber))
+    {
+        return false;
+    }
+
+    if (!(payload.CurrentSenseKILIS >= MIN_CHANNEL_CURRENT_SENSE_KILIS &&
+          payload.CurrentSenseKILIS <= MAX_CHANNEL_CURRENT_SENSE_KILIS))
+    {
+        return false;
+    }
+
+    uint8_t channelIndex = payload.ChannelNumber - 1;
+    Channels[channelIndex].CurrentSenseKILIS = payload.CurrentSenseKILIS;
+    pendingChannelConfigSave = true;
+    saveEEPROMOnTimeout = true;
+    EEPROMSaveTimout = millis() + EEPROM_WRITE_DELAY;
+    return true;
+}
 
 static bool FactoryResetController()
 {
@@ -242,6 +425,8 @@ static void SendStaticStatusPacket()
     AppendStatusByte(SystemParams.SystemCurrentLimit, checksum);
     AppendStatusBytes(&SystemRuntimeParams.ErrorFlags, sizeof(SystemRuntimeParams.ErrorFlags), checksum);
     AppendStatusBytes(&SystemParams.ChannelDataCANID, sizeof(SystemParams.ChannelDataCANID), checksum);
+    AppendStatusBytes(&SystemParams.DigitalInputDataCANID, sizeof(SystemParams.DigitalInputDataCANID), checksum);
+    AppendStatusBytes(&SystemParams.AnalogueInputDataCANID, sizeof(SystemParams.AnalogueInputDataCANID), checksum);
     AppendStatusBytes(&SystemParams.SystemDataCANID, sizeof(SystemParams.SystemDataCANID), checksum);
     AppendStatusBytes(&SystemParams.ChannelConfigDataCANID, sizeof(SystemParams.ChannelConfigDataCANID), checksum);
     AppendStatusBytes(&SystemParams.SystemConfigDataCANID, sizeof(SystemParams.SystemConfigDataCANID), checksum);
@@ -635,6 +820,7 @@ void CheckSerial()
         receivingConfig = false;
         logTransferStreaming = false;
         logTransferBulkStreaming = false;
+        serialCalibrationModeEnabled = false;
         CancelLogTransfer();
         readBufIdx = 0;
         recBytesRead = 0;
@@ -1034,34 +1220,40 @@ void CheckSerial()
                             case 1: // Channel CAN data ID
                                 memcpy(&SystemParams.ChannelDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.ChannelDataCANID));
                                 break;
-                            case 2: // System CAN ID
+                            case 2: // Digital input CAN data ID
+                                memcpy(&SystemParams.DigitalInputDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.DigitalInputDataCANID));
+                                break;
+                            case 3: // Analogue input CAN data ID
+                                memcpy(&SystemParams.AnalogueInputDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.AnalogueInputDataCANID));
+                                break;
+                            case 4: // System CAN ID
                                 memcpy(&SystemParams.SystemDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.SystemDataCANID));
                                 break;
-                            case 3: // Config CAN ID
+                            case 5: // Config CAN ID
                                 memcpy(&SystemParams.ChannelConfigDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.ChannelConfigDataCANID));
                                 break;
-                            case 4: // IMU wake window
+                            case 6: // IMU wake window
                                 memcpy(&SystemParams.IMUwakeWindow, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.IMUwakeWindow));
                                 break;
-                            case 5: // Speed unit preference
+                            case 7: // Speed unit preference
                                 SystemParams.SpeedUnitPref = configBuffer[CONFIG_DATA_START_INDEX];
                                 break;
-                            case 6: // Distance unit preference
+                            case 8: // Distance unit preference
                                 SystemParams.DistanceUnitPref = configBuffer[CONFIG_DATA_START_INDEX];
                                 break;
-                            case 7: // Allow mobile data
+                            case 9: // Allow mobile data
                                 SystemParams.AllowData = configBuffer[CONFIG_DATA_START_INDEX];
                                 break;
-                            case 8: // Allow GPS
+                            case 10: // Allow GPS
                                 SystemParams.AllowGPS = configBuffer[CONFIG_DATA_START_INDEX];
                                 break;
-                            case 9: // Allow motion detect wake
+                            case 11: // Allow motion detect wake
                                 SystemParams.AllowMotionDetect = configBuffer[CONFIG_DATA_START_INDEX];
                                 break;
-                            case 10: // System config CAN ID
+                            case 12: // System config CAN ID
                                 memcpy(&SystemParams.SystemConfigDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.SystemConfigDataCANID));
                                 break;
-                            case 11: // Time zone and DST rule blob
+                            case 13: // Time zone and DST rule blob
                                 memcpy(&SystemParams.TimeZone, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.TimeZone));
                                 SanitizeTimeZoneRule(&SystemParams.TimeZone);
                                 if (SystemParams.TimeZone.DSTEnabled == 0)
@@ -1208,6 +1400,60 @@ void CheckSerial()
 
         case COMMAND_ID_FACTORY_RESET:
             Serial.write(FactoryResetController() ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            break;
+
+        case COMMAND_ID_CALIBRATION_MODE:
+        {
+            CalibrationModePayload payload = {0};
+            if (!ReadSerialBytesExact((uint8_t *)&payload, sizeof(payload), 2000))
+            {
+                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                break;
+            }
+
+            SetCalibrationModeEnabled(payload.Enabled != 0);
+            Serial.write(COMMAND_ID_CONFIM);
+            break;
+        }
+
+        case COMMAND_ID_CALIBRATION_SAMPLE:
+            if (!serialCalibrationModeEnabled)
+            {
+                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                break;
+            }
+
+            SendCalibrationSamplePacket();
+            break;
+
+        case COMMAND_ID_CALIBRATION_OVERRIDE:
+        {
+            CalibrationOverridePayload payload = {0};
+            if (!ReadSerialBytesExact((uint8_t *)&payload, sizeof(payload), 2000))
+            {
+                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                break;
+            }
+
+            Serial.write((serialCalibrationModeEnabled && ApplyCalibrationOverride(payload)) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            break;
+        }
+
+        case COMMAND_ID_CALIBRATION_SET_KILIS:
+        {
+            CalibrationSetKilisPayload payload = {0};
+            if (!ReadSerialBytesExact((uint8_t *)&payload, sizeof(payload), 2000))
+            {
+                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                break;
+            }
+
+            Serial.write((serialCalibrationModeEnabled && ApplyCalibrationKilis(payload)) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            break;
+        }
+
+        case COMMAND_ID_CONTROLLER_TELEMETRY:
+            SendControllerTelemetryPacket();
             break;
 
         case COMMAND_ID_FW_UPLOAD_BEGIN:

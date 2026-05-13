@@ -76,9 +76,11 @@ struct __attribute__((packed)) SystemParameters
   uint8_t CANResEnabled;           // CAN bus termination resistor enabled. 0 = disabled, 1 = enabled
   uint8_t SystemCurrentLimit;      // System current limit in amps
   uint16_t ChannelDataCANID;       // Channel data CAN ID. Response is this ID + 1.
+  uint16_t DigitalInputDataCANID;  // Digital input request CAN ID. Response is this ID + 1.
+  uint16_t AnalogueInputDataCANID; // Analogue input request CAN ID. Response is this ID + 1.
   uint16_t SystemDataCANID;        // System status data CAN ID. Two messages are sent, the second is on the next ID.
   uint16_t SystemConfigDataCANID;  // System config data CAN ID.
-  uint16_t ChannelConfigDataCANID; // Configuration data CAN ID. Message on this ID is basic control. Subsequent two messages for further channel configuration.
+  uint16_t ChannelConfigDataCANID; // Configuration data CAN ID. Message on this ID is basic control. Subsequent messages carry further channel configuration.
   uint32_t IMUwakeWindow;          // Wake window for the IMU to determine if something needs to be done or go back to sleep
   uint8_t MotionDeadTime;          // Time in minutes to ignore motion after wake
   uint8_t SpeedUnitPref;           // Speed units. 0 = KPH, 1 = MPH
@@ -88,7 +90,7 @@ struct __attribute__((packed)) SystemParameters
   uint8_t AllowMotionDetect;       // Allow motion detection wake
   TimeZoneRule TimeZone;           // Stored time zone and DST rule received from Cortex
   uint8_t DSTActive;               // Current DST state applied to the RTC
-  uint8_t Reserved[14];            // Reserved for future use
+  uint8_t Reserved[10];            // Reserved for future use
 };
 
 /// @brief System runtime data structure

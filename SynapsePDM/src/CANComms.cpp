@@ -26,6 +26,102 @@
 // Use CAN1 with ALT_2 pin configuration (PD0/PD1)
 STM32_CAN Can(CAN1, ALT_2);
 
+static uint8_t BuildDigitalInputMask()
+{
+    uint8_t mask = 0;
+
+    for (int i = 0; i < NUM_DI_CHANNELS; i++)
+    {
+        if (digitalRead(DIchannelInputPins[i]))
+        {
+            mask |= (uint8_t)(1U << i);
+        }
+    }
+
+    return mask;
+}
+
+static void StoreUint16BigEndian(uint8_t *buffer, uint16_t value)
+{
+    buffer[0] = (uint8_t)((value >> 8) & 0xFF);
+    buffer[1] = (uint8_t)(value & 0xFF);
+}
+
+static void StoreInt32BigEndian(uint8_t *buffer, int32_t value)
+{
+    buffer[0] = (uint8_t)((value >> 24) & 0xFF);
+    buffer[1] = (uint8_t)((value >> 16) & 0xFF);
+    buffer[2] = (uint8_t)((value >> 8) & 0xFF);
+    buffer[3] = (uint8_t)(value & 0xFF);
+}
+
+static int32_t ScaleSignedThousandths(float value)
+{
+    const float maxMagnitude = 2147483.0f;
+    if (value > maxMagnitude)
+    {
+        value = maxMagnitude;
+    }
+    else if (value < -maxMagnitude)
+    {
+        value = -maxMagnitude;
+    }
+
+    float scaled = value * 1000.0f;
+    return (int32_t)(scaled >= 0.0f ? (scaled + 0.5f) : (scaled - 0.5f));
+}
+
+static void ReplyWithAnalogueInputStatus(uint8_t inputIndex)
+{
+    if (inputIndex >= NUM_ANA_CHANNELS)
+    {
+        return;
+    }
+
+    SanitizeAnalogueInputConfig(AnalogueIns[inputIndex]);
+    float convertedValue = ReadAnalogueInputValue(inputIndex);
+    bool highState = AnalogueIns[inputIndex].InputVoltage >= ANALOG_DIGITAL_THRESHOLD_VOLTS;
+    bool digitalActive = AnalogueIns[inputIndex].PullUpEnable ? !highState : highState;
+    float millivolts = AnalogueIns[inputIndex].InputVoltage * 1000.0f;
+    if (millivolts < 0.0f)
+    {
+        millivolts = 0.0f;
+    }
+    if (millivolts > 65535.0f)
+    {
+        millivolts = 65535.0f;
+    }
+    uint16_t voltageMilliVolts = (uint16_t)(millivolts + 0.5f);
+
+    CAN_message_t frame0;
+    frame0.id = SystemParams.AnalogueInputDataCANID + 1;
+    frame0.len = 8;
+    frame0.flags.extended = 0;
+    frame0.flags.remote = 0;
+    frame0.buf[0] = 0;
+    frame0.buf[1] = (uint8_t)AnalogueIns[inputIndex].ChanType;
+    frame0.buf[2] = (uint8_t)AnalogueIns[inputIndex].Units;
+    frame0.buf[3] = (AnalogueIns[inputIndex].PullUpEnable ? 0x01 : 0x00) |
+                    (AnalogueIns[inputIndex].PullDownEnable ? 0x02 : 0x00) |
+                    (digitalActive ? 0x04 : 0x00);
+    StoreUint16BigEndian(&frame0.buf[4], voltageMilliVolts);
+    frame0.buf[6] = 0;
+    frame0.buf[7] = 0;
+    Can.write(frame0);
+
+    CAN_message_t frame1;
+    frame1.id = SystemParams.AnalogueInputDataCANID + 1;
+    frame1.len = 8;
+    frame1.flags.extended = 0;
+    frame1.flags.remote = 0;
+    frame1.buf[0] = 1;
+    StoreInt32BigEndian(&frame1.buf[1], ScaleSignedThousandths(convertedValue));
+    frame1.buf[5] = 0;
+    frame1.buf[6] = 0;
+    frame1.buf[7] = 0;
+    Can.write(frame1);
+}
+
 uint8_t aliveCounter = 0;
 
 uint32_t EEPROMSaveTimout = 0;
@@ -56,12 +152,48 @@ void InitialiseCAN()
     Can.setFilterSingleMask(0, 0x000, 0x000, STD);
 }
 
+void SleepCAN()
+{
+    pinMode(CAN_BUS_RESISTOR_ENABLE, OUTPUT);
+    digitalWrite(CAN_BUS_RESISTOR_ENABLE, LOW);
+}
+
 void ReadCANMessages()
 {
     CAN_message_t msg;
     bool inputConfigChanged = false;
     while (Can.read(msg))
     {
+        if (msg.id == SystemParams.DigitalInputDataCANID)
+        {
+            CAN_message_t response;
+            response.id = SystemParams.DigitalInputDataCANID + 1;
+            response.len = 8;
+            response.flags.extended = 0;
+            response.flags.remote = 0;
+            response.buf[0] = BuildDigitalInputMask();
+            response.buf[1] = 0;
+            response.buf[2] = 0;
+            response.buf[3] = 0;
+            response.buf[4] = 0;
+            response.buf[5] = 0;
+            response.buf[6] = 0;
+            response.buf[7] = 0;
+            Can.write(response);
+        }
+
+        if (msg.id == SystemParams.AnalogueInputDataCANID)
+        {
+            if (msg.len > 0)
+            {
+                uint8_t requestedInput = msg.buf[0];
+                if (requestedInput >= 1 && requestedInput <= NUM_ANA_CHANNELS)
+                {
+                    ReplyWithAnalogueInputStatus(requestedInput - 1);
+                }
+            }
+        }
+
         if (msg.id == SystemParams.ChannelDataCANID)
         {
             // Channel status request. Reply on data CAN ID + 1 over 3 frames.
@@ -77,7 +209,7 @@ void ReadCANMessages()
                     frame0.buf[0] = 0; // Frame index
                     frame0.buf[1] = (uint8_t)(Channels[i].ChanType);
                     frame0.buf[2] = (ChannelRuntime[i].CurrentValue * 10);
-                    frame0.buf[3] = Channels[i].Enabled;
+                    frame0.buf[3] = IsChannelRuntimeEnabled(i) ? 1 : 0;
                     uint16_t packedName = ((Channels[i].ChannelName[0] - 'A') << 10) | ((Channels[i].ChannelName[1] - 'A') << 5) | (Channels[i].ChannelName[2] - 'A');
                     frame0.buf[4] = (packedName >> 8) & 0xFF; // upper 8 bits
                     frame0.buf[5] = packedName & 0xFF;        // lower 8 bits
@@ -110,6 +242,9 @@ void ReadCANMessages()
                     frame2.buf[2] = Channels[i].RunOnTime >> 16 & 0xFF;
                     frame2.buf[3] = Channels[i].RunOnTime >> 8 & 0xFF;
                     frame2.buf[4] = Channels[i].RunOnTime & 0xFF; // LSB
+                    frame2.buf[5] = (uint8_t)Channels[i].InrushCurrentThreshold;
+                    frame2.buf[6] = 0;
+                    frame2.buf[7] = 0;
                     Can.write(frame2);
                 }
             }
@@ -249,17 +384,6 @@ void ReadCANMessages()
                             pendingEEPROMSave = true;
                         }
                     }
-
-                    // Inrush current threshold
-                    if (paramMask >> 6 & 0x01)
-                    {
-                        float newInrushCurrentThreshold = (float)msg.buf[7];
-                        if (newInrushCurrentThreshold != Channels[i].InrushCurrentThreshold)
-                        {
-                            Channels[i].InrushCurrentThreshold = newInrushCurrentThreshold;
-                            pendingEEPROMSave = true;
-                        }
-                    }
                 }
             }
         }
@@ -360,7 +484,29 @@ void ReadCANMessages()
                             pendingEEPROMSave = true;
                         }
                     }
-                                }
+                }
+            }
+        }
+
+        // Channel config - F4
+        if (msg.id == SystemParams.ChannelConfigDataCANID + 4)
+        {
+            for (int i = 0; i < NUM_CHANNELS; i++)
+            {
+                if (msg.buf[0] - 1 == i)
+                {
+                    uint8_t paramMask = msg.buf[7];
+
+                    if ((paramMask & 0x01) && msg.buf[1] <= INRUSH_CURRENT_MAX)
+                    {
+                        float newInrushCurrentThreshold = (float)msg.buf[1];
+                        if (newInrushCurrentThreshold != Channels[i].InrushCurrentThreshold)
+                        {
+                            Channels[i].InrushCurrentThreshold = newInrushCurrentThreshold;
+                            pendingEEPROMSave = true;
+                        }
+                    }
+                }
             }
         }
 
@@ -488,5 +634,6 @@ void BroadcastSystemStatus()
     systemStatusMsg2.buf[4] = SystemParams.AllowGPS;
     systemStatusMsg2.buf[5] = SystemParams.AllowMotionDetect;
     systemStatusMsg2.buf[6] = SystemParams.MotionDeadTime;
+    systemStatusMsg2.buf[7] = 0;
     Can.write(systemStatusMsg2);
 }

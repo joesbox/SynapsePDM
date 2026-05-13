@@ -525,6 +525,71 @@ bool LoadChannelConfig()
     return validCRC;
 }
 
+static void SanitizeLoadedSystemConfig()
+{
+    if (SystemParams.SystemCurrentLimit > SYSTEM_CURRENT_MAX)
+    {
+        SystemParams.SystemCurrentLimit = SYSTEM_CURRENT_MAX;
+    }
+
+    if (SystemParams.IMUwakeWindow == 0)
+    {
+        SystemParams.IMUwakeWindow = DEFAULT_WW;
+    }
+
+    if (SystemParams.MotionDeadTime > MAX_MOTION_DEAD_TIME)
+    {
+        SystemParams.MotionDeadTime = DEFAULT_MOTION_DEADTIME;
+    }
+
+    if (SystemParams.ChannelDataCANID == 0)
+    {
+        SystemParams.ChannelDataCANID = CHAN_CAN_ID;
+    }
+
+    if (SystemParams.DigitalInputDataCANID == 0)
+    {
+        SystemParams.DigitalInputDataCANID = DIG_INPUT_CAN_ID;
+    }
+
+    if (SystemParams.AnalogueInputDataCANID == 0)
+    {
+        SystemParams.AnalogueInputDataCANID = ANA_INPUT_CAN_ID;
+    }
+
+    if (SystemParams.SystemDataCANID == 0)
+    {
+        SystemParams.SystemDataCANID = SYS_CAN_ID;
+    }
+
+    if (SystemParams.SystemConfigDataCANID == 0)
+    {
+        SystemParams.SystemConfigDataCANID = SYS_CONFIG_CAN_ID;
+    }
+
+    if (SystemParams.ChannelConfigDataCANID == 0)
+    {
+        SystemParams.ChannelConfigDataCANID = CONF_CAN_ID;
+    }
+
+    SystemParams.CANResEnabled = SystemParams.CANResEnabled ? 1 : 0;
+    SystemParams.SpeedUnitPref = SystemParams.SpeedUnitPref ? 1 : 0;
+    SystemParams.DistanceUnitPref = SystemParams.DistanceUnitPref ? 1 : 0;
+    SystemParams.AllowData = SystemParams.AllowData ? 1 : 0;
+    SystemParams.AllowGPS = SystemParams.AllowGPS ? 1 : 0;
+    SystemParams.AllowMotionDetect = SystemParams.AllowMotionDetect ? 1 : 0;
+
+    SanitizeTimeZoneRule(&SystemParams.TimeZone);
+    if (SystemParams.TimeZone.DSTEnabled == 0)
+    {
+        SystemParams.DSTActive = 0;
+    }
+    else
+    {
+        SystemParams.DSTActive = SystemParams.DSTActive ? 1 : 0;
+    }
+}
+
 void SaveSystemConfig()
 {
     SPI_2.begin();
@@ -704,6 +769,7 @@ bool LoadSystemConfig()
     {
         validCRC = true;
         memcpy(&SystemParams, &SystemConfigData.data, sizeof(SystemParams));
+        SanitizeLoadedSystemConfig();
     }
 
     EEPROMindex = 0;
@@ -1185,7 +1251,7 @@ void LogData()
                                      &logLineIndex,
                                      "%s,%d,%.1f,%.1f,%.1f,%d,%d,%d,%s,",
                                      chanType,
-                                     Channels[i].Enabled,
+                                     IsChannelRuntimeEnabled(i) ? 1 : 0,
                                      ChannelRuntime[i].CurrentValue,
                                      Channels[i].CurrentThresholdHigh,
                                      Channels[i].CurrentThresholdLow,

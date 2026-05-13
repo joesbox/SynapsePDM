@@ -38,8 +38,6 @@
 #define R_IS 1000.0F  // Sense resistor value in ohms (1kΩ)
 #define ADCres 4095 // 12-bit ADC resolution
 
-#define k_ILIS 18407.72F // Current sense ratio
-
 #define PWM_CURRENT_FILTER_ALPHA 0.20f
 #define PWM_CURRENT_ZERO_SNAP_AMPS 0.05f
 

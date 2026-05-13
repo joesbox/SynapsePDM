@@ -44,6 +44,15 @@ bool SyncChannelTypeForAssignedInput(uint8_t channelIndex);
 /// @brief Coerces all channels bound to an analogue input to match that input's mode.
 bool SyncChannelTypesForAnalogueInput(uint8_t inputIndex);
 
+/// @brief Clamp a persisted analogue input configuration to supported values.
+void SanitizeAnalogueInputConfig(AnalogueInputs &input);
+
+/// @brief Read an analogue input and update its live voltage and converted value.
+float ReadAnalogueInputValue(int inputIndex);
+
+/// @brief Returns the live runtime enabled state for a channel.
+bool IsChannelRuntimeEnabled(uint8_t channelIndex);
+
 /// @brief Disables all pull-up and pull-down resistor outputs
 void PullResistorSleep();
 
