@@ -1339,7 +1339,7 @@ SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:2096:0: information: Skipping confi
 SynapsePDM/src/GSM.cpp:278:9: style: Consider using std::find_if algorithm instead of a raw loop. [useStlAlgorithm]
         {
         ^
-SynapsePDM/src/Globals.cpp:78:5: portability: Using memset() on struct which contains a floating point number. [memsetClassFloat]
+SynapsePDM/src/Globals.cpp:80:5: portability: Using memset() on struct which contains a floating point number. [memsetClassFloat]
     memset(&Channels[i], 0, sizeof(ChannelConfig));
     ^
 SynapsePDM/src/IMU.cpp:100:7: style: Variable 'err' is reassigned a value before the old one has been used. [redundantAssignment]
@@ -1360,214 +1360,292 @@ SynapsePDM/src/IMU.cpp:100:7: note: err is assigned
 SynapsePDM/src/IMU.cpp:110:7: note: err is overwritten
   err = imu.setConfig(gyroConfig);
       ^
-SynapsePDM/src/InputHandler.cpp:373:29: style: Local variable 'PowerState' shadows outer variable [shadowVariable]
+SynapsePDM/src/InputHandler.cpp:397:29: style: Local variable 'PowerState' shadows outer variable [shadowVariable]
     extern volatile uint8_t PowerState;
                             ^
-SynapsePDM/src/System.h:134:25: note: Shadowed declaration
+SynapsePDM/src/System.h:136:25: note: Shadowed declaration
 extern volatile uint8_t PowerState;
                         ^
-SynapsePDM/src/InputHandler.cpp:373:29: note: Shadow variable
+SynapsePDM/src/InputHandler.cpp:397:29: note: Shadow variable
     extern volatile uint8_t PowerState;
                             ^
-SynapsePDM/src/InputHandler.cpp:374:17: style: Local variable 'runOnEligible' shadows outer variable [shadowVariable]
+SynapsePDM/src/InputHandler.cpp:398:17: style: Local variable 'runOnEligible' shadows outer variable [shadowVariable]
     extern bool runOnEligible[NUM_CHANNELS];
                 ^
-SynapsePDM/src/Globals.h:260:13: note: Shadowed declaration
+SynapsePDM/src/Globals.h:262:13: note: Shadowed declaration
 extern bool runOnEligible[NUM_CHANNELS];
             ^
-SynapsePDM/src/InputHandler.cpp:374:17: note: Shadow variable
+SynapsePDM/src/InputHandler.cpp:398:17: note: Shadow variable
     extern bool runOnEligible[NUM_CHANNELS];
                 ^
-SynapsePDM/src/InputHandler.cpp:375:21: style: Local variable 'runOnDeadline' shadows outer variable [shadowVariable]
+SynapsePDM/src/InputHandler.cpp:399:21: style: Local variable 'runOnDeadline' shadows outer variable [shadowVariable]
     extern uint32_t runOnDeadline[NUM_CHANNELS];
                     ^
-SynapsePDM/src/Globals.h:263:17: note: Shadowed declaration
+SynapsePDM/src/Globals.h:265:17: note: Shadowed declaration
 extern uint32_t runOnDeadline[NUM_CHANNELS];
                 ^
-SynapsePDM/src/InputHandler.cpp:375:21: note: Shadow variable
+SynapsePDM/src/InputHandler.cpp:399:21: note: Shadow variable
     extern uint32_t runOnDeadline[NUM_CHANNELS];
                     ^
-SynapsePDM/src/OutputHandler.cpp:464:16: style: Redundant initialization for 'amps'. The initialized value is overwritten before it is read. [redundantInitialization]
+SynapsePDM/src/OutputHandler.cpp:490:16: style: Redundant initialization for 'amps'. The initialized value is overwritten before it is read. [redundantInitialization]
           amps = 0.0f;
                ^
-SynapsePDM/src/OutputHandler.cpp:458:20: note: amps is initialized
+SynapsePDM/src/OutputHandler.cpp:484:20: note: amps is initialized
         float amps = measuredAmps;
                    ^
-SynapsePDM/src/OutputHandler.cpp:464:16: note: amps is overwritten
+SynapsePDM/src/OutputHandler.cpp:490:16: note: amps is overwritten
           amps = 0.0f;
                ^
-SynapsePDM/src/OutputHandler.cpp:432:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
+SynapsePDM/src/OutputHandler.cpp:458:15: style: The scope of the variable 'analogMean' can be reduced. [variableScope]
         float analogMean = 0.0f;
               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'CurrentValue' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'CurrentValue' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:149:27: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:332:27: note: Address of variable taken here.
         AppendStatusBytes(&ChannelRuntime[i].CurrentValue, sizeof(ChannelRuntime[i].CurrentValue), checksum);
                           ^
-SynapsePDM/src/SerialComms.cpp:149:27: note: Calling function 'AppendStatusBytes', 1st argument '&ChannelRuntime[i].CurrentValue' value is lifetime=CurrentValue
+SynapsePDM/src/SerialComms.cpp:332:27: note: Calling function 'AppendStatusBytes', 1st argument '&ChannelRuntime[i].CurrentValue' value is lifetime=CurrentValue
         AppendStatusBytes(&ChannelRuntime[i].CurrentValue, sizeof(ChannelRuntime[i].CurrentValue), checksum);
                           ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'CurrentValue' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'CurrentValue' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'InputVoltage' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'InputVoltage' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:158:27: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:341:27: note: Address of variable taken here.
         AppendStatusBytes(&AnalogueIns[i].InputVoltage, sizeof(AnalogueIns[i].InputVoltage), checksum);
                           ^
-SynapsePDM/src/SerialComms.cpp:158:27: note: Calling function 'AppendStatusBytes', 1st argument '&AnalogueIns[i].InputVoltage' value is lifetime=InputVoltage
+SynapsePDM/src/SerialComms.cpp:341:27: note: Calling function 'AppendStatusBytes', 1st argument '&AnalogueIns[i].InputVoltage' value is lifetime=InputVoltage
         AppendStatusBytes(&AnalogueIns[i].InputVoltage, sizeof(AnalogueIns[i].InputVoltage), checksum);
                           ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'InputVoltage' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'InputVoltage' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'InputValue' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'InputValue' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:159:27: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:342:27: note: Address of variable taken here.
         AppendStatusBytes(&AnalogueIns[i].InputValue, sizeof(AnalogueIns[i].InputValue), checksum);
                           ^
-SynapsePDM/src/SerialComms.cpp:159:27: note: Calling function 'AppendStatusBytes', 1st argument '&AnalogueIns[i].InputValue' value is lifetime=InputValue
+SynapsePDM/src/SerialComms.cpp:342:27: note: Calling function 'AppendStatusBytes', 1st argument '&AnalogueIns[i].InputValue' value is lifetime=InputValue
         AppendStatusBytes(&AnalogueIns[i].InputValue, sizeof(AnalogueIns[i].InputValue), checksum);
                           ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'InputValue' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'InputValue' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'SystemTemperature' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'SystemTemperature' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:162:23: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:345:23: note: Address of variable taken here.
     AppendStatusBytes(&SystemRuntimeParams.SystemTemperature, sizeof(SystemRuntimeParams.SystemTemperature), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:162:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.SystemTemperature' value is lifetime=SystemTemperature
+SynapsePDM/src/SerialComms.cpp:345:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.SystemTemperature' value is lifetime=SystemTemperature
     AppendStatusBytes(&SystemRuntimeParams.SystemTemperature, sizeof(SystemRuntimeParams.SystemTemperature), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'SystemTemperature' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'SystemTemperature' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'SIMModuleTemp' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'SIMModuleTemp' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:163:23: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:346:23: note: Address of variable taken here.
     AppendStatusBytes(&SystemRuntimeParams.SIMModuleTemp, sizeof(SystemRuntimeParams.SIMModuleTemp), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:163:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.SIMModuleTemp' value is lifetime=SIMModuleTemp
+SynapsePDM/src/SerialComms.cpp:346:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.SIMModuleTemp' value is lifetime=SIMModuleTemp
     AppendStatusBytes(&SystemRuntimeParams.SIMModuleTemp, sizeof(SystemRuntimeParams.SIMModuleTemp), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'SIMModuleTemp' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'SIMModuleTemp' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'IMUTemp' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'IMUTemp' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:164:23: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:347:23: note: Address of variable taken here.
     AppendStatusBytes(&SystemRuntimeParams.IMUTemp, sizeof(SystemRuntimeParams.IMUTemp), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:164:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.IMUTemp' value is lifetime=IMUTemp
+SynapsePDM/src/SerialComms.cpp:347:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.IMUTemp' value is lifetime=IMUTemp
     AppendStatusBytes(&SystemRuntimeParams.IMUTemp, sizeof(SystemRuntimeParams.IMUTemp), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'IMUTemp' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'IMUTemp' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'VBatt' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'VBatt' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:165:23: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:348:23: note: Address of variable taken here.
     AppendStatusBytes(&SystemRuntimeParams.VBatt, sizeof(SystemRuntimeParams.VBatt), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:165:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.VBatt' value is lifetime=VBatt
+SynapsePDM/src/SerialComms.cpp:348:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.VBatt' value is lifetime=VBatt
     AppendStatusBytes(&SystemRuntimeParams.VBatt, sizeof(SystemRuntimeParams.VBatt), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'VBatt' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'VBatt' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'SystemCurrent' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'SystemCurrent' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:166:23: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:349:23: note: Address of variable taken here.
     AppendStatusBytes(&SystemRuntimeParams.SystemCurrent, sizeof(SystemRuntimeParams.SystemCurrent), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:166:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.SystemCurrent' value is lifetime=SystemCurrent
+SynapsePDM/src/SerialComms.cpp:349:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.SystemCurrent' value is lifetime=SystemCurrent
     AppendStatusBytes(&SystemRuntimeParams.SystemCurrent, sizeof(SystemRuntimeParams.SystemCurrent), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'SystemCurrent' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'SystemCurrent' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'ErrorFlags' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'ErrorFlags' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:167:23: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:350:23: note: Address of variable taken here.
     AppendStatusBytes(&SystemRuntimeParams.ErrorFlags, sizeof(SystemRuntimeParams.ErrorFlags), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:167:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.ErrorFlags' value is lifetime=ErrorFlags
+SynapsePDM/src/SerialComms.cpp:350:23: note: Calling function 'AppendStatusBytes', 1st argument '&SystemRuntimeParams.ErrorFlags' value is lifetime=ErrorFlags
     AppendStatusBytes(&SystemRuntimeParams.ErrorFlags, sizeof(SystemRuntimeParams.ErrorFlags), checksum);
                       ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'ErrorFlags' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'ErrorFlags' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:109:31: warning: The address of local variable 'CurrentThresholdHigh' might be accessed at non-zero index. [objectIndex]
+SynapsePDM/src/SerialComms.cpp:292:31: warning: The address of local variable 'CurrentThresholdHigh' might be accessed at non-zero index. [objectIndex]
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:186:27: note: Address of variable taken here.
+SynapsePDM/src/SerialComms.cpp:369:27: note: Address of variable taken here.
         AppendStatusBytes(&Channels[i].CurrentThresholdHigh, sizeof(Channels[i].CurrentThresholdHigh), checksum);
                           ^
-SynapsePDM/src/SerialComms.cpp:186:27: note: Calling function 'AppendStatusBytes', 1st argument '&Channels[i].CurrentThresholdHigh' value is lifetime=CurrentThresholdHigh
+SynapsePDM/src/SerialComms.cpp:369:27: note: Calling function 'AppendStatusBytes', 1st argument '&Channels[i].CurrentThresholdHigh' value is lifetime=CurrentThresholdHigh
         AppendStatusBytes(&Channels[i].CurrentThresholdHigh, sizeof(Channels[i].CurrentThresholdHigh), checksum);
                           ^
-SynapsePDM/src/SerialComms.cpp:109:31: note: The address of local variable 'CurrentThresholdHigh' might be accessed at non-zero index.
+SynapsePDM/src/SerialComms.cpp:292:31: note: The address of local variable 'CurrentThresholdHigh' might be accessed at non-zero index.
         AppendStatusByte(bytes[i], checksum);
                               ^
-SynapsePDM/src/SerialComms.cpp:743:42: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/SerialComms.cpp:637:51: warning: The address of local variable 'payload' might be accessed at non-zero index. [objectIndex]
+        framedPacketBuffer[writeIndex++] = payload[i];
+                                                  ^
+SynapsePDM/src/SerialComms.cpp:200:69: note: Address of variable taken here.
+    SendFramedPacket(COMMAND_ID_CONTROLLER_TELEMETRY, (const byte *)&payload, sizeof(payload));
+                                                                    ^
+SynapsePDM/src/SerialComms.cpp:200:55: note: Calling function 'SendFramedPacket', 2nd argument '(const byte*)&payload' value is lifetime=payload
+    SendFramedPacket(COMMAND_ID_CONTROLLER_TELEMETRY, (const byte *)&payload, sizeof(payload));
+                                                      ^
+SynapsePDM/src/SerialComms.cpp:617:21: note: Assuming condition is Assuming condition is false
+    if (frameLength > sizeof(framedPacketBuffer))
+                    ^
+SynapsePDM/src/SerialComms.cpp:637:51: note: The address of local variable 'payload' might be accessed at non-zero index.
+        framedPacketBuffer[writeIndex++] = payload[i];
+                                                  ^
+SynapsePDM/src/SerialComms.cpp:638:28: warning: The address of local variable 'payload' might be accessed at non-zero index. [objectIndex]
+        checksum += payload[i];
+                           ^
+SynapsePDM/src/SerialComms.cpp:200:69: note: Address of variable taken here.
+    SendFramedPacket(COMMAND_ID_CONTROLLER_TELEMETRY, (const byte *)&payload, sizeof(payload));
+                                                                    ^
+SynapsePDM/src/SerialComms.cpp:200:55: note: Calling function 'SendFramedPacket', 2nd argument '(const byte*)&payload' value is lifetime=payload
+    SendFramedPacket(COMMAND_ID_CONTROLLER_TELEMETRY, (const byte *)&payload, sizeof(payload));
+                                                      ^
+SynapsePDM/src/SerialComms.cpp:617:21: note: Assuming condition is Assuming condition is false
+    if (frameLength > sizeof(framedPacketBuffer))
+                    ^
+SynapsePDM/src/SerialComms.cpp:638:28: note: The address of local variable 'payload' might be accessed at non-zero index.
+        checksum += payload[i];
+                           ^
+SynapsePDM/src/SerialComms.cpp:929:42: style: Variable 'connectionStatus' is reassigned a value before the old one has been used. [redundantAssignment]
                         connectionStatus = 4;
                                          ^
-SynapsePDM/src/SerialComms.cpp:726:38: note: connectionStatus is assigned
+SynapsePDM/src/SerialComms.cpp:912:38: note: connectionStatus is assigned
                     connectionStatus = 3;
                                      ^
-SynapsePDM/src/SerialComms.cpp:743:42: note: connectionStatus is overwritten
+SynapsePDM/src/SerialComms.cpp:929:42: note: connectionStatus is overwritten
                         connectionStatus = 4;
                                          ^
-SynapsePDM/src/SerialComms.cpp:744:37: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
+SynapsePDM/src/SerialComms.cpp:930:37: style: Variable 'validPacket' is reassigned a value before the old one has been used. [redundantAssignment]
                         validPacket = true;
                                     ^
-SynapsePDM/src/SerialComms.cpp:727:33: note: validPacket is assigned
+SynapsePDM/src/SerialComms.cpp:913:33: note: validPacket is assigned
                     validPacket = true;
                                 ^
-SynapsePDM/src/SerialComms.cpp:744:37: note: validPacket is overwritten
+SynapsePDM/src/SerialComms.cpp:930:37: note: validPacket is overwritten
                         validPacket = true;
                                     ^
-SynapsePDM/src/SerialComms.cpp:827:89: style: Checking if unsigned expression 'Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime' is less than zero. [unsignedLessThanZero]
+SynapsePDM/src/SerialComms.cpp:1013:89: style: Checking if unsigned expression 'Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime' is less than zero. [unsignedLessThanZero]
                                 if (Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime < 0)
                                                                                         ^
-SynapsePDM/src/Storage.cpp:1105:10: style: The scope of the variable 'logLine' can be reduced. [variableScope]
+SynapsePDM/src/SerialComms.cpp:105:11: style: struct member 'ControllerTelemetryPayload::AccelX' is never used. [unusedStructMember]
+    float AccelX;
+          ^
+SynapsePDM/src/SerialComms.cpp:106:11: style: struct member 'ControllerTelemetryPayload::AccelY' is never used. [unusedStructMember]
+    float AccelY;
+          ^
+SynapsePDM/src/SerialComms.cpp:107:11: style: struct member 'ControllerTelemetryPayload::AccelZ' is never used. [unusedStructMember]
+    float AccelZ;
+          ^
+SynapsePDM/src/SerialComms.cpp:108:11: style: struct member 'ControllerTelemetryPayload::GyroX' is never used. [unusedStructMember]
+    float GyroX;
+          ^
+SynapsePDM/src/SerialComms.cpp:109:11: style: struct member 'ControllerTelemetryPayload::GyroY' is never used. [unusedStructMember]
+    float GyroY;
+          ^
+SynapsePDM/src/SerialComms.cpp:110:11: style: struct member 'ControllerTelemetryPayload::GyroZ' is never used. [unusedStructMember]
+    float GyroZ;
+          ^
+SynapsePDM/src/SerialComms.cpp:111:11: style: struct member 'ControllerTelemetryPayload::MagX' is never used. [unusedStructMember]
+    float MagX;
+          ^
+SynapsePDM/src/SerialComms.cpp:112:11: style: struct member 'ControllerTelemetryPayload::MagY' is never used. [unusedStructMember]
+    float MagY;
+          ^
+SynapsePDM/src/SerialComms.cpp:113:11: style: struct member 'ControllerTelemetryPayload::MagZ' is never used. [unusedStructMember]
+    float MagZ;
+          ^
+SynapsePDM/src/SerialComms.cpp:114:11: style: struct member 'ControllerTelemetryPayload::Latitude' is never used. [unusedStructMember]
+    float Latitude;
+          ^
+SynapsePDM/src/SerialComms.cpp:115:11: style: struct member 'ControllerTelemetryPayload::Longitude' is never used. [unusedStructMember]
+    float Longitude;
+          ^
+SynapsePDM/src/SerialComms.cpp:116:11: style: struct member 'ControllerTelemetryPayload::Speed' is never used. [unusedStructMember]
+    float Speed;
+          ^
+SynapsePDM/src/SerialComms.cpp:117:11: style: struct member 'ControllerTelemetryPayload::Altitude' is never used. [unusedStructMember]
+    float Altitude;
+          ^
+SynapsePDM/src/SerialComms.cpp:118:11: style: struct member 'ControllerTelemetryPayload::Accuracy' is never used. [unusedStructMember]
+    float Accuracy;
+          ^
+SynapsePDM/src/SerialComms.cpp:119:13: style: struct member 'ControllerTelemetryPayload::VisibleSatellites' is never used. [unusedStructMember]
+    int16_t VisibleSatellites;
+            ^
+SynapsePDM/src/SerialComms.cpp:120:13: style: struct member 'ControllerTelemetryPayload::UsedSatellites' is never used. [unusedStructMember]
+    int16_t UsedSatellites;
+            ^
+SynapsePDM/src/Storage.cpp:1171:10: style: The scope of the variable 'logLine' can be reduced. [variableScope]
     char logLine[LOG_LINE_BUFFER_SIZE] = {0};
          ^
-SynapsePDM/src/Storage.cpp:1107:12: style: The scope of the variable 'expectedBytes' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:1173:12: style: The scope of the variable 'expectedBytes' can be reduced. [variableScope]
     size_t expectedBytes = 0;
            ^
-SynapsePDM/src/Storage.cpp:1547:14: style: The scope of the variable 'linesSent' can be reduced. [variableScope]
+SynapsePDM/src/Storage.cpp:1613:14: style: The scope of the variable 'linesSent' can be reduced. [variableScope]
     uint16_t linesSent = 0;
              ^
-SynapsePDM/src/Storage.cpp:1375:18: style: Local variable 'fileName' shadows outer variable [shadowVariable]
+SynapsePDM/src/Storage.cpp:1441:18: style: Local variable 'fileName' shadows outer variable [shadowVariable]
             char fileName[24] = {0};
                  ^
 SynapsePDM/src/Storage.h:78:13: note: Shadowed declaration
 extern char fileName[];
             ^
-SynapsePDM/src/Storage.cpp:1375:18: note: Shadow variable
+SynapsePDM/src/Storage.cpp:1441:18: note: Shadow variable
             char fileName[24] = {0};
                  ^
-SynapsePDM/src/Storage.cpp:1654:18: style: Local variable 'fileName' shadows outer variable [shadowVariable]
+SynapsePDM/src/Storage.cpp:1720:18: style: Local variable 'fileName' shadows outer variable [shadowVariable]
             char fileName[32] = {0};
                  ^
 SynapsePDM/src/Storage.h:78:13: note: Shadowed declaration
 extern char fileName[];
             ^
-SynapsePDM/src/Storage.cpp:1654:18: note: Shadow variable
+SynapsePDM/src/Storage.cpp:1720:18: note: Shadow variable
             char fileName[32] = {0};
                  ^
-SynapsePDM/src/Storage.cpp:1107:26: style: Variable 'expectedBytes' is assigned a value that is never used. [unreadVariable]
+SynapsePDM/src/Storage.cpp:1173:26: style: Variable 'expectedBytes' is assigned a value that is never used. [unreadVariable]
     size_t expectedBytes = 0;
                          ^
 SynapsePDM/src/System.cpp:99:13: style: Local variable 'year' shadows outer variable [shadowVariable]
@@ -1606,7 +1684,7 @@ extern int day;
 SynapsePDM/src/System.cpp:212:17: note: Shadow variable
         uint8_t day = GetDaysInMonth(fullYear, month);
                 ^
-SynapsePDM/src/Storage.cpp:1348:0: style: The function 'CleanupOrphanedLogFiles' is never used. [unusedFunction]
+SynapsePDM/src/Storage.cpp:1414:0: style: The function 'CleanupOrphanedLogFiles' is never used. [unusedFunction]
 
 ^
 SynapsePDM/src/FirmwareUpdate.cpp:352:0: style: The function 'ClearFirmwareUpdateDiagnostic' is never used. [unusedFunction]
@@ -1648,10 +1726,10 @@ SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:864:0: style: The function 'bmm350_
 SynapsePDM/lib/BMM350_SensorAPI/src/bmm350.c:416:0: style: The function 'bmm350_soft_reset' is never used. [unusedFunction]
 
 ^
-SynapsePDM/src/main.cpp:519:0: style: The function 'loop' is never used. [unusedFunction]
+SynapsePDM/src/main.cpp:580:0: style: The function 'loop' is never used. [unusedFunction]
 
 ^
-SynapsePDM/src/main.cpp:166:0: style: The function 'setup' is never used. [unusedFunction]
+SynapsePDM/src/main.cpp:184:0: style: The function 'setup' is never used. [unusedFunction]
 
 ^
 nofile:0:0: information: Cppcheck cannot find all the include files (use --check-config for details) [missingInclude]
