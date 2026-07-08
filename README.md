@@ -18,8 +18,3 @@ See https://wiki.joeblogs.uk/ for more info.
 
 ## License
 This work is licensed under a GPL-3.0 license.
-
-### Disclaimer 
-Please don’t use this in safety-critical systems.
-
-Use it at your own risk.
