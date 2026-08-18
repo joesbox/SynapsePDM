@@ -72,6 +72,35 @@ static void ScheduleMagnetometerRecovery(uint32_t delayMs)
   nextMagnetometerRecoveryAt = millis() + delayMs;
 }
 
+static int8_t ConfigurePrimaryIMURunProfile()
+{
+  int8_t err = BMI2_OK;
+
+  err |= imu.enableFeature(BMI2_ACCEL);
+  err |= imu.enableFeature(BMI2_GYRO);
+  err |= imu.enableFeature(BMI2_ANY_MOTION);
+
+  bmi2_sens_config accelConfig;
+  accelConfig.type = BMI2_ACCEL;
+  accelConfig.cfg.acc.odr = BMI2_ACC_ODR_50HZ;
+  accelConfig.cfg.acc.bwp = BMI2_ACC_OSR4_AVG1;
+  accelConfig.cfg.acc.filter_perf = BMI2_PERF_OPT_MODE;
+  accelConfig.cfg.acc.range = BMI2_ACC_RANGE_2G;
+  err |= imu.setConfig(accelConfig);
+
+  bmi2_sens_config gyroConfig;
+  gyroConfig.type = BMI2_GYRO;
+  gyroConfig.cfg.gyr.odr = BMI2_GYR_ODR_50HZ;
+  gyroConfig.cfg.gyr.bwp = BMI2_GYR_OSR4_MODE;
+  gyroConfig.cfg.gyr.filter_perf = BMI2_PERF_OPT_MODE;
+  gyroConfig.cfg.gyr.ois_range = BMI2_GYR_OIS_250;
+  gyroConfig.cfg.gyr.range = BMI2_GYR_RANGE_125;
+  gyroConfig.cfg.gyr.noise_perf = BMI2_PERF_OPT_MODE;
+  err |= imu.setConfig(gyroConfig);
+
+  return err;
+}
+
 static bool InitialisePrimaryIMU()
 {
   IMUOK = false;
@@ -87,27 +116,31 @@ static bool InitialisePrimaryIMU()
     return false;
   }
 
-  err |= imu.enableFeature(BMI2_ACCEL);
-  err |= imu.enableFeature(BMI2_GYRO);
-  err |= imu.enableFeature(BMI2_ANY_MOTION);
+  err = ConfigurePrimaryIMURunProfile();
 
-  bmi2_sens_config accelConfig;
-  accelConfig.type = BMI2_ACCEL;
-  accelConfig.cfg.acc.odr = BMI2_ACC_ODR_50HZ;
-  accelConfig.cfg.acc.bwp = BMI2_ACC_OSR4_AVG1;
-  accelConfig.cfg.acc.filter_perf = BMI2_PERF_OPT_MODE;
-  accelConfig.cfg.acc.range = BMI2_ACC_RANGE_2G;
-  err = imu.setConfig(accelConfig);
+  IMUOK = !err;
+  return IMUOK;
+}
 
-  bmi2_sens_config gyroConfig;
-  gyroConfig.type = BMI2_GYRO;
-  gyroConfig.cfg.gyr.odr = BMI2_GYR_ODR_50HZ;
-  gyroConfig.cfg.gyr.bwp = BMI2_GYR_OSR4_MODE;
-  gyroConfig.cfg.gyr.filter_perf = BMI2_PERF_OPT_MODE;
-  gyroConfig.cfg.gyr.ois_range = BMI2_GYR_OIS_250;
-  gyroConfig.cfg.gyr.range = BMI2_GYR_RANGE_125;
-  gyroConfig.cfg.gyr.noise_perf = BMI2_PERF_OPT_MODE;
-  err = imu.setConfig(gyroConfig);
+static bool RestorePrimaryIMUAfterSleep()
+{
+  IMUOK = false;
+
+  Wire.begin();
+  Wire.setClock(I2C_BUS_SPEED);
+
+  uint8_t status = 0;
+  if (imu.getStatus(&status) != BMI2_OK)
+  {
+    return InitialisePrimaryIMU();
+  }
+
+  int8_t err = imu.disableAdvancedPowerSave();
+
+  if (err == BMI2_OK)
+  {
+    err |= ConfigurePrimaryIMURunProfile();
+  }
 
   IMUOK = !err;
   return IMUOK;
@@ -279,7 +312,7 @@ void InitialiseIMU()
 void ReinitialiseIMUAfterWake()
 {
   ClearImuData();
-  InitialisePrimaryIMU();
+  RestorePrimaryIMUAfterSleep();
   ReinitialiseMagnetometer();
 }
 
@@ -422,6 +455,6 @@ void EnableMotionDetect()
 void DisableMotionDetect()
 {
   int8_t err = BMI2_OK;
-  imu.disableFeature(BMI2_ANY_MOTION);
+  err |= imu.disableFeature(BMI2_ANY_MOTION);
   IMUOK = !err;
 }

@@ -36,7 +36,7 @@
 #include <backup.h>
 
 // Firmware version
-#define FW_VER "v0.9"
+#define FW_VER "v0.10"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -151,6 +151,7 @@
 #define PC_COMMS_CHECKSUM_ERROR 0x0020
 #define GPS_ERROR 0x0040
 #define TEMP_WARNING 0x0080
+#define TELEMETRY_OFFLINE 0x0100
 
 // Channel error bitmasks
 #define CHN_OVERCURRENT 0x01
@@ -223,6 +224,10 @@
 #define IMU_WAKE 6
 #define IMU_WAKE_WINDOW 7
 
+// Wake sources reported through telemetry
+#define WAKE_SOURCE_IGNITION 0
+#define WAKE_SOURCE_IMU 1
+
 // SPI 2 Pins
 #define PICO PB15
 #define POCI PB14
@@ -249,20 +254,17 @@
 // Maximum soft stop time in milliseconds
 #define MAX_SOFT_STOP_TIME 5000
 
-// Max run on time in milliseconds
-#define MAX_RUN_ON_TIME 3600000
-
 // Maximum intermittent on/off time in milliseconds
 #define MAX_INTERMITTENT_TIME 10000
 
 // EEPROM write delay (milliseconds) after a change is made to allow time for multiple changes to be made without writing to EEPROM after each change
 #define EEPROM_WRITE_DELAY 5000
 
-/// @brief Tracks which channels are eligible for RunOn (were enabled at PREPARE_SLEEP entry)
-extern bool runOnEligible[NUM_CHANNELS];
+/// @brief Tracks which channels are eligible for ignition-off delayed off (were enabled at PREPARE_SLEEP entry)
+extern bool ignitionDelayedOffEligible[NUM_CHANNELS];
 
-/// @brief Absolute millis deadline for each active RunOn window. Zero means inactive.
-extern uint32_t runOnDeadline[NUM_CHANNELS];
+/// @brief Absolute millis deadline for each active ignition-off delayed-off window. Zero means inactive.
+extern uint32_t ignitionDelayedOffDeadline[NUM_CHANNELS];
 
 /// @brief Output enabled flags
 extern bool enabledFlags[NUM_CHANNELS];
@@ -290,6 +292,9 @@ extern bool bootToSleep;
 
 /// @brief IMU wake mode flag
 extern volatile bool IMUWakeMode;
+
+/// @brief Source of the current wake cycle for telemetry
+extern volatile uint8_t WakeSource;
 
 /// @brief Ignition wake pending flag
 extern volatile bool ignitionWakePending;

@@ -26,6 +26,38 @@
 static bool intermittentInputActive[NUM_CHANNELS] = {false};
 static bool intermittentOutputActive[NUM_CHANNELS] = {false};
 static uint32_t intermittentPhaseTimers[NUM_CHANNELS] = {0};
+static bool channelSourceDemandState[NUM_CHANNELS] = {false};
+static bool channelDelayedEnabledState[NUM_CHANNELS] = {false};
+static bool delayedOnPending[NUM_CHANNELS] = {false};
+static uint32_t delayedOnDeadline[NUM_CHANNELS] = {0};
+static bool delayedOffPending[NUM_CHANNELS] = {false};
+static uint32_t delayedOffDeadline[NUM_CHANNELS] = {0};
+
+static void ResetChannelInputTimingState(uint8_t channelIndex)
+{
+    if (channelIndex >= NUM_CHANNELS)
+    {
+        return;
+    }
+
+    intermittentInputActive[channelIndex] = false;
+    intermittentOutputActive[channelIndex] = false;
+    intermittentPhaseTimers[channelIndex] = 0;
+    channelSourceDemandState[channelIndex] = false;
+    channelDelayedEnabledState[channelIndex] = false;
+    delayedOnPending[channelIndex] = false;
+    delayedOnDeadline[channelIndex] = 0;
+    delayedOffPending[channelIndex] = false;
+    delayedOffDeadline[channelIndex] = 0;
+}
+
+void ResetChannelInputTimingStates()
+{
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+        ResetChannelInputTimingState(i);
+    }
+}
 
 static void SetChannelRuntimeEnabledState(uint8_t channelIndex, bool enabled)
 {
@@ -351,6 +383,102 @@ static void ResetIntermittentState(uint8_t channelIndex)
     intermittentPhaseTimers[channelIndex] = 0;
 }
 
+static bool ApplyChannelDelayTiming(uint8_t channelIndex, bool rawDemand)
+{
+    if (channelIndex >= NUM_CHANNELS)
+    {
+        return rawDemand;
+    }
+
+    uint32_t now = millis();
+    bool delayedOnEnabled = Channels[channelIndex].DelayedOn && (Channels[channelIndex].DelayedOnTime >= MIN_DELAY_TIME_MS);
+    bool assignedInputDelayedOffEnabled = Channels[channelIndex].DelayedOff &&
+                                          (Channels[channelIndex].DelayedOffTrigger == DELAYED_OFF_ASSIGNED_INPUT) &&
+                                          (Channels[channelIndex].DelayedOffTime >= MIN_DELAY_TIME_MS);
+
+    bool afterDelayedOn = rawDemand;
+    if (delayedOnEnabled)
+    {
+        if (rawDemand)
+        {
+            if (channelDelayedEnabledState[channelIndex])
+            {
+                delayedOnPending[channelIndex] = false;
+                delayedOnDeadline[channelIndex] = 0;
+                afterDelayedOn = true;
+            }
+            else
+            {
+                if (!delayedOnPending[channelIndex])
+                {
+                    delayedOnPending[channelIndex] = true;
+                    delayedOnDeadline[channelIndex] = now + Channels[channelIndex].DelayedOnTime;
+                }
+
+                afterDelayedOn = (int32_t)(now - delayedOnDeadline[channelIndex]) >= 0;
+                if (afterDelayedOn)
+                {
+                    delayedOnPending[channelIndex] = false;
+                    delayedOnDeadline[channelIndex] = 0;
+                }
+            }
+        }
+        else
+        {
+            delayedOnPending[channelIndex] = false;
+            delayedOnDeadline[channelIndex] = 0;
+            afterDelayedOn = false;
+        }
+    }
+    else
+    {
+        delayedOnPending[channelIndex] = false;
+        delayedOnDeadline[channelIndex] = 0;
+    }
+
+    bool delayedEnabled = afterDelayedOn;
+    if (assignedInputDelayedOffEnabled)
+    {
+        if (afterDelayedOn)
+        {
+            delayedOffPending[channelIndex] = false;
+            delayedOffDeadline[channelIndex] = 0;
+            delayedEnabled = true;
+        }
+        else if (channelDelayedEnabledState[channelIndex])
+        {
+            if (!delayedOffPending[channelIndex])
+            {
+                delayedOffPending[channelIndex] = true;
+                delayedOffDeadline[channelIndex] = now + Channels[channelIndex].DelayedOffTime;
+            }
+
+            delayedEnabled = (int32_t)(now - delayedOffDeadline[channelIndex]) < 0;
+            if (!delayedEnabled)
+            {
+                delayedOffPending[channelIndex] = false;
+                delayedOffDeadline[channelIndex] = 0;
+            }
+        }
+        else
+        {
+            delayedOffPending[channelIndex] = false;
+            delayedOffDeadline[channelIndex] = 0;
+            delayedEnabled = false;
+        }
+    }
+    else
+    {
+        delayedOffPending[channelIndex] = false;
+        delayedOffDeadline[channelIndex] = 0;
+        delayedEnabled = afterDelayedOn;
+    }
+
+    channelSourceDemandState[channelIndex] = rawDemand;
+    channelDelayedEnabledState[channelIndex] = delayedEnabled;
+    return delayedEnabled;
+}
+
 static void ResolveChannelInputSource(uint8_t channelIndex, int *inputPin, bool *inputIsDigital)
 {
     if (inputPin == nullptr || inputIsDigital == nullptr)
@@ -392,26 +520,40 @@ static void ResolveChannelInputSource(uint8_t channelIndex, int *inputPin, bool 
     }
 }
 
-static bool ReadChannelDigitalInputState(uint8_t channelIndex, int inputPin, bool inputIsDigital, bool requireDigitalAnalogueConfig)
+static bool IsIgnitionDelayedOffActive(uint8_t channelIndex)
 {
     extern volatile uint8_t PowerState;
-    extern bool runOnEligible[NUM_CHANNELS];
-    extern uint32_t runOnDeadline[NUM_CHANNELS];
+    extern bool ignitionDelayedOffEligible[NUM_CHANNELS];
+    extern uint32_t ignitionDelayedOffDeadline[NUM_CHANNELS];
 
-    if ((PowerState == 1 /*PREPARE_SLEEP*/ || PowerState == 2 /*SLEEPING*/) &&
-        Channels[channelIndex].RunOn &&
-        runOnEligible[channelIndex] &&
-        runOnDeadline[channelIndex] != 0 &&
-        (int32_t)(millis() - runOnDeadline[channelIndex]) < 0)
+    if (channelIndex >= NUM_CHANNELS)
     {
-        return true;
+        return false;
     }
 
-    if (ChannelRuntime[channelIndex].Override)
+    if ((PowerState != 1 /*PREPARE_SLEEP*/) && (PowerState != 2 /*SLEEPING*/))
     {
-        return true;
+        return false;
     }
 
+    if (!Channels[channelIndex].DelayedOff ||
+        Channels[channelIndex].DelayedOffTrigger != DELAYED_OFF_IGNITION_OFF)
+    {
+        return false;
+    }
+
+    return ignitionDelayedOffEligible[channelIndex] &&
+           ignitionDelayedOffDeadline[channelIndex] != 0 &&
+           (int32_t)(millis() - ignitionDelayedOffDeadline[channelIndex]) < 0;
+}
+
+static bool ApplyIgnitionDelayedOffOverride(uint8_t channelIndex, bool runtimeEnabled)
+{
+    return runtimeEnabled || IsIgnitionDelayedOffActive(channelIndex);
+}
+
+static bool ReadChannelDigitalInputState(uint8_t channelIndex, int inputPin, bool inputIsDigital, bool requireDigitalAnalogueConfig)
+{
     if (inputIsDigital)
     {
         return digitalRead(Channels[channelIndex].InputControlPin);
@@ -535,28 +677,46 @@ void HandleInputs()
         case DIG:
         case DIG_PWM:
         {
+            if (IsChannelOverrideActive(i))
+            {
+                ResetChannelInputTimingState(i);
+                SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, true));
+                break;
+            }
+
             bool runtimeEnabled = ReadChannelDigitalInputState(i, inputPin, inputIsDigital, false);
-            SetChannelRuntimeEnabledState(i, runtimeEnabled);
+            runtimeEnabled = ApplyChannelDelayTiming(i, runtimeEnabled);
+            SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, runtimeEnabled));
             break;
         }
         case DIG_INTERMITTENT:
         {
+            if (IsChannelOverrideActive(i))
+            {
+                ResetChannelInputTimingState(i);
+                SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, true));
+                break;
+            }
+
             bool inputActive = ReadChannelDigitalInputState(i, inputPin, inputIsDigital, true);
             bool runtimeEnabled = ComputeIntermittentOutputState(i, inputActive);
-            SetChannelRuntimeEnabledState(i, runtimeEnabled);
+            runtimeEnabled = ApplyChannelDelayTiming(i, runtimeEnabled);
+            SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, runtimeEnabled));
             break;
         }
         case ANA:
         {
             if (IsChannelOverrideActive(i))
             {
-                SetChannelRuntimeEnabledState(i, true);
+                ResetChannelInputTimingState(i);
+                SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, true));
                 break;
             }
 
             if (inputPin < 0)
             {
-                SetChannelRuntimeEnabledState(i, false);
+                bool runtimeEnabled = ApplyChannelDelayTiming(i, false);
+                SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, runtimeEnabled));
                 break;
             }
 
@@ -564,7 +724,7 @@ void HandleInputs()
             SanitizeAnalogueInputConfig(AnalogueIns[inputPin]);
             float value = ReadAnalogueInputValue(inputPin);
             bool negativeGoingThreshold = Channels[i].OnThreshold < Channels[i].OffThreshold;
-            bool runtimeEnabled = IsChannelRuntimeEnabled(i);
+            bool runtimeEnabled = channelSourceDemandState[i];
             if ((!negativeGoingThreshold && value >= Channels[i].OnThreshold) ||
                 (negativeGoingThreshold && value <= Channels[i].OnThreshold))
             {
@@ -575,20 +735,23 @@ void HandleInputs()
             {
                 runtimeEnabled = false;
             }
-            SetChannelRuntimeEnabledState(i, runtimeEnabled);
+            runtimeEnabled = ApplyChannelDelayTiming(i, runtimeEnabled);
+            SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, runtimeEnabled));
             break;
         }
         case ANA_PWM:
         {
             if (IsChannelOverrideActive(i))
             {
-                SetChannelRuntimeEnabledState(i, Channels[i].PWMSetDuty > 0);
+                ResetChannelInputTimingState(i);
+                SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, Channels[i].PWMSetDuty > 0));
                 break;
             }
 
             if (inputPin < 0)
             {
-                SetChannelRuntimeEnabledState(i, false);
+                bool runtimeEnabled = ApplyChannelDelayTiming(i, false);
+                SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, runtimeEnabled));
                 Channels[i].PWMSetDuty = 0;
                 break;
             }
@@ -625,7 +788,8 @@ void HandleInputs()
                 dutyInt = 100;
             }
             Channels[i].PWMSetDuty = (uint8_t)dutyInt;
-            SetChannelRuntimeEnabledState(i, dutyInt > 0);
+            bool runtimeEnabled = ApplyChannelDelayTiming(i, dutyInt > 0);
+            SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, runtimeEnabled));
             break;
         }
         case CAN_DIGITAL:
@@ -634,14 +798,16 @@ void HandleInputs()
             bool runtimeEnabled = false;
             if (IsChannelOverrideActive(i))
             {
+                ResetChannelInputTimingState(i);
                 runtimeEnabled = (Channels[i].ChanType == CAN_PWM) ? (Channels[i].PWMSetDuty > 0) : true;
             }
             else
             {
                 runtimeEnabled = CANChannelEnableFlags[i];
+                runtimeEnabled = ApplyChannelDelayTiming(i, runtimeEnabled);
             }
 
-            SetChannelRuntimeEnabledState(i, runtimeEnabled);
+            SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, runtimeEnabled));
 
             if (!runtimeEnabled)
             {

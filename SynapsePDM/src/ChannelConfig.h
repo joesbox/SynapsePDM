@@ -25,6 +25,8 @@
 
 #include <Arduino.h>
 
+#define MIN_DELAY_TIME_MS 100UL
+#define MAX_DELAY_TIME_MS 3600000UL
 #define MAX_INTERMITTENT_TIME_MS 10000UL
 #define DEFAULT_CHANNEL_CURRENT_SENSE_KILIS 18407.72F
 #define MIN_CHANNEL_CURRENT_SENSE_KILIS 1000.0F
@@ -33,12 +35,12 @@
 /// @brief Defines available channel types
 enum ChannelType
 {
-  DIG,         // Digital input
-  DIG_PWM,     // Digital input, PWM output
-  ANA,         // Analogue input (threshold based)
-  ANA_PWM,     // Analogue input, PWM output (scaled)
-  CAN_DIGITAL, // CAN bus controlled digital output
-  CAN_PWM,     // CAN bus controlled PWM output
+  DIG,             // Digital input
+  DIG_PWM,         // Digital input, PWM output
+  ANA,             // Analogue input (threshold based)
+  ANA_PWM,         // Analogue input, PWM output (scaled)
+  CAN_DIGITAL,     // CAN bus controlled digital output
+  CAN_PWM,         // CAN bus controlled PWM output
   DIG_INTERMITTENT // Digital input, intermittent digital output
 };
 
@@ -99,6 +101,12 @@ enum ChannelPriority
   CHANNEL_PRIORITY_LOW
 };
 
+enum DelayedOffTriggerSource
+{
+  DELAYED_OFF_ASSIGNED_INPUT = 0,
+  DELAYED_OFF_IGNITION_OFF = 1
+};
+
 /// @brief Channel config structure
 struct __attribute__((packed)) ChannelConfig
 {
@@ -110,7 +118,7 @@ struct __attribute__((packed)) ChannelConfig
   float CurrentThresholdHigh;   // Turn off threshold high
   float CurrentThresholdLow;    // Turn off threshold low (open circuit detection)
   uint8_t RetryCount;           // Number of retries
-  uint32_t InrushDelay;         // Inrush delay in milliseconds  
+  uint32_t InrushDelay;         // Inrush delay in milliseconds
   uint8_t MultiChannel;         // Grouped with other channels. Allows higher current loads
   uint8_t GroupNumber;          // Group membership number
   int OutputControlPin;         // Digital uC control pin
@@ -133,8 +141,15 @@ struct __attribute__((packed)) ChannelConfig
   uint32_t IntermittentOnTime;  // Intermittent on time in milliseconds
   uint32_t IntermittentOffTime; // Intermittent off time in milliseconds
   float CurrentSenseKILIS;      // Per-channel current sense ratio calibration value
-  uint8_t Reserved[14];         // Reserved for future use
+  uint8_t DelayedOn;            // Delayed-on enabled flag
+  uint32_t DelayedOnTime;       // Delayed-on time in milliseconds
+  uint8_t DelayedOff;           // Delayed-off enabled flag
+  uint32_t DelayedOffTime;      // Delayed-off time in milliseconds
+  uint8_t DelayedOffTrigger;    // Delayed-off trigger source
+  uint8_t Reserved[3];          // Reserved for future use
 };
+
+static_assert(sizeof(ChannelConfig) == 92, "ChannelConfig EEPROM layout must remain compatible with v0.9");
 
 /// @brief Channel config runtime structure
 struct __attribute__((packed)) ChannelConfigRuntime
@@ -153,6 +168,7 @@ ChannelCategory SanitizeChannelCategory(uint8_t rawCategory);
 ChannelPriority GetChannelPriority(ChannelCategory category);
 
 /// @brief Normalise persisted channel config values after load.
-void SanitizeChannelConfig(ChannelConfig &config);
+/// @return True when any persisted field was changed.
+bool SanitizeChannelConfig(ChannelConfig &config);
 
 #endif

@@ -3,6 +3,7 @@ from pathlib import Path
 import configparser
 import subprocess
 import sys
+import zipfile
 
 # --- Get directories from command line ---
 build_dir = Path(sys.argv[1])
@@ -53,6 +54,7 @@ if not firmware_bin.exists():
 bin_out = build_dir / f"SynapsePDM-{version}.bin"
 sha_out = build_dir / f"SynapsePDM-{version}.sha256"
 sig_out = build_dir / f"SynapsePDM-{version}.sig"
+zip_out = build_dir / f"SynapsePDM-{version}.zip"
 
 # Copy / rename original firmware
 firmware_bin.replace(bin_out)
@@ -81,6 +83,15 @@ if private_key_path.exists():
         with open(sig_out, "wb") as f:
             f.write(sig)
         print(f"[POST-BUILD] Firmware signed -> {sig_out}")
+
+        if zip_out.exists():
+            zip_out.unlink()
+
+        with zipfile.ZipFile(zip_out, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.write(bin_out, bin_out.name)
+            archive.write(sha_out, sha_out.name)
+            archive.write(sig_out, sig_out.name)
+        print(f"[POST-BUILD] Firmware package -> {zip_out}")
 
     except Exception as e:
         print(f"[POST-BUILD] Signing failed: {e}")

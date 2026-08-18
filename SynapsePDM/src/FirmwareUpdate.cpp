@@ -401,6 +401,13 @@ bool BeginFirmwareAssetUpload(uint8_t assetType)
     uploadFile = SD.open(assetPath, FILE_WRITE);
     if (!uploadFile)
     {
+        SDCardOK = false;
+        ResumeSD();
+        uploadFile = SD.open(assetPath, FILE_WRITE);
+    }
+
+    if (!uploadFile)
+    {
         SetDiagnosticMessage("failed to open update asset file");
         ReleaseUpdateStorage(uploadResumeLogging);
         uploadResumeLogging = false;

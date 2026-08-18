@@ -62,15 +62,17 @@ bool bootToSleep = false;
 
 volatile bool IMUWakeMode = false;
 
+volatile uint8_t WakeSource = WAKE_SOURCE_IGNITION;
+
 volatile bool ignitionWakePending = false;
 
 volatile bool imuWakePending = false;
 
 bool CANChannelEnableFlags[NUM_CHANNELS] = {false};
 
-// Tracks which channels are eligible for RunOn (were enabled at PREPARE_SLEEP entry)
-bool runOnEligible[NUM_CHANNELS] = {false};
-uint32_t runOnDeadline[NUM_CHANNELS] = {0};
+// Tracks which channels are eligible for ignition-off delayed off (were enabled at PREPARE_SLEEP entry)
+bool ignitionDelayedOffEligible[NUM_CHANNELS] = {false};
+uint32_t ignitionDelayedOffDeadline[NUM_CHANNELS] = {0};
 
 void InitialiseChannelData()
 {
@@ -114,6 +116,11 @@ void InitialiseChannelData()
     Channels[i].InrushCurrentThreshold = 1.0;
     Channels[i].IntermittentOnTime = 1000;
     Channels[i].IntermittentOffTime = 1000;
+    Channels[i].DelayedOn = false;
+    Channels[i].DelayedOnTime = 0;
+    Channels[i].DelayedOff = false;
+    Channels[i].DelayedOffTime = 0;
+    Channels[i].DelayedOffTrigger = DELAYED_OFF_ASSIGNED_INPUT;
     Channels[i].CurrentSenseKILIS = DEFAULT_CHANNEL_CURRENT_SENSE_KILIS;
     ChannelRuntime[i].Override = false;
     ChannelRuntime[i].Enabled = false;

@@ -37,8 +37,8 @@
 #include <stm32f446xx.h>
 #include <OutputHandler.h>
 
-// SPI clock speed for the EEPROM
-#define EEPROM_SPI_SPEED 4000000
+// SPI clock speed for the EEPROM (M95640R supports up to 20MHz)
+#define EEPROM_SPI_SPEED 10000000
 
 // EEPROM page size in bytes. Writes larger than this will be split into multiple page writes.
 #define EEPROM_PAGE_SIZE 32
@@ -95,6 +95,15 @@ extern bool StorageCRCValid;
 /// @brief Analogue input config CRC check failed flag
 extern bool AnalogueCRCValid;
 
+/// @brief Cellular/OpenRemote config CRC check failed flag
+extern bool CellularCRCValid;
+
+/// @brief A valid channel EEPROM block was loaded but normalized or migrated in RAM.
+extern bool ChannelConfigNeedsRewriteAfterLoad;
+
+/// @brief A valid system EEPROM block was loaded but normalized or migrated in RAM.
+extern bool SystemConfigNeedsRewriteAfterLoad;
+
 /// @brief Saves the channel config data to EEPROM along with a calculated CRC
 void SaveChannelConfig();
 
@@ -122,6 +131,19 @@ void SaveAnalogueConfig();
 /// @brief Loads the analogue input config data from EEPROM storage
 /// @return True if the CRC check was successful
 bool LoadAnalogueConfig();
+
+/// @brief Saves the cellular/OpenRemote config data to EEPROM along with a calculated CRC
+void SaveCellularConfig();
+
+/// @brief Loads the cellular/OpenRemote config data from EEPROM storage
+/// @return True if the CRC check was successful
+bool LoadCellularConfig();
+
+/// @brief Inititalise cellular/OpenRemote data to known values
+void InitialiseCellularData();
+
+/// @brief Ensure the cellular MQTT client ID has a stable device-derived default.
+void EnsureCellularClientID();
 
 /// @brief Inititalise storage data to known values
 void InitialiseStorageData();

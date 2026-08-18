@@ -21,6 +21,7 @@
 
 */
 #include "SerialComms.h"
+#include "CANComms.h"
 #include "OutputHandler.h"
 #include "GSM.h"
 #include "IMU.h"
@@ -38,28 +39,52 @@ bool previousConnectionStatus = false;
 bool pendingChannelConfigSave = false;
 bool pendingSystemConfigSave = false;
 bool pendingAnalogueConfigSave = false;
+bool pendingCellularConfigSave = false;
+bool pendingCANBitrateReinitialise = false;
 
 bool IsCortexConfigSaveActive()
 {
-    return receivingConfig || pendingChannelConfigSave || pendingSystemConfigSave || pendingAnalogueConfigSave;
+    return receivingConfig;
 }
 
 uint32_t lastComms = 0;
 
 unsigned int readBufIdx = 0;
 
-// Keep transfer chunks at the last known stable size.
-static const size_t LOG_TRANSFER_CHUNK_BYTES = 4096;
+static const size_t LOG_TRANSFER_CHUNK_BYTES = 2048;
 static const uint16_t LOG_BULK_MAGIC = 0x4C42;
 static char logChunkTextBuffer[LOG_TRANSFER_CHUNK_BYTES] = {0};
+static char openRemoteProvisioningRequestBuffer[OPENREMOTE_PROVISIONING_MAX_REQUEST_BYTES + 1] = {0};
 static byte logChunkPayloadBuffer[4 + sizeof(logChunkTextBuffer)] = {0};
 static byte framedPacketBuffer[sizeof(logChunkPayloadBuffer) + 16] = {0};
 static byte rawBulkPacketBuffer[6 + sizeof(logChunkTextBuffer) + 4] = {0};
 static bool logTransferStreaming = false;
 static bool logTransferBulkStreaming = false;
 static bool serialCalibrationModeEnabled = false;
+static char cellularDiagnosticBuffer[1024] = {0};
+
+static void CopyConfigString(char *destination, size_t destinationSize)
+{
+    if (destination == nullptr || destinationSize == 0)
+    {
+        return;
+    }
+
+    size_t copyLength = destinationSize - 1;
+    memcpy(destination, &configBuffer[CONFIG_DATA_START_INDEX], copyLength);
+    destination[copyLength] = '\0';
+}
 
 static void SendFramedPacket(byte commandId, const byte *payload, uint16_t payloadLength);
+
+static void EnforceOpenRemoteTlsSettings()
+{
+    CellularParams.UseTLS = 1;
+    if (CellularParams.OpenRemotePort == 0 || CellularParams.OpenRemotePort == CELLULAR_DEFAULT_MQTT_PORT)
+    {
+        CellularParams.OpenRemotePort = CELLULAR_DEFAULT_MQTT_TLS_PORT;
+    }
+}
 
 struct RtcCommandPayload
 {
@@ -76,6 +101,18 @@ static const uint8_t RTC_COMMAND_PAYLOAD_LENGTH = 7;
 struct __attribute__((packed)) CalibrationModePayload
 {
     uint8_t Enabled;
+};
+
+struct __attribute__((packed)) CellularTestPayload
+{
+    char APN[64];
+    char OpenRemoteHost[64];
+    uint16_t OpenRemotePort;
+    char ClientID[48];
+    char MQTTUsername[48];
+    char MQTTPassword[48];
+    char PublishTopic[128];
+    uint8_t UseTLS;
 };
 
 struct __attribute__((packed)) CalibrationOverridePayload
@@ -267,6 +304,10 @@ static bool FactoryResetController()
     SaveAnalogueConfig();
     AnalogueCRCValid = LoadAnalogueConfig();
 
+    InitialiseCellularData();
+    SaveCellularConfig();
+    CellularCRCValid = LoadCellularConfig();
+
     InitialiseInputs();
     backgroundDrawn = false;
     invalidateDisplay = true;
@@ -274,8 +315,9 @@ static bool FactoryResetController()
     pendingChannelConfigSave = false;
     pendingSystemConfigSave = false;
     pendingAnalogueConfigSave = false;
+    pendingCellularConfigSave = false;
 
-    return ChannelCRCValid && SystemCRCValid && StorageCRCValid && AnalogueCRCValid;
+    return ChannelCRCValid && SystemCRCValid && StorageCRCValid && AnalogueCRCValid && CellularCRCValid;
 }
 
 static void AppendStatusByte(byte value, uint32_t &checksum)
@@ -383,8 +425,6 @@ static void SendStaticStatusPacket()
         AppendStatusByte(Channels[i].RetryCount, checksum);
         AppendStatusBytes(&Channels[i].InrushDelay, sizeof(Channels[i].InrushDelay), checksum);
         AppendStatusBytes(&Channels[i].ChannelName, sizeof(Channels[i].ChannelName), checksum);
-        AppendStatusByte(Channels[i].RunOn, checksum);
-        AppendStatusBytes(&Channels[i].RunOnTime, sizeof(Channels[i].RunOnTime), checksum);
         AppendStatusByte(Channels[i].SoftStart, checksum);
         AppendStatusBytes(&Channels[i].SoftStartTime, sizeof(Channels[i].SoftStartTime), checksum);
         AppendStatusBytes(&Channels[i].InrushCurrentThreshold, sizeof(Channels[i].InrushCurrentThreshold), checksum);
@@ -394,6 +434,11 @@ static void SendStaticStatusPacket()
         AppendStatusByte((byte)Channels[i].Category, checksum);
         AppendStatusBytes(&Channels[i].IntermittentOnTime, sizeof(Channels[i].IntermittentOnTime), checksum);
         AppendStatusBytes(&Channels[i].IntermittentOffTime, sizeof(Channels[i].IntermittentOffTime), checksum);
+        AppendStatusByte(Channels[i].DelayedOn, checksum);
+        AppendStatusBytes(&Channels[i].DelayedOnTime, sizeof(Channels[i].DelayedOnTime), checksum);
+        AppendStatusByte(Channels[i].DelayedOff, checksum);
+        AppendStatusBytes(&Channels[i].DelayedOffTime, sizeof(Channels[i].DelayedOffTime), checksum);
+        AppendStatusByte(Channels[i].DelayedOffTrigger, checksum);
     }
 
     AppendStatusByte(NUM_ANA_CHANNELS, checksum);
@@ -440,6 +485,25 @@ static void SendStaticStatusPacket()
     uint8_t mobileSignalBars = csq_to_bars();
     AppendStatusByte(mobileSignalBars, checksum);
     AppendStatusBytes(&SystemParams.TimeZone, sizeof(SystemParams.TimeZone), checksum);
+    AppendStatusBytes(&SystemParams.CANBusBitrate, sizeof(SystemParams.CANBusBitrate), checksum);
+
+    AppendStatusByte(CellularParams.ConfigVersion, checksum);
+    AppendStatusByte(CellularParams.Protocol, checksum);
+    AppendStatusByte(CellularParams.UseTLS, checksum);
+    AppendStatusBytes(&CellularParams.APN, sizeof(CellularParams.APN), checksum);
+    AppendStatusBytes(&CellularParams.APNUser, sizeof(CellularParams.APNUser), checksum);
+    AppendStatusBytes(&CellularParams.APNPassword, sizeof(CellularParams.APNPassword), checksum);
+    AppendStatusBytes(&CellularParams.OpenRemoteHost, sizeof(CellularParams.OpenRemoteHost), checksum);
+    AppendStatusBytes(&CellularParams.OpenRemotePort, sizeof(CellularParams.OpenRemotePort), checksum);
+    AppendStatusBytes(&CellularParams.ClientID, sizeof(CellularParams.ClientID), checksum);
+    AppendStatusBytes(&CellularParams.MQTTUsername, sizeof(CellularParams.MQTTUsername), checksum);
+    AppendStatusBytes(&CellularParams.MQTTPassword, sizeof(CellularParams.MQTTPassword), checksum);
+    AppendStatusBytes(&CellularParams.PublishTopic, sizeof(CellularParams.PublishTopic), checksum);
+    AppendStatusBytes(&CellularParams.SubscribeTopic, sizeof(CellularParams.SubscribeTopic), checksum);
+    AppendStatusBytes(&CellularParams.KeepAliveSeconds, sizeof(CellularParams.KeepAliveSeconds), checksum);
+    AppendStatusBytes(&CellularParams.PublishIntervalMs, sizeof(CellularParams.PublishIntervalMs), checksum);
+    AppendStatusBytes(&CellularParams.TelemetryUploadMask, sizeof(CellularParams.TelemetryUploadMask), checksum);
+    AppendStatusBytes(&CellularParams.OpenRemoteAssetName, sizeof(CellularParams.OpenRemoteAssetName), checksum);
 
     FinalizeStatusPacket(checksum);
 }
@@ -539,6 +603,123 @@ static bool ReadRtcCommandPayload(RtcCommandPayload *payload)
     payload->Minute = buffer[5];
     payload->Second = buffer[6];
 
+    return true;
+}
+
+static bool ApplyOptionalCellularTestPayload()
+{
+    if (!WaitForSerialBytes(sizeof(CellularTestPayload), 250))
+    {
+        return false;
+    }
+
+    CellularTestPayload payload = {0};
+    if (!ReadSerialBytesExact((uint8_t *)&payload, sizeof(payload), 75))
+    {
+        return false;
+    }
+
+    payload.APN[sizeof(payload.APN) - 1] = '\0';
+    payload.OpenRemoteHost[sizeof(payload.OpenRemoteHost) - 1] = '\0';
+    payload.ClientID[sizeof(payload.ClientID) - 1] = '\0';
+    payload.MQTTUsername[sizeof(payload.MQTTUsername) - 1] = '\0';
+    payload.MQTTPassword[sizeof(payload.MQTTPassword) - 1] = '\0';
+    payload.PublishTopic[sizeof(payload.PublishTopic) - 1] = '\0';
+
+    strncpy(CellularParams.APN, payload.APN, sizeof(CellularParams.APN) - 1);
+    CellularParams.APN[sizeof(CellularParams.APN) - 1] = '\0';
+    strncpy(CellularParams.OpenRemoteHost, payload.OpenRemoteHost, sizeof(CellularParams.OpenRemoteHost) - 1);
+    CellularParams.OpenRemoteHost[sizeof(CellularParams.OpenRemoteHost) - 1] = '\0';
+    strncpy(CellularParams.ClientID, payload.ClientID, sizeof(CellularParams.ClientID) - 1);
+    CellularParams.ClientID[sizeof(CellularParams.ClientID) - 1] = '\0';
+    strncpy(CellularParams.MQTTUsername, payload.MQTTUsername, sizeof(CellularParams.MQTTUsername) - 1);
+    CellularParams.MQTTUsername[sizeof(CellularParams.MQTTUsername) - 1] = '\0';
+    strncpy(CellularParams.MQTTPassword, payload.MQTTPassword, sizeof(CellularParams.MQTTPassword) - 1);
+    CellularParams.MQTTPassword[sizeof(CellularParams.MQTTPassword) - 1] = '\0';
+    strncpy(CellularParams.PublishTopic, payload.PublishTopic, sizeof(CellularParams.PublishTopic) - 1);
+    CellularParams.PublishTopic[sizeof(CellularParams.PublishTopic) - 1] = '\0';
+    CellularParams.UseTLS = payload.UseTLS ? 1 : 0;
+    CellularParams.OpenRemotePort = payload.OpenRemotePort;
+    EnforceOpenRemoteTlsSettings();
+    EnsureCellularClientID();
+    uint32_t telemetryUploadMask = 0;
+    if (WaitForSerialBytes(sizeof(telemetryUploadMask), 25) && ReadSerialBytesExact((uint8_t *)&telemetryUploadMask, sizeof(telemetryUploadMask), 25))
+    {
+        CellularParams.TelemetryUploadMask = telemetryUploadMask == 0 ? TELEMETRY_UPLOAD_DEFAULT_MASK : telemetryUploadMask;
+    }
+    if (CellularParams.Protocol == 0)
+    {
+        CellularParams.Protocol = CELLULAR_PROTOCOL_MQTT;
+    }
+
+    return true;
+}
+
+static bool ApplyCellularPayloadFields(const CellularTestPayload &payload)
+{
+    strncpy(CellularParams.APN, payload.APN, sizeof(CellularParams.APN) - 1);
+    CellularParams.APN[sizeof(CellularParams.APN) - 1] = '\0';
+    strncpy(CellularParams.OpenRemoteHost, payload.OpenRemoteHost, sizeof(CellularParams.OpenRemoteHost) - 1);
+    CellularParams.OpenRemoteHost[sizeof(CellularParams.OpenRemoteHost) - 1] = '\0';
+    strncpy(CellularParams.ClientID, payload.ClientID, sizeof(CellularParams.ClientID) - 1);
+    CellularParams.ClientID[sizeof(CellularParams.ClientID) - 1] = '\0';
+    strncpy(CellularParams.MQTTUsername, payload.MQTTUsername, sizeof(CellularParams.MQTTUsername) - 1);
+    CellularParams.MQTTUsername[sizeof(CellularParams.MQTTUsername) - 1] = '\0';
+    strncpy(CellularParams.MQTTPassword, payload.MQTTPassword, sizeof(CellularParams.MQTTPassword) - 1);
+    CellularParams.MQTTPassword[sizeof(CellularParams.MQTTPassword) - 1] = '\0';
+    strncpy(CellularParams.PublishTopic, payload.PublishTopic, sizeof(CellularParams.PublishTopic) - 1);
+    CellularParams.PublishTopic[sizeof(CellularParams.PublishTopic) - 1] = '\0';
+    CellularParams.UseTLS = payload.UseTLS ? 1 : 0;
+    CellularParams.OpenRemotePort = payload.OpenRemotePort;
+    EnforceOpenRemoteTlsSettings();
+    EnsureCellularClientID();
+    if (CellularParams.Protocol == 0)
+    {
+        CellularParams.Protocol = CELLULAR_PROTOCOL_MQTT;
+    }
+
+    return true;
+}
+
+static bool ReadOpenRemoteProvisioningCommand(char *requestBuffer, uint16_t requestBufferSize, uint16_t *requestLength)
+{
+    if (requestBuffer == nullptr || requestBufferSize == 0 || requestLength == nullptr)
+    {
+        return false;
+    }
+
+    CellularTestPayload payload = {0};
+    if (!ReadSerialBytesExact((uint8_t *)&payload, sizeof(payload), 2000))
+    {
+        return false;
+    }
+
+    payload.APN[sizeof(payload.APN) - 1] = '\0';
+    payload.OpenRemoteHost[sizeof(payload.OpenRemoteHost) - 1] = '\0';
+    payload.ClientID[sizeof(payload.ClientID) - 1] = '\0';
+    payload.MQTTUsername[sizeof(payload.MQTTUsername) - 1] = '\0';
+    payload.MQTTPassword[sizeof(payload.MQTTPassword) - 1] = '\0';
+    payload.PublishTopic[sizeof(payload.PublishTopic) - 1] = '\0';
+    ApplyCellularPayloadFields(payload);
+
+    uint16_t incomingLength = 0;
+    if (!ReadSerialBytesExact((uint8_t *)&incomingLength, sizeof(incomingLength), 2000))
+    {
+        return false;
+    }
+
+    if (incomingLength == 0 || incomingLength >= requestBufferSize)
+    {
+        return false;
+    }
+
+    if (!ReadSerialBytesExact((uint8_t *)requestBuffer, incomingLength, 5000))
+    {
+        return false;
+    }
+
+    requestBuffer[incomingLength] = '\0';
+    *requestLength = incomingLength;
     return true;
 }
 
@@ -1005,14 +1186,27 @@ void CheckSerial()
                             case 10: // Channel name
                                 memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].ChannelName, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].ChannelName));
                                 break;
-                            case 11: // Run on
-                                Channels[configBuffer[CONFIG_DATA_INDEX]].RunOn = configBuffer[CONFIG_DATA_START_INDEX];
-                                break;
-                            case 12: // Run on time
-                                memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime));
-                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime < 0)
+                            case 11: // Legacy run on flag maps to ignition-off delayed off
+                                if (configBuffer[CONFIG_DATA_START_INDEX])
                                 {
-                                    Channels[configBuffer[CONFIG_DATA_INDEX]].RunOnTime = 0;
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOff = 1;
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTrigger = DELAYED_OFF_IGNITION_OFF;
+                                    if (Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime < MIN_DELAY_TIME_MS)
+                                    {
+                                        Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime = MIN_DELAY_TIME_MS;
+                                    }
+                                }
+                                break;
+                            case 12: // Legacy run on time maps to ignition-off delayed off time
+                                memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime));
+                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime > MAX_DELAY_TIME_MS)
+                                {
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime = MAX_DELAY_TIME_MS;
+                                }
+                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime > 0)
+                                {
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOff = 1;
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTrigger = DELAYED_OFF_IGNITION_OFF;
                                 }
                                 break;
                             case 13: // Soft start enable
@@ -1083,6 +1277,48 @@ void CheckSerial()
                                 {
                                     Channels[configBuffer[CONFIG_DATA_INDEX]].IntermittentOffTime = MAX_INTERMITTENT_TIME;
                                 }
+                                break;
+                            case 28: // Delayed on enable
+                                Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOn = configBuffer[CONFIG_DATA_START_INDEX] ? 1 : 0;
+                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOn && Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOnTime < MIN_DELAY_TIME_MS)
+                                {
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOnTime = MIN_DELAY_TIME_MS;
+                                }
+                                break;
+                            case 29: // Delayed on time
+                                memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOnTime, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOnTime));
+                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOnTime > MAX_DELAY_TIME_MS)
+                                {
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOnTime = MAX_DELAY_TIME_MS;
+                                }
+                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOn && Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOnTime < MIN_DELAY_TIME_MS)
+                                {
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOnTime = MIN_DELAY_TIME_MS;
+                                }
+                                break;
+                            case 30: // Delayed off enable
+                                Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOff = configBuffer[CONFIG_DATA_START_INDEX] ? 1 : 0;
+                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOff && Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime < MIN_DELAY_TIME_MS)
+                                {
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime = MIN_DELAY_TIME_MS;
+                                }
+                                break;
+                            case 31: // Delayed off time
+                                memcpy(&Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime));
+                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime > MAX_DELAY_TIME_MS)
+                                {
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime = MAX_DELAY_TIME_MS;
+                                }
+                                if (Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOff && Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime < MIN_DELAY_TIME_MS)
+                                {
+                                    Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTime = MIN_DELAY_TIME_MS;
+                                }
+                                break;
+                            case 32: // Delayed off trigger
+                                Channels[configBuffer[CONFIG_DATA_INDEX]].DelayedOffTrigger =
+                                    (configBuffer[CONFIG_DATA_START_INDEX] <= DELAYED_OFF_IGNITION_OFF)
+                                        ? configBuffer[CONFIG_DATA_START_INDEX]
+                                        : DELAYED_OFF_ASSIGNED_INPUT;
                                 break;
 
                             default:
@@ -1261,6 +1497,23 @@ void CheckSerial()
                                     SystemParams.DSTActive = 0;
                                 }
                                 break;
+                            case 14: // CAN bus bitrate
+                            {
+                                uint32_t canBusBitrate = 0;
+                                memcpy(&canBusBitrate, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(canBusBitrate));
+                                if (!IsSupportedCANBusBitrate(canBusBitrate))
+                                {
+                                    validPacket = false;
+                                    break;
+                                }
+
+                                if (SystemParams.CANBusBitrate != canBusBitrate)
+                                {
+                                    SystemParams.CANBusBitrate = canBusBitrate;
+                                    pendingCANBitrateReinitialise = true;
+                                }
+                                break;
+                            }
                             default:
                                 // System parameter out of range. Ignore packet
                                 validPacket = false;
@@ -1273,6 +1526,82 @@ void CheckSerial()
                         case CONFIG_DATA_DIGITAL:
                             connectionStatus = 6;
 
+                            break;
+
+                        case CONFIG_DATA_CELLULAR:
+                            pendingCellularConfigSave = true;
+
+                            switch (configBuffer[CONFIG_PARAMETER_INDEX])
+                            {
+                            case 0:
+                                CellularParams.ConfigVersion = CELLULAR_CONFIG_VERSION;
+                                break;
+                            case 1:
+                                CellularParams.Protocol = configBuffer[CONFIG_DATA_START_INDEX] == 0 ? CELLULAR_PROTOCOL_MQTT : configBuffer[CONFIG_DATA_START_INDEX];
+                                break;
+                            case 2:
+                                CellularParams.UseTLS = configBuffer[CONFIG_DATA_START_INDEX] ? 1 : 0;
+                                EnforceOpenRemoteTlsSettings();
+                                break;
+                            case 3:
+                                CopyConfigString(CellularParams.APN, sizeof(CellularParams.APN));
+                                break;
+                            case 4:
+                                CopyConfigString(CellularParams.APNUser, sizeof(CellularParams.APNUser));
+                                break;
+                            case 5:
+                                CopyConfigString(CellularParams.APNPassword, sizeof(CellularParams.APNPassword));
+                                break;
+                            case 6:
+                                CopyConfigString(CellularParams.OpenRemoteHost, sizeof(CellularParams.OpenRemoteHost));
+                                break;
+                            case 7:
+                                memcpy(&CellularParams.OpenRemotePort, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(CellularParams.OpenRemotePort));
+                                EnforceOpenRemoteTlsSettings();
+                                break;
+                            case 8:
+                                CopyConfigString(CellularParams.ClientID, sizeof(CellularParams.ClientID));
+                                break;
+                            case 9:
+                                CopyConfigString(CellularParams.MQTTUsername, sizeof(CellularParams.MQTTUsername));
+                                break;
+                            case 10:
+                                CopyConfigString(CellularParams.MQTTPassword, sizeof(CellularParams.MQTTPassword));
+                                break;
+                            case 11:
+                                CopyConfigString(CellularParams.PublishTopic, sizeof(CellularParams.PublishTopic));
+                                break;
+                            case 12:
+                                CopyConfigString(CellularParams.SubscribeTopic, sizeof(CellularParams.SubscribeTopic));
+                                break;
+                            case 13:
+                                memcpy(&CellularParams.KeepAliveSeconds, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(CellularParams.KeepAliveSeconds));
+                                memcpy(&CellularParams.PublishIntervalMs, &configBuffer[CONFIG_DATA_START_INDEX + sizeof(CellularParams.KeepAliveSeconds)], sizeof(CellularParams.PublishIntervalMs));
+                                if (CellularParams.KeepAliveSeconds == 0)
+                                {
+                                    CellularParams.KeepAliveSeconds = CELLULAR_DEFAULT_KEEPALIVE_SECONDS;
+                                }
+                                if (CellularParams.PublishIntervalMs < CELLULAR_DEFAULT_PUBLISH_INTERVAL_MS)
+                                {
+                                    CellularParams.PublishIntervalMs = CELLULAR_DEFAULT_PUBLISH_INTERVAL_MS;
+                                }
+                                break;
+                            case 14:
+                                memcpy(&CellularParams.TelemetryUploadMask, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(CellularParams.TelemetryUploadMask));
+                                if (CellularParams.TelemetryUploadMask == 0)
+                                {
+                                    CellularParams.TelemetryUploadMask = TELEMETRY_UPLOAD_DEFAULT_MASK;
+                                }
+                                break;
+                            case 15:
+                                CopyConfigString(CellularParams.OpenRemoteAssetName, sizeof(CellularParams.OpenRemoteAssetName));
+                                break;
+                            default:
+                                validPacket = false;
+                                break;
+                            }
+
+                            connectionStatus = 14;
                             break;
 
                         default:
@@ -1317,12 +1646,34 @@ void CheckSerial()
         case COMMAND_ID_SAVECHANGES:
         {
             bool allSaved = true;
-            bool anySaveRequested = pendingChannelConfigSave || pendingSystemConfigSave || pendingAnalogueConfigSave;
+            bool anySaveRequested = pendingChannelConfigSave || pendingSystemConfigSave || pendingAnalogueConfigSave || pendingCellularConfigSave;
+
+#ifdef DEBUG
+            uint32_t saveStartMs = millis();
+            Serial.println("=== SAVE START ===");
+#endif
 
             if (pendingChannelConfigSave)
             {
+#ifdef DEBUG
+                uint32_t t1 = millis();
+#endif
                 SaveChannelConfig();
-                ChannelCRCValid = LoadChannelConfig();
+#ifdef DEBUG
+                uint32_t t2 = millis();
+                Serial.print("SaveChannelConfig: ");
+                Serial.print(t2 - t1);
+                Serial.println("ms");
+#endif
+                IWatchdog.reload();
+                LoadChannelConfig();
+#ifdef DEBUG
+                uint32_t t3 = millis();
+                Serial.print("LoadChannelConfig: ");
+                Serial.print(t3 - t2);
+                Serial.println("ms");
+#endif
+                IWatchdog.reload();
                 if (!ChannelCRCValid)
                 {
                     allSaved &= false;
@@ -1336,8 +1687,19 @@ void CheckSerial()
 
             if (pendingSystemConfigSave)
             {
+#ifdef DEBUG
+                uint32_t t1 = millis();
+#endif
                 SaveSystemConfig();
+                IWatchdog.reload();
                 SystemCRCValid = LoadSystemConfig();
+#ifdef DEBUG
+                uint32_t t2 = millis();
+                Serial.print("System Save/Load: ");
+                Serial.print(t2 - t1);
+                Serial.println("ms");
+#endif
+                IWatchdog.reload();
                 if (!SystemCRCValid)
                 {
                     allSaved &= false;
@@ -1345,14 +1707,39 @@ void CheckSerial()
                 }
                 else
                 {
+                    if (pendingCANBitrateReinitialise)
+                    {
+#ifdef DEBUG
+                        uint32_t t1 = millis();
+#endif
+                        InitialiseCAN();
+#ifdef DEBUG
+                        uint32_t t2 = millis();
+                        Serial.print("InitialiseCAN: ");
+                        Serial.print(t2 - t1);
+                        Serial.println("ms");
+#endif
+                        pendingCANBitrateReinitialise = false;
+                    }
                     pendingSystemConfigSave = false;
                 }
             }
 
             if (pendingAnalogueConfigSave)
             {
+#ifdef DEBUG
+                uint32_t t1 = millis();
+#endif
                 SaveAnalogueConfig();
+                IWatchdog.reload();
                 AnalogueCRCValid = LoadAnalogueConfig();
+#ifdef DEBUG
+                uint32_t t2 = millis();
+                Serial.print("Analogue Save/Load: ");
+                Serial.print(t2 - t1);
+                Serial.println("ms");
+#endif
+                IWatchdog.reload();
                 if (!AnalogueCRCValid)
                 {
                     allSaved &= false;
@@ -1365,10 +1752,43 @@ void CheckSerial()
                 }
             }
 
+            if (pendingCellularConfigSave)
+            {
+#ifdef DEBUG
+                uint32_t t1 = millis();
+#endif
+                SaveCellularConfig();
+                IWatchdog.reload();
+                CellularCRCValid = LoadCellularConfig();
+#ifdef DEBUG
+                uint32_t t2 = millis();
+                Serial.print("Cellular Save/Load: ");
+                Serial.print(t2 - t1);
+                Serial.println("ms");
+#endif
+                IWatchdog.reload();
+                if (!CellularCRCValid)
+                {
+                    allSaved &= false;
+                    connectionStatus = 14;
+                }
+                else
+                {
+                    pendingCellularConfigSave = false;
+                }
+            }
+
             if (anySaveRequested)
             {
                 invalidateDisplay = true;
             }
+
+#ifdef DEBUG
+            uint32_t saveEndMs = millis();
+            Serial.print("=== SAVE COMPLETE: ");
+            Serial.print(saveEndMs - saveStartMs);
+            Serial.println("ms ===");
+#endif
 
             Serial.write(allSaved ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
@@ -1401,6 +1821,35 @@ void CheckSerial()
         case COMMAND_ID_FACTORY_RESET:
             Serial.write(FactoryResetController() ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
+
+        case COMMAND_ID_CELLULAR_TEST:
+            if (ApplyOptionalCellularTestPayload())
+            {
+                CellularParams.ConfigVersion = CELLULAR_CONFIG_VERSION;
+                ResetCellularConnectionTest();
+                SaveCellularConfig();
+                CellularCRCValid = LoadCellularConfig();
+            }
+            RequestCellularConnectionTest();
+            UpdateSIM7600();
+            GetCellularDiagnosticReport(cellularDiagnosticBuffer, sizeof(cellularDiagnosticBuffer));
+            SendFramedPacket(COMMAND_ID_CELLULAR_TEST, (const byte *)cellularDiagnosticBuffer, strlen(cellularDiagnosticBuffer));
+            break;
+
+        case COMMAND_ID_OPENREMOTE_PROVISION:
+        {
+            uint16_t requestLength = 0;
+            if (!ReadOpenRemoteProvisioningCommand(openRemoteProvisioningRequestBuffer, sizeof(openRemoteProvisioningRequestBuffer), &requestLength))
+            {
+                const char *failure = "Provisioning: Failed - invalid command payload.";
+                SendFramedPacket(COMMAND_ID_OPENREMOTE_PROVISION, (const byte *)failure, strlen(failure));
+                break;
+            }
+
+            RunOpenRemoteProvisioningRequest(openRemoteProvisioningRequestBuffer, requestLength, cellularDiagnosticBuffer, sizeof(cellularDiagnosticBuffer));
+            SendFramedPacket(COMMAND_ID_OPENREMOTE_PROVISION, (const byte *)cellularDiagnosticBuffer, strlen(cellularDiagnosticBuffer));
+            break;
+        }
 
         case COMMAND_ID_CALIBRATION_MODE:
         {

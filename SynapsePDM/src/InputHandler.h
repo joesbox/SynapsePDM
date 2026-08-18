@@ -38,6 +38,9 @@ void InitialiseInputs();
 /// @brief Handles reading of inputs
 void HandleInputs();
 
+/// @brief Reset per-channel delayed on/off and source-state timing state.
+void ResetChannelInputTimingStates();
+
 /// @brief Coerces channel types to match the assigned analogue input mode.
 bool SyncChannelTypeForAssignedInput(uint8_t channelIndex);
 

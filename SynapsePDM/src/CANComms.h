@@ -42,4 +42,7 @@ void ReadCANMessages();
 /// @brief Broadcast current system status on the CAN bus.
 void BroadcastSystemStatus();
 
+/// @brief Persist pending CAN-originated config changes using the deferred save path.
+void PersistPendingCANConfigChanges();
+
 #endif

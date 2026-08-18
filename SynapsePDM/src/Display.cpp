@@ -26,15 +26,43 @@
 
 #define SCREENWIDTH 320
 #define SCREENHEIGHT 240
-
 #define ICON_WIDTH 48
 #define ICON_HEIGHT 48
+#define DISPLAY_SPI_FILL_BUFFER_SIZE 2048U
+#define DISPLAY_SPI_FILL_BUFFER_PIXELS (DISPLAY_SPI_FILL_BUFFER_SIZE / 2U)
+#define DISPLAY_STATIC_LABEL_MAX_HEIGHT 20
+#define DISPLAY_STATIC_NUMBER_MAX_WIDTH 16
+#define DISPLAY_STATIC_NAME_MAX_WIDTH 32
+
+#define ILI9341_CASET 0x2A
+#define ILI9341_PASET 0x2B
+#define ILI9341_RAMWR 0x2C
+
+#ifndef DISPLAY_WAKE_CLEAR_COLOR
+#define DISPLAY_WAKE_CLEAR_COLOR TFT_BLACK
+#endif
 
 #define CHANNEL_GREY 0xC5C6C5
 
 SPIClass &spix = SPI;
 
 TFT_eSPI tft = TFT_eSPI(); // Invoke custom library
+
+static uint16_t displaySpiFillBuffer[DISPLAY_SPI_FILL_BUFFER_PIXELS];
+static TFT_eSprite initialCurrentLabelSprite = TFT_eSprite(&tft);
+static TFT_eSprite textLabelStageSprite = TFT_eSprite(&tft);
+static uint16_t *initialCurrentLabelPixels = nullptr;
+static int initialCurrentLabelWidth = 0;
+static int initialCurrentLabelHeight = 0;
+static uint16_t channelNumberLabelPixels[NUM_CHANNELS][DISPLAY_STATIC_NUMBER_MAX_WIDTH * DISPLAY_STATIC_LABEL_MAX_HEIGHT];
+static uint16_t channelNameLabelPixels[NUM_CHANNELS][DISPLAY_STATIC_NAME_MAX_WIDTH * DISPLAY_STATIC_LABEL_MAX_HEIGHT];
+static uint8_t channelNumberLabelWidths[NUM_CHANNELS] = {0};
+static uint8_t channelNumberLabelHeights[NUM_CHANNELS] = {0};
+static uint8_t channelNameLabelWidths[NUM_CHANNELS] = {0};
+static uint8_t channelNameLabelHeights[NUM_CHANNELS] = {0};
+static bool channelNumberLabelValid[NUM_CHANNELS] = {false};
+static bool channelNameLabelValid[NUM_CHANNELS] = {false};
+static char cachedChannelNames[NUM_CHANNELS][4] = {{0}};
 
 long splashCounter;
 
@@ -47,6 +75,388 @@ static int prevHour = -1;
 static int prevMin = -1;
 static uint16_t systemErrorFlags = 0;
 static uint8_t prevBars = 0;
+static bool backgroundClearNeeded = true;
+
+static void DisplayWriteCommandBuffer(SPI_HandleTypeDef *spiHandle, uint8_t command, const uint8_t *data, uint16_t size)
+{
+  digitalWrite(TFT_CS, LOW);
+  digitalWrite(TFT_DC, LOW);
+  HAL_SPI_Transmit(spiHandle, &command, 1U, HAL_MAX_DELAY);
+
+  if ((data != nullptr) && (size > 0U))
+  {
+    digitalWrite(TFT_DC, HIGH);
+    HAL_SPI_Transmit(spiHandle, (uint8_t *)data, size, HAL_MAX_DELAY);
+  }
+
+  digitalWrite(TFT_CS, HIGH);
+}
+
+static void DisplaySetAddressWindowRaw(SPI_HandleTypeDef *spiHandle, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
+{
+  uint8_t data[4];
+
+  data[0] = (uint8_t)(x0 >> 8);
+  data[1] = (uint8_t)(x0 & 0xFFU);
+  data[2] = (uint8_t)(x1 >> 8);
+  data[3] = (uint8_t)(x1 & 0xFFU);
+  DisplayWriteCommandBuffer(spiHandle, ILI9341_CASET, data, sizeof(data));
+
+  data[0] = (uint8_t)(y0 >> 8);
+  data[1] = (uint8_t)(y0 & 0xFFU);
+  data[2] = (uint8_t)(y1 >> 8);
+  data[3] = (uint8_t)(y1 & 0xFFU);
+  DisplayWriteCommandBuffer(spiHandle, ILI9341_PASET, data, sizeof(data));
+}
+
+static bool PushImageRaw16Bit(int32_t x, int32_t y, int32_t width, int32_t height, const uint16_t *image)
+{
+  if ((image == nullptr) || (width <= 0) || (height <= 0))
+  {
+    return false;
+  }
+
+  spix.beginTransaction(SPISettings(SPI_FREQUENCY, MSBFIRST, TFT_SPI_MODE));
+
+  SPI_HandleTypeDef *spiHandle = spix.getHandle();
+  uint32_t remainingPixels = (uint32_t)width * (uint32_t)height;
+  uint32_t originalDataSize = SPI_DATASIZE_8BIT;
+  bool use16BitData = false;
+
+  if (spiHandle == nullptr)
+  {
+    spix.endTransaction();
+    return false;
+  }
+
+  originalDataSize = spiHandle->Init.DataSize;
+
+  DisplaySetAddressWindowRaw(spiHandle, (uint16_t)x, (uint16_t)y, (uint16_t)(x + width - 1), (uint16_t)(y + height - 1));
+
+  digitalWrite(TFT_CS, LOW);
+  digitalWrite(TFT_DC, LOW);
+  uint8_t command = ILI9341_RAMWR;
+  HAL_SPI_Transmit(spiHandle, &command, 1U, HAL_MAX_DELAY);
+  digitalWrite(TFT_DC, HIGH);
+
+  if (spiHandle->Init.DataSize != SPI_DATASIZE_16BIT)
+  {
+    __HAL_SPI_DISABLE(spiHandle);
+    spiHandle->Init.DataSize = SPI_DATASIZE_16BIT;
+    if (HAL_SPI_Init(spiHandle) == HAL_OK)
+    {
+      use16BitData = true;
+    }
+    else
+    {
+      spiHandle->Init.DataSize = originalDataSize;
+      (void)HAL_SPI_Init(spiHandle);
+    }
+  }
+
+  while (remainingPixels > 0U)
+  {
+    uint32_t chunkPixels = remainingPixels;
+    if (chunkPixels > DISPLAY_SPI_FILL_BUFFER_PIXELS)
+    {
+      chunkPixels = DISPLAY_SPI_FILL_BUFFER_PIXELS;
+    }
+
+    for (uint32_t i = 0; i < chunkPixels; i++)
+    {
+      uint16_t pixel = image[i];
+      displaySpiFillBuffer[i] = (uint16_t)((pixel >> 8) | (pixel << 8));
+    }
+
+    if (use16BitData)
+    {
+      HAL_SPI_Transmit(spiHandle, (uint8_t *)displaySpiFillBuffer, (uint16_t)chunkPixels, HAL_MAX_DELAY);
+    }
+    else
+    {
+      HAL_SPI_Transmit(spiHandle, (uint8_t *)displaySpiFillBuffer, (uint16_t)(chunkPixels * 2U), HAL_MAX_DELAY);
+    }
+
+    image += chunkPixels;
+    remainingPixels -= chunkPixels;
+  }
+
+  if (spiHandle->Init.DataSize != originalDataSize)
+  {
+    __HAL_SPI_DISABLE(spiHandle);
+    spiHandle->Init.DataSize = originalDataSize;
+    (void)HAL_SPI_Init(spiHandle);
+  }
+
+  digitalWrite(TFT_CS, HIGH);
+  spix.endTransaction();
+  return true;
+}
+
+static void PushImageRaw16BitWithFallback(int32_t x, int32_t y, int32_t width, int32_t height, const uint16_t *image)
+{
+  if (!PushImageRaw16Bit(x, y, width, height, image))
+  {
+    spix.begin();
+    tft.startWrite();
+    tft.pushImage(x, y, width, height, (uint16_t *)image);
+    tft.endWrite();
+    spix.end();
+  }
+}
+
+static void PushImageRaw16BitInterruptingWrite(int32_t x, int32_t y, int32_t width, int32_t height, const uint16_t *image)
+{
+  tft.endWrite();
+  spix.end();
+  PushImageRaw16BitWithFallback(x, y, width, height, image);
+  spix.begin();
+  tft.startWrite();
+}
+
+static bool EnsureInitialCurrentLabelSprite()
+{
+  static const char initialCurrentText[] = "0A";
+
+  if ((initialCurrentLabelPixels != nullptr) && (initialCurrentLabelWidth > 0) && (initialCurrentLabelHeight > 0))
+  {
+    return true;
+  }
+
+  initialCurrentLabelWidth = tft.textWidth(initialCurrentText);
+  initialCurrentLabelHeight = tft.fontHeight();
+
+  if ((initialCurrentLabelWidth <= 0) || (initialCurrentLabelHeight <= 0))
+  {
+    initialCurrentLabelPixels = nullptr;
+    return false;
+  }
+
+  initialCurrentLabelSprite.setColorDepth(16);
+  if (initialCurrentLabelSprite.createSprite(initialCurrentLabelWidth, initialCurrentLabelHeight) == nullptr)
+  {
+    initialCurrentLabelPixels = nullptr;
+    return false;
+  }
+
+  initialCurrentLabelSprite.loadFont(NotoSansBold15);
+  initialCurrentLabelSprite.setTextColor(TFT_WHITE, TFT_BLACK);
+  initialCurrentLabelSprite.fillSprite(TFT_BLACK);
+  initialCurrentLabelSprite.drawString(initialCurrentText, 0, 0);
+
+  initialCurrentLabelPixels = (uint16_t *)initialCurrentLabelSprite.getPointer();
+  if (initialCurrentLabelPixels == nullptr)
+  {
+    initialCurrentLabelSprite.deleteSprite();
+    initialCurrentLabelWidth = 0;
+    initialCurrentLabelHeight = 0;
+    return false;
+  }
+
+  return true;
+}
+
+static bool RenderTextLabelToBuffer(const char *text, uint16_t *labelPixels, int maxWidth, int maxHeight, int *labelWidth, int *labelHeight)
+{
+  if ((text == nullptr) || (labelPixels == nullptr) || (labelWidth == nullptr) || (labelHeight == nullptr))
+  {
+    return false;
+  }
+
+  int renderedWidth = tft.textWidth(text);
+  int renderedHeight = tft.fontHeight();
+
+  if ((renderedWidth <= 0) || (renderedHeight <= 0) || (renderedWidth > maxWidth) || (renderedHeight > maxHeight))
+  {
+    *labelWidth = 0;
+    *labelHeight = 0;
+    return false;
+  }
+
+  if (textLabelStageSprite.created())
+  {
+    textLabelStageSprite.deleteSprite();
+  }
+
+  textLabelStageSprite.setColorDepth(16);
+  if (textLabelStageSprite.createSprite(renderedWidth, renderedHeight) == nullptr)
+  {
+    *labelWidth = 0;
+    *labelHeight = 0;
+    return false;
+  }
+
+  textLabelStageSprite.loadFont(NotoSansBold15);
+  textLabelStageSprite.setTextColor(TFT_WHITE, TFT_BLACK);
+  textLabelStageSprite.fillSprite(TFT_BLACK);
+  textLabelStageSprite.drawString(text, 0, 0);
+
+  uint16_t *sourcePixels = (uint16_t *)textLabelStageSprite.getPointer();
+  if (sourcePixels == nullptr)
+  {
+    textLabelStageSprite.deleteSprite();
+    *labelWidth = 0;
+    *labelHeight = 0;
+    return false;
+  }
+
+  memcpy(labelPixels, sourcePixels, (size_t)renderedWidth * (size_t)renderedHeight * sizeof(uint16_t));
+  textLabelStageSprite.deleteSprite();
+
+  *labelWidth = renderedWidth;
+  *labelHeight = renderedHeight;
+  return true;
+}
+
+static bool EnsureChannelNumberLabel(int channelIndex)
+{
+  if ((channelIndex < 0) || (channelIndex >= NUM_CHANNELS))
+  {
+    return false;
+  }
+
+  if (channelNumberLabelValid[channelIndex])
+  {
+    return true;
+  }
+
+  char numberText[3];
+  if (channelIndex < 9)
+  {
+    numberText[0] = (char)('1' + channelIndex);
+    numberText[1] = '\0';
+  }
+  else
+  {
+    numberText[0] = '1';
+    numberText[1] = (char)('0' + (channelIndex - 9));
+    numberText[2] = '\0';
+  }
+
+  int labelWidth = 0;
+  int labelHeight = 0;
+  if (!RenderTextLabelToBuffer(numberText, channelNumberLabelPixels[channelIndex], DISPLAY_STATIC_NUMBER_MAX_WIDTH, DISPLAY_STATIC_LABEL_MAX_HEIGHT, &labelWidth, &labelHeight))
+  {
+    channelNumberLabelValid[channelIndex] = false;
+    channelNumberLabelWidths[channelIndex] = 0;
+    channelNumberLabelHeights[channelIndex] = 0;
+    return false;
+  }
+
+  channelNumberLabelWidths[channelIndex] = (uint8_t)labelWidth;
+  channelNumberLabelHeights[channelIndex] = (uint8_t)labelHeight;
+  channelNumberLabelValid[channelIndex] = true;
+  return true;
+}
+
+static bool EnsureChannelNameLabel(int channelIndex)
+{
+  if ((channelIndex < 0) || (channelIndex >= NUM_CHANNELS))
+  {
+    return false;
+  }
+
+  char safeName[4];
+  memcpy(safeName, Channels[channelIndex].ChannelName, 3);
+  safeName[3] = '\0';
+
+  if (channelNameLabelValid[channelIndex] && (memcmp(cachedChannelNames[channelIndex], safeName, sizeof(safeName)) == 0))
+  {
+    return true;
+  }
+
+  int labelWidth = 0;
+  int labelHeight = 0;
+  if (!RenderTextLabelToBuffer(safeName, channelNameLabelPixels[channelIndex], DISPLAY_STATIC_NAME_MAX_WIDTH, DISPLAY_STATIC_LABEL_MAX_HEIGHT, &labelWidth, &labelHeight))
+  {
+    channelNameLabelValid[channelIndex] = false;
+    channelNameLabelWidths[channelIndex] = 0;
+    channelNameLabelHeights[channelIndex] = 0;
+    return false;
+  }
+
+  memcpy(cachedChannelNames[channelIndex], safeName, sizeof(safeName));
+  channelNameLabelWidths[channelIndex] = (uint8_t)labelWidth;
+  channelNameLabelHeights[channelIndex] = (uint8_t)labelHeight;
+  channelNameLabelValid[channelIndex] = true;
+  return true;
+}
+
+static bool FillScreenWakeRaw(uint16_t color)
+{
+  spix.beginTransaction(SPISettings(SPI_FREQUENCY, MSBFIRST, TFT_SPI_MODE));
+
+  SPI_HandleTypeDef *spiHandle = spix.getHandle();
+  uint32_t remainingPixels = (uint32_t)SCREENWIDTH * SCREENHEIGHT;
+  uint32_t originalDataSize = SPI_DATASIZE_8BIT;
+  bool use16BitData = false;
+
+  if (spiHandle == nullptr)
+  {
+    spix.endTransaction();
+    return false;
+  }
+
+  originalDataSize = spiHandle->Init.DataSize;
+
+  for (uint32_t index = 0; index < DISPLAY_SPI_FILL_BUFFER_PIXELS; index++)
+  {
+    displaySpiFillBuffer[index] = color;
+  }
+
+  DisplaySetAddressWindowRaw(spiHandle, 0U, 0U, (uint16_t)(SCREENWIDTH - 1), (uint16_t)(SCREENHEIGHT - 1));
+
+  digitalWrite(TFT_CS, LOW);
+  digitalWrite(TFT_DC, LOW);
+  uint8_t command = ILI9341_RAMWR;
+  HAL_SPI_Transmit(spiHandle, &command, 1U, HAL_MAX_DELAY);
+  digitalWrite(TFT_DC, HIGH);
+
+  if (spiHandle->Init.DataSize != SPI_DATASIZE_16BIT)
+  {
+    __HAL_SPI_DISABLE(spiHandle);
+    spiHandle->Init.DataSize = SPI_DATASIZE_16BIT;
+    if (HAL_SPI_Init(spiHandle) == HAL_OK)
+    {
+      use16BitData = true;
+    }
+    else
+    {
+      spiHandle->Init.DataSize = originalDataSize;
+      (void)HAL_SPI_Init(spiHandle);
+    }
+  }
+
+  while (remainingPixels > 0U)
+  {
+    uint32_t chunkPixels = remainingPixels;
+    if (chunkPixels > DISPLAY_SPI_FILL_BUFFER_PIXELS)
+    {
+      chunkPixels = DISPLAY_SPI_FILL_BUFFER_PIXELS;
+    }
+
+    if (use16BitData)
+    {
+      HAL_SPI_Transmit(spiHandle, (uint8_t *)displaySpiFillBuffer, (uint16_t)chunkPixels, HAL_MAX_DELAY);
+    }
+    else
+    {
+      HAL_SPI_Transmit(spiHandle, (uint8_t *)displaySpiFillBuffer, (uint16_t)(chunkPixels * 2U), HAL_MAX_DELAY);
+    }
+    remainingPixels -= chunkPixels;
+  }
+
+  if (spiHandle->Init.DataSize != originalDataSize)
+  {
+    __HAL_SPI_DISABLE(spiHandle);
+    spiHandle->Init.DataSize = originalDataSize;
+    (void)HAL_SPI_Init(spiHandle);
+  }
+
+  digitalWrite(TFT_CS, HIGH);
+  spix.endTransaction();
+  return true;
+}
 
 bool invalidateDisplay = false;
 
@@ -117,7 +527,7 @@ const int channelName[14][2] = {
 void InitialiseDisplay()
 {
   digitalWrite(TFT_RST, LOW);
-  delay(20);
+  delay(5);
   digitalWrite(TFT_RST, HIGH);
   tft.begin();
   tft.initDMA();
@@ -135,21 +545,23 @@ void InitialiseDisplay()
 
   prevSDOK = SDCardOK;
   prevGPSOK = !GPSFix;
+  backgroundClearNeeded = true;
 }
 
 void StartDisplay()
 {
   initIcons = false;
   SPI_2.begin();
-  digitalWrite(TFT_RST, LOW);
-  delay(20);
-  digitalWrite(TFT_RST, HIGH);
   tft.begin();
   tft.initDMA();
   spix = tft.getSPIinstance();
   tft.setRotation(3);
   tft.setBitmapColor(TFT_WHITE, TFT_BLACK);
-  tft.fillScreen(TFT_BLACK);
+  if (!FillScreenWakeRaw(DISPLAY_WAKE_CLEAR_COLOR))
+  {
+    tft.fillScreen(DISPLAY_WAKE_CLEAR_COLOR);
+  }
+  backgroundClearNeeded = false;
   spix.end();
 }
 
@@ -190,11 +602,25 @@ void StopDisplay()
 
 void DrawBackground()
 {
+  static const char initialCurrentText[] = "0A";
+  bool haveInitialCurrentLabelSprite = EnsureInitialCurrentLabelSprite();
+  bool haveChannelNumberLabels[NUM_CHANNELS];
+  bool haveChannelNameLabels[NUM_CHANNELS];
+
+  for (int i = 0; i < NUM_CHANNELS; i++)
+  {
+    haveChannelNumberLabels[i] = EnsureChannelNumberLabel(i);
+    haveChannelNameLabels[i] = EnsureChannelNameLabel(i);
+  }
+
   spix.begin();
 
   tft.startWrite();
 
-  tft.fillRect(0, 85, SCREENWIDTH, 100, TFT_BLACK);
+  if (backgroundClearNeeded)
+  {
+    tft.fillRect(0, 58, SCREENWIDTH, 181, TFT_BLACK);
+  }
 
   tft.drawLine(0, 58, SCREENWIDTH, 58, TFT_DARKGREY);
   tft.drawLine(0, 148, SCREENWIDTH, 148, TFT_DARKGREY);
@@ -210,33 +636,125 @@ void DrawBackground()
 
   tft.setTextColor(TFT_WHITE, TFT_BLACK);
 
+  int initialTextWidth = initialCurrentLabelWidth;
+  int initialTextHeight = initialCurrentLabelHeight;
+
+  if (!haveInitialCurrentLabelSprite)
+  {
+    initialTextWidth = tft.textWidth(initialCurrentText);
+    initialTextHeight = tft.fontHeight();
+  }
+
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    tft.setCursor(textCoordinates[i][0], textCoordinates[i][1]);
-    tft.print(i + 1);
-
-    int ledCenterX = lights[i][0] + 2;
-    int currentTextY = currentReadingCoordinates[i][1];
-    String initialCurrentText = "0A";
-    int initialTextWidth = tft.textWidth(initialCurrentText);
-    tft.setCursor(ledCenterX - (initialTextWidth / 2), currentTextY);
-    tft.print(initialCurrentText);
-
-    char safeName[4];
-    memcpy(safeName, Channels[i].ChannelName, 3);
-    safeName[3] = '\0';
-
-    int chanNameWidth = tft.textWidth(safeName);
-    int chanNameX = channelName[i][0] + (5 - chanNameWidth) / 2;
-
-    tft.setCursor(chanNameX, channelName[i][1]);
-    tft.print(safeName);
-
-    tft.pushImage(lights[i][0] - 10, lights[i][1] - 8, 24, 24, (uint16_t *)greyLED);
+    (void)i;
   }
 
   tft.endWrite();
   spix.end();
+
+  if (haveInitialCurrentLabelSprite)
+  {
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+      int ledCenterX = lights[i][0] + 2;
+      int currentTextX = ledCenterX - (initialTextWidth / 2);
+      int currentTextY = currentReadingCoordinates[i][1];
+
+      if (!PushImageRaw16Bit(currentTextX, currentTextY, initialTextWidth, initialTextHeight, initialCurrentLabelPixels))
+      {
+        spix.begin();
+        tft.startWrite();
+        tft.pushImage(currentTextX, currentTextY, initialTextWidth, initialTextHeight, initialCurrentLabelPixels);
+        tft.endWrite();
+        spix.end();
+      }
+    }
+  }
+  else
+  {
+    for (int i = 0; i < NUM_CHANNELS; i++)
+    {
+      int ledCenterX = lights[i][0] + 2;
+      int currentTextY = currentReadingCoordinates[i][1];
+      spix.begin();
+      tft.startWrite();
+      tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      tft.setCursor(ledCenterX - (initialTextWidth / 2), currentTextY);
+      tft.print(initialCurrentText);
+      tft.endWrite();
+      spix.end();
+    }
+  }
+
+  for (int i = 0; i < NUM_CHANNELS; i++)
+  {
+    if (haveChannelNumberLabels[i])
+    {
+      if (!PushImageRaw16Bit(textCoordinates[i][0], textCoordinates[i][1], channelNumberLabelWidths[i], channelNumberLabelHeights[i], channelNumberLabelPixels[i]))
+      {
+        spix.begin();
+        tft.startWrite();
+        tft.pushImage(textCoordinates[i][0], textCoordinates[i][1], channelNumberLabelWidths[i], channelNumberLabelHeights[i], channelNumberLabelPixels[i]);
+        tft.endWrite();
+        spix.end();
+      }
+    }
+    else
+    {
+      spix.begin();
+      tft.startWrite();
+      tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      tft.setCursor(textCoordinates[i][0], textCoordinates[i][1]);
+      tft.print(i + 1);
+      tft.endWrite();
+      spix.end();
+    }
+
+    if (haveChannelNameLabels[i])
+    {
+      int chanNameX = channelName[i][0] + (5 - channelNameLabelWidths[i]) / 2;
+      if (!PushImageRaw16Bit(chanNameX, channelName[i][1], channelNameLabelWidths[i], channelNameLabelHeights[i], channelNameLabelPixels[i]))
+      {
+        spix.begin();
+        tft.startWrite();
+        tft.pushImage(chanNameX, channelName[i][1], channelNameLabelWidths[i], channelNameLabelHeights[i], channelNameLabelPixels[i]);
+        tft.endWrite();
+        spix.end();
+      }
+    }
+    else
+    {
+      char safeName[4];
+      memcpy(safeName, Channels[i].ChannelName, 3);
+      safeName[3] = '\0';
+
+      int chanNameWidth = tft.textWidth(safeName);
+      int chanNameX = channelName[i][0] + (5 - chanNameWidth) / 2;
+
+      spix.begin();
+      tft.startWrite();
+      tft.setTextColor(TFT_WHITE, TFT_BLACK);
+      tft.setCursor(chanNameX, channelName[i][1]);
+      tft.print(safeName);
+      tft.endWrite();
+      spix.end();
+    }
+  }
+
+  for (int i = 0; i < NUM_CHANNELS; i++)
+  {
+    if (!PushImageRaw16Bit(lights[i][0] - 10, lights[i][1] - 8, 24, 24, greyLED))
+    {
+      spix.begin();
+      tft.startWrite();
+      tft.pushImage(lights[i][0] - 10, lights[i][1] - 8, 24, 24, (uint16_t *)greyLED);
+      tft.endWrite();
+      spix.end();
+    }
+  }
+
+  backgroundClearNeeded = true;
   backgroundDrawn = true;
 }
 
@@ -291,16 +809,16 @@ void UpdateDisplay()
   {
     initIcons = true;
     // Initial icon states
-    tft.pushImage(0, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)logiconError);
+    PushImageRaw16BitInterruptingWrite(0, 4, ICON_WIDTH, ICON_HEIGHT, logiconError);
     if (SystemParams.AllowGPS)
     {
       if (GPSFix)
       {
-        tft.pushImage(47, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)gpsOK);
+        PushImageRaw16BitInterruptingWrite(47, 4, ICON_WIDTH, ICON_HEIGHT, gpsOK);
       }
       else
       {
-        tft.pushImage(47, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)gpsError);
+        PushImageRaw16BitInterruptingWrite(47, 4, ICON_WIDTH, ICON_HEIGHT, gpsError);
       }
     }
     else
@@ -310,14 +828,14 @@ void UpdateDisplay()
 
     if (SystemParams.AllowMotionDetect != 0)
     {
-      tft.pushImage(99, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)motion_ok);
+      PushImageRaw16BitInterruptingWrite(99, 4, ICON_WIDTH, ICON_HEIGHT, motion_ok);
     }
     else
     {
-      tft.pushImage(99, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)motion_error);
+      PushImageRaw16BitInterruptingWrite(99, 4, ICON_WIDTH, ICON_HEIGHT, motion_error);
     }
 
-    tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)zero_bar);
+    PushImageRaw16BitInterruptingWrite(151, 4, ICON_WIDTH, ICON_HEIGHT, zero_bar);
     char timeString[6];
     snprintf(timeString, sizeof(timeString), "%02d:%02d", rtc.getHours(), rtc.getMinutes());
     tft.setCursor(271, 21);
@@ -379,11 +897,11 @@ void UpdateDisplay()
   {
     if (!SDCardOK)
     {
-      tft.pushImage(0, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)logiconError);
+      PushImageRaw16BitInterruptingWrite(0, 4, ICON_WIDTH, ICON_HEIGHT, logiconError);
     }
     else
     {
-      tft.pushImage(0, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)logicon);
+      PushImageRaw16BitInterruptingWrite(0, 4, ICON_WIDTH, ICON_HEIGHT, logicon);
     }
     prevSDOK = SDCardOK;
   }
@@ -395,11 +913,11 @@ void UpdateDisplay()
     {
       if (GPSFix)
       {
-        tft.pushImage(47, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)gpsOK);
+        PushImageRaw16BitInterruptingWrite(47, 4, ICON_WIDTH, ICON_HEIGHT, gpsOK);
       }
       else
       {
-        tft.pushImage(47, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)gpsError);
+        PushImageRaw16BitInterruptingWrite(47, 4, ICON_WIDTH, ICON_HEIGHT, gpsError);
       }
     }
     else
@@ -415,11 +933,11 @@ void UpdateDisplay()
   {
     if (SystemParams.AllowMotionDetect != 0)
     {
-      tft.pushImage(99, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)motion_ok);
+      PushImageRaw16BitInterruptingWrite(99, 4, ICON_WIDTH, ICON_HEIGHT, motion_ok);
     }
     else
     {
-      tft.pushImage(99, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)motion_error);
+      PushImageRaw16BitInterruptingWrite(99, 4, ICON_WIDTH, ICON_HEIGHT, motion_error);
     }
     prevMotionStatus = SystemParams.AllowMotionDetect;
   }
@@ -449,7 +967,7 @@ void UpdateDisplay()
   {
     if (pcCommsOK)
     {
-      tft.pushImage(220, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)pc_ok);
+      PushImageRaw16BitInterruptingWrite(220, 4, ICON_WIDTH, ICON_HEIGHT, pc_ok);
     }
     else
     {
@@ -465,22 +983,22 @@ void UpdateDisplay()
     switch (bars)
     {
     case 0:
-      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)zero_bar);
+      PushImageRaw16BitInterruptingWrite(151, 4, ICON_WIDTH, ICON_HEIGHT, zero_bar);
       break;
     case 1:
-      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)one_bar);
+      PushImageRaw16BitInterruptingWrite(151, 4, ICON_WIDTH, ICON_HEIGHT, one_bar);
       break;
     case 2:
-      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)two_bar);
+      PushImageRaw16BitInterruptingWrite(151, 4, ICON_WIDTH, ICON_HEIGHT, two_bar);
       break;
     case 3:
-      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)three_bar);
+      PushImageRaw16BitInterruptingWrite(151, 4, ICON_WIDTH, ICON_HEIGHT, three_bar);
       break;
     case 4:
-      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)four_bar);
+      PushImageRaw16BitInterruptingWrite(151, 4, ICON_WIDTH, ICON_HEIGHT, four_bar);
       break;
     case 5:
-      tft.pushImage(151, 4, ICON_WIDTH, ICON_HEIGHT, (uint16_t *)five_bar);
+      PushImageRaw16BitInterruptingWrite(151, 4, ICON_WIDTH, ICON_HEIGHT, five_bar);
       break;
     }
     prevBars = bars;

@@ -609,6 +609,21 @@ void InitialiseSystemData()
     SystemParams.DistanceUnitPref = 1;
     SystemParams.AllowMotionDetect = 1;
     SystemParams.DSTActive = 0;
+    SystemParams.CANBusBitrate = DEFAULT_CAN_BUS_BITRATE;
+}
+
+bool IsSupportedCANBusBitrate(uint32_t bitrate)
+{
+    switch (bitrate)
+    {
+    case CAN_BUS_BITRATE_125K:
+    case CAN_BUS_BITRATE_250K:
+    case CAN_BUS_BITRATE_500K:
+    case CAN_BUS_BITRATE_1M:
+        return true;
+    default:
+        return false;
+    }
 }
 
 bool IsValidRtcDateTime(uint16_t fullYear, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second)
@@ -805,6 +820,15 @@ void UpdateSystem()
     else
     {
         SystemRuntimeParams.ErrorFlags = SystemRuntimeParams.ErrorFlags & ~GPS_ERROR;
+    }
+
+    if (IsTelemetryOffline())
+    {
+        SystemRuntimeParams.ErrorFlags |= TELEMETRY_OFFLINE;
+    }
+    else
+    {
+        SystemRuntimeParams.ErrorFlags = SystemRuntimeParams.ErrorFlags & ~TELEMETRY_OFFLINE;
     }
 
     // Checksum status of PC communications

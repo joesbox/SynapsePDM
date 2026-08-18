@@ -81,6 +81,8 @@ const byte COMMAND_ID_CALIBRATION_SAMPLE = 'G';
 const byte COMMAND_ID_CALIBRATION_OVERRIDE = 'O';
 const byte COMMAND_ID_CALIBRATION_SET_KILIS = 'K';
 const byte COMMAND_ID_CONTROLLER_TELEMETRY = 'H';
+const byte COMMAND_ID_CELLULAR_TEST = 'm';
+const byte COMMAND_ID_OPENREMOTE_PROVISION = 'M';
 
 /// @brief Config type index, channel, input or system
 const byte CONFIG_TYPE_INDEX = 2;
@@ -99,6 +101,7 @@ const byte CONFIG_DATA_CHANNELS = 0;
 const byte CONFIG_DATA_ANALOGUE = 1;
 const byte CONFIG_DATA_SYSTEM = 2;
 const byte CONFIG_DATA_DIGITAL = 3;
+const byte CONFIG_DATA_CELLULAR = 4;
 
 /// @brief Config storage union
 extern ChannelConfigUnion SerialChannelData;

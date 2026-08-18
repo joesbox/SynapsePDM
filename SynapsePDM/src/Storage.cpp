@@ -26,6 +26,8 @@
 #include "InputHandler.h"
 #include <stdarg.h>
 
+extern M95640R EEPROMext;
+
 uint16_t bufferIndex = 0;
 StorageConfigUnion StorageConfigData;
 StorageParameters StorageParams;
@@ -37,6 +39,9 @@ uint32_t BytesStored;
 bool UndervoltageLatch;
 bool StorageCRCValid;
 bool AnalogueCRCValid;
+bool CellularCRCValid;
+bool ChannelConfigNeedsRewriteAfterLoad;
+bool SystemConfigNeedsRewriteAfterLoad;
 bool SDFileOpen = false; // Track whether SD file is currently open
 
 CircularBuffer<String, 10> logs;
@@ -48,7 +53,95 @@ static uint32_t transferTotalBytes = 0;
 static bool transferSuspendedLogging = false;
 static uint32_t lastLogFlushMillis = 0;
 static size_t pendingLogBytes = 0;
-static char pendingLogBuffer[8192] = {0};
+static char pendingLogBuffer[4096] = {0};
+
+static uint16_t GetSystemConfigEEPROMOffset()
+{
+    return sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t);
+}
+
+void EnsureCellularClientID()
+{
+#ifdef UID_BASE
+    const volatile uint32_t *uid = reinterpret_cast<const volatile uint32_t *>(UID_BASE);
+    snprintf(CellularParams.ClientID,
+             sizeof(CellularParams.ClientID),
+             "synapse-pdm-%08lX%08lX%08lX",
+             static_cast<unsigned long>(uid[0]),
+             static_cast<unsigned long>(uid[1]),
+             static_cast<unsigned long>(uid[2]));
+#else
+    snprintf(CellularParams.ClientID, sizeof(CellularParams.ClientID), "synapse-pdm");
+#endif
+}
+
+static uint16_t GetStorageConfigEEPROMOffset()
+{
+    return GetSystemConfigEEPROMOffset() + sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t);
+}
+
+static uint16_t GetAnalogueConfigEEPROMOffset()
+{
+    return GetStorageConfigEEPROMOffset() + sizeof(StorageConfigData.dataBytes) + sizeof(uint32_t);
+}
+
+static uint16_t GetCellularConfigEEPROMOffset()
+{
+    return GetAnalogueConfigEEPROMOffset() + sizeof(AnalogueConfigData.dataBytes) + sizeof(uint32_t);
+}
+
+static void WriteEEPROMBlock(uint16_t startAddress, const uint8_t *src, uint16_t length)
+{
+    uint16_t addr = startAddress;
+    uint16_t bytesRemaining = length;
+
+    while (bytesRemaining > 0)
+    {
+        uint8_t pageOffset = addr % EEPROM_PAGE_SIZE;
+        uint8_t spaceInPage = EEPROM_PAGE_SIZE - pageOffset;
+        uint8_t writeLen = (bytesRemaining < spaceInPage) ? bytesRemaining : spaceInPage;
+
+        EEPROMext.EepromWrite(addr, writeLen, (uint8_t *)src);
+        EEPROMext.EepromWaitEndWriteOperation();
+
+        addr += writeLen;
+        src += writeLen;
+        bytesRemaining -= writeLen;
+    }
+}
+
+static void ReadEEPROMBlock(uint16_t startAddress, uint8_t *dst, uint16_t length)
+{
+    uint16_t addr = startAddress;
+    uint16_t bytesRemaining = length;
+
+    while (bytesRemaining > 0)
+    {
+        uint8_t chunk = (bytesRemaining > EEPROM_PAGE_SIZE) ? EEPROM_PAGE_SIZE : bytesRemaining;
+
+        EEPROMext.EepromRead(addr, chunk, dst);
+
+        addr += chunk;
+        dst += chunk;
+        bytesRemaining -= chunk;
+    }
+}
+
+static void EncodeCRC(uint32_t checksum, uint8_t *crcBuf)
+{
+    crcBuf[0] = (checksum >> 24) & 0xFF;
+    crcBuf[1] = (checksum >> 16) & 0xFF;
+    crcBuf[2] = (checksum >> 8) & 0xFF;
+    crcBuf[3] = checksum & 0xFF;
+}
+
+static uint32_t DecodeCRC(const uint8_t *crcBuf)
+{
+    return (uint32_t(crcBuf[0]) << 24) |
+           (uint32_t(crcBuf[1]) << 16) |
+           (uint32_t(crcBuf[2]) << 8) |
+           (uint32_t(crcBuf[3]));
+}
 
 static void RestoreLoggingAfterFailedTransferStart()
 {
@@ -395,6 +488,8 @@ void SaveChannelConfig()
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
+    ChannelConfigNeedsRewriteAfterLoad = false;
+
     EEPROMindex = 0;
 
     // Copy current channel info to storage structure
@@ -460,6 +555,7 @@ bool LoadChannelConfig()
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
     bool validCRC = false;
+    ChannelConfigNeedsRewriteAfterLoad = false;
     EEPROMindex = 0;
 
     uint8_t int32Buf[4];
@@ -514,7 +610,7 @@ bool LoadChannelConfig()
         memcpy(&Channels, &ChannelConfigData.data, sizeof(Channels));
         for (int i = 0; i < NUM_CHANNELS; i++)
         {
-            SanitizeChannelConfig(Channels[i]);
+            ChannelConfigNeedsRewriteAfterLoad = SanitizeChannelConfig(Channels[i]) || ChannelConfigNeedsRewriteAfterLoad;
         }
     }
 
@@ -525,69 +621,138 @@ bool LoadChannelConfig()
     return validCRC;
 }
 
-static void SanitizeLoadedSystemConfig()
+static bool SanitizeLoadedSystemConfig()
 {
+    bool changed = false;
+
     if (SystemParams.SystemCurrentLimit > SYSTEM_CURRENT_MAX)
     {
         SystemParams.SystemCurrentLimit = SYSTEM_CURRENT_MAX;
+        changed = true;
     }
 
     if (SystemParams.IMUwakeWindow == 0)
     {
         SystemParams.IMUwakeWindow = DEFAULT_WW;
+        changed = true;
     }
 
     if (SystemParams.MotionDeadTime > MAX_MOTION_DEAD_TIME)
     {
         SystemParams.MotionDeadTime = DEFAULT_MOTION_DEADTIME;
+        changed = true;
     }
 
     if (SystemParams.ChannelDataCANID == 0)
     {
         SystemParams.ChannelDataCANID = CHAN_CAN_ID;
+        changed = true;
     }
 
     if (SystemParams.DigitalInputDataCANID == 0)
     {
         SystemParams.DigitalInputDataCANID = DIG_INPUT_CAN_ID;
+        changed = true;
     }
 
     if (SystemParams.AnalogueInputDataCANID == 0)
     {
         SystemParams.AnalogueInputDataCANID = ANA_INPUT_CAN_ID;
+        changed = true;
     }
 
     if (SystemParams.SystemDataCANID == 0)
     {
         SystemParams.SystemDataCANID = SYS_CAN_ID;
+        changed = true;
     }
 
     if (SystemParams.SystemConfigDataCANID == 0)
     {
         SystemParams.SystemConfigDataCANID = SYS_CONFIG_CAN_ID;
+        changed = true;
     }
 
     if (SystemParams.ChannelConfigDataCANID == 0)
     {
         SystemParams.ChannelConfigDataCANID = CONF_CAN_ID;
+        changed = true;
     }
 
-    SystemParams.CANResEnabled = SystemParams.CANResEnabled ? 1 : 0;
-    SystemParams.SpeedUnitPref = SystemParams.SpeedUnitPref ? 1 : 0;
-    SystemParams.DistanceUnitPref = SystemParams.DistanceUnitPref ? 1 : 0;
-    SystemParams.AllowData = SystemParams.AllowData ? 1 : 0;
-    SystemParams.AllowGPS = SystemParams.AllowGPS ? 1 : 0;
-    SystemParams.AllowMotionDetect = SystemParams.AllowMotionDetect ? 1 : 0;
+    if (!IsSupportedCANBusBitrate(SystemParams.CANBusBitrate))
+    {
+        SystemParams.CANBusBitrate = DEFAULT_CAN_BUS_BITRATE;
+        changed = true;
+    }
 
+    uint8_t normalizedCanResEnabled = SystemParams.CANResEnabled ? 1 : 0;
+    if (SystemParams.CANResEnabled != normalizedCanResEnabled)
+    {
+        SystemParams.CANResEnabled = normalizedCanResEnabled;
+        changed = true;
+    }
+
+    uint8_t normalizedSpeedUnitPref = SystemParams.SpeedUnitPref ? 1 : 0;
+    if (SystemParams.SpeedUnitPref != normalizedSpeedUnitPref)
+    {
+        SystemParams.SpeedUnitPref = normalizedSpeedUnitPref;
+        changed = true;
+    }
+
+    uint8_t normalizedDistanceUnitPref = SystemParams.DistanceUnitPref ? 1 : 0;
+    if (SystemParams.DistanceUnitPref != normalizedDistanceUnitPref)
+    {
+        SystemParams.DistanceUnitPref = normalizedDistanceUnitPref;
+        changed = true;
+    }
+
+    uint8_t normalizedAllowData = SystemParams.AllowData ? 1 : 0;
+    if (SystemParams.AllowData != normalizedAllowData)
+    {
+        SystemParams.AllowData = normalizedAllowData;
+        changed = true;
+    }
+
+    uint8_t normalizedAllowGPS = SystemParams.AllowGPS ? 1 : 0;
+    if (SystemParams.AllowGPS != normalizedAllowGPS)
+    {
+        SystemParams.AllowGPS = normalizedAllowGPS;
+        changed = true;
+    }
+
+    uint8_t normalizedAllowMotionDetect = SystemParams.AllowMotionDetect ? 1 : 0;
+    if (SystemParams.AllowMotionDetect != normalizedAllowMotionDetect)
+    {
+        SystemParams.AllowMotionDetect = normalizedAllowMotionDetect;
+        changed = true;
+    }
+
+    TimeZoneRule originalTimeZone = SystemParams.TimeZone;
     SanitizeTimeZoneRule(&SystemParams.TimeZone);
+    if (memcmp(&SystemParams.TimeZone, &originalTimeZone, sizeof(TimeZoneRule)) != 0)
+    {
+        changed = true;
+    }
+
     if (SystemParams.TimeZone.DSTEnabled == 0)
     {
+        if (SystemParams.DSTActive != 0)
+        {
+            changed = true;
+        }
         SystemParams.DSTActive = 0;
     }
     else
     {
-        SystemParams.DSTActive = SystemParams.DSTActive ? 1 : 0;
+        uint8_t normalizedDstActive = SystemParams.DSTActive ? 1 : 0;
+        if (SystemParams.DSTActive != normalizedDstActive)
+        {
+            SystemParams.DSTActive = normalizedDstActive;
+            changed = true;
+        }
     }
+
+    return changed;
 }
 
 void SaveSystemConfig()
@@ -595,8 +760,10 @@ void SaveSystemConfig()
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
+    SystemConfigNeedsRewriteAfterLoad = false;
+
     // System info comes straight after channel info + CRC
-    EEPROMindex = sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t);
+    EEPROMindex = GetSystemConfigEEPROMOffset();
 
 #ifdef DEBUG
     Serial.print("System write start index: ");
@@ -693,9 +860,10 @@ bool LoadSystemConfig()
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
     bool validCRC = false;
+    SystemConfigNeedsRewriteAfterLoad = false;
 
     // System config follows channel config + CRC
-    EEPROMindex = sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t);
+    EEPROMindex = GetSystemConfigEEPROMOffset();
 
 #ifdef DEBUG
     Serial.print("System read start index: ");
@@ -769,7 +937,7 @@ bool LoadSystemConfig()
     {
         validCRC = true;
         memcpy(&SystemParams, &SystemConfigData.data, sizeof(SystemParams));
-        SanitizeLoadedSystemConfig();
+        SystemConfigNeedsRewriteAfterLoad = SanitizeLoadedSystemConfig();
     }
 
     EEPROMindex = 0;
@@ -796,9 +964,7 @@ void SaveStorageConfig()
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
     // Storage config follows channel + CRC + system + CRC
-    EEPROMindex =
-        sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) +
-        sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t);
+    EEPROMindex = GetStorageConfigEEPROMOffset();
 
     // Copy current storage info to storage structure
     memcpy(&StorageConfigData.data, &StorageParams, sizeof(StorageParameters));
@@ -863,9 +1029,7 @@ bool LoadStorageConfig()
     bool validCRC = false;
 
     // Storage config follows channel + CRC + system + CRC
-    EEPROMindex =
-        sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) +
-        sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t);
+    EEPROMindex = GetStorageConfigEEPROMOffset();
 
     uint8_t int32Buf[4];
 
@@ -942,10 +1106,7 @@ void SaveAnalogueConfig()
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
     // Analogue config follows channel + CRC + system + CRC + storage + CRC
-    EEPROMindex =
-        sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) +
-        sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t) +
-        sizeof(StorageConfigData.dataBytes) + sizeof(uint32_t);
+    EEPROMindex = GetAnalogueConfigEEPROMOffset();
 
     // Copy current analogue input info to storage structure
     memcpy(&AnalogueConfigData.data, &AnalogueIns, sizeof(AnalogueIns));
@@ -1026,8 +1187,7 @@ bool LoadAnalogueConfig()
     bool validCRC = false;
 
     // Reset EEPROM index, analogue config comes straight after storage info
-    EEPROMindex = sizeof(ChannelConfigData.dataBytes) + sizeof(uint32_t) + sizeof(SystemConfigData.dataBytes) + sizeof(uint32_t) +
-                  sizeof(StorageConfigData.dataBytes) + sizeof(uint32_t);
+    EEPROMindex = GetAnalogueConfigEEPROMOffset();
 
     // Reset CRC result
     uint32_t result = 0;
@@ -1091,6 +1251,154 @@ bool LoadAnalogueConfig()
     EEPROMindex = 0;
     EEPROMext.end();
     SPI_2.end();
+
+    return validCRC;
+}
+
+void InitialiseCellularData()
+{
+    memset(&CellularParams, 0, sizeof(CellularParams));
+    CellularParams.ConfigVersion = CELLULAR_CONFIG_VERSION;
+    CellularParams.Protocol = CELLULAR_PROTOCOL_MQTT;
+    CellularParams.UseTLS = 1;
+    strncpy(CellularParams.OpenRemoteHost, CELLULAR_DEFAULT_OPENREMOTE_HOST, sizeof(CellularParams.OpenRemoteHost) - 1);
+    CellularParams.OpenRemoteHost[sizeof(CellularParams.OpenRemoteHost) - 1] = '\0';
+    CellularParams.OpenRemotePort = CELLULAR_DEFAULT_MQTT_TLS_PORT;
+    CellularParams.KeepAliveSeconds = CELLULAR_DEFAULT_KEEPALIVE_SECONDS;
+    CellularParams.PublishIntervalMs = CELLULAR_DEFAULT_PUBLISH_INTERVAL_MS;
+    CellularParams.TelemetryUploadMask = TELEMETRY_UPLOAD_DEFAULT_MASK;
+    EnsureCellularClientID();
+}
+
+static void EnforceCellularTlsDefaults()
+{
+    CellularParams.UseTLS = 1;
+    if (CellularParams.OpenRemotePort == 0 || CellularParams.OpenRemotePort == CELLULAR_DEFAULT_MQTT_PORT)
+    {
+        CellularParams.OpenRemotePort = CELLULAR_DEFAULT_MQTT_TLS_PORT;
+    }
+}
+
+void SaveCellularConfig()
+{
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+
+    if (CellularParams.ConfigVersion != CELLULAR_CONFIG_VERSION)
+    {
+        CellularParams.ConfigVersion = CELLULAR_CONFIG_VERSION;
+    }
+
+    if (CellularParams.Protocol == 0)
+    {
+        CellularParams.Protocol = CELLULAR_PROTOCOL_MQTT;
+    }
+
+    EnsureCellularClientID();
+    EnforceCellularTlsDefaults();
+
+    if (CellularParams.KeepAliveSeconds == 0)
+    {
+        CellularParams.KeepAliveSeconds = CELLULAR_DEFAULT_KEEPALIVE_SECONDS;
+    }
+
+    if (CellularParams.PublishIntervalMs < CELLULAR_DEFAULT_PUBLISH_INTERVAL_MS)
+    {
+        CellularParams.PublishIntervalMs = CELLULAR_DEFAULT_PUBLISH_INTERVAL_MS;
+    }
+
+    if (CellularParams.TelemetryUploadMask == 0)
+    {
+        CellularParams.TelemetryUploadMask = TELEMETRY_UPLOAD_DEFAULT_MASK;
+    }
+
+    CellularParams.OpenRemoteAssetName[sizeof(CellularParams.OpenRemoteAssetName) - 1] = '\0';
+
+    EEPROMindex = GetCellularConfigEEPROMOffset();
+
+    memcpy(&CellularConfigData.data, &CellularParams, sizeof(CellularParams));
+
+    uint32_t checksum = CRC32::calculate(CellularConfigData.dataBytes, sizeof(CellularConfigData.dataBytes));
+    uint8_t crcBuf[4];
+    EncodeCRC(checksum, crcBuf);
+
+    WriteEEPROMBlock(EEPROMindex, CellularConfigData.dataBytes, sizeof(CellularConfigData.dataBytes));
+    EEPROMindex += sizeof(CellularConfigData.dataBytes);
+    WriteEEPROMBlock(EEPROMindex, crcBuf, sizeof(crcBuf));
+
+    EEPROMindex = 0;
+    EEPROMext.end();
+    SPI_2.end();
+}
+
+bool LoadCellularConfig()
+{
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+
+    bool validCRC = false;
+    bool migratedLegacyConfig = false;
+    EEPROMindex = GetCellularConfigEEPROMOffset();
+
+    uint8_t crcBuf[4];
+
+    ReadEEPROMBlock(EEPROMindex, CellularConfigData.dataBytes, sizeof(CellularConfigData.dataBytes));
+    EEPROMindex += sizeof(CellularConfigData.dataBytes);
+    ReadEEPROMBlock(EEPROMindex, crcBuf, sizeof(crcBuf));
+
+    uint32_t result = DecodeCRC(crcBuf);
+    uint32_t checksum = CRC32::calculate(CellularConfigData.dataBytes, sizeof(CellularConfigData.dataBytes));
+
+    if (result == checksum && (CellularConfigData.data.ConfigVersion == CELLULAR_CONFIG_VERSION || CellularConfigData.data.ConfigVersion == 5))
+    {
+        validCRC = true;
+        memcpy(&CellularParams, &CellularConfigData.data, sizeof(CellularParams));
+        CellularParams.ConfigVersion = CELLULAR_CONFIG_VERSION;
+        if (CellularParams.TelemetryUploadMask == 0)
+        {
+            CellularParams.TelemetryUploadMask = TELEMETRY_UPLOAD_DEFAULT_MASK;
+        }
+        CellularParams.OpenRemoteAssetName[sizeof(CellularParams.OpenRemoteAssetName) - 1] = '\0';
+        EnsureCellularClientID();
+        EnforceCellularTlsDefaults();
+    }
+    else
+    {
+        const size_t legacyCellularConfigSize = sizeof(CellularParameters) - sizeof(CellularParams.OpenRemoteAssetName);
+        EEPROMindex = GetCellularConfigEEPROMOffset();
+        memset(CellularConfigData.dataBytes, 0, sizeof(CellularConfigData.dataBytes));
+        ReadEEPROMBlock(EEPROMindex, CellularConfigData.dataBytes, legacyCellularConfigSize);
+        EEPROMindex += legacyCellularConfigSize;
+        ReadEEPROMBlock(EEPROMindex, crcBuf, sizeof(crcBuf));
+
+        result = DecodeCRC(crcBuf);
+        checksum = CRC32::calculate(CellularConfigData.dataBytes, legacyCellularConfigSize);
+
+        if (result == checksum && CellularConfigData.data.ConfigVersion == 5)
+        {
+            validCRC = true;
+            migratedLegacyConfig = true;
+            memset(&CellularParams, 0, sizeof(CellularParams));
+            memcpy(&CellularParams, CellularConfigData.dataBytes, legacyCellularConfigSize);
+            CellularParams.ConfigVersion = CELLULAR_CONFIG_VERSION;
+            if (CellularParams.TelemetryUploadMask == 0)
+            {
+                CellularParams.TelemetryUploadMask = TELEMETRY_UPLOAD_DEFAULT_MASK;
+            }
+            CellularParams.OpenRemoteAssetName[0] = '\0';
+            EnsureCellularClientID();
+            EnforceCellularTlsDefaults();
+        }
+    }
+
+    EEPROMindex = 0;
+    EEPROMext.end();
+    SPI_2.end();
+
+    if (migratedLegacyConfig)
+    {
+        SaveCellularConfig();
+    }
 
     return validCRC;
 }

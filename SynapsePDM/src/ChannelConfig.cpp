@@ -61,29 +61,103 @@ ChannelPriority GetChannelPriority(ChannelCategory category)
     }
 }
 
-void SanitizeChannelConfig(ChannelConfig &config)
+bool SanitizeChannelConfig(ChannelConfig &config)
 {
+    bool changed = false;
+
     if ((uint8_t)config.ChanType > (uint8_t)DIG_INTERMITTENT)
     {
         config.ChanType = DIG;
+        changed = true;
     }
 
-    config.Category = SanitizeChannelCategory((uint8_t)config.Category);
+    ChannelCategory sanitizedCategory = SanitizeChannelCategory((uint8_t)config.Category);
+    if (config.Category != sanitizedCategory)
+    {
+        config.Category = sanitizedCategory;
+        changed = true;
+    }
 
     if (config.IntermittentOnTime > MAX_INTERMITTENT_TIME_MS)
     {
         config.IntermittentOnTime = MAX_INTERMITTENT_TIME_MS;
+        changed = true;
     }
 
     if (config.IntermittentOffTime > MAX_INTERMITTENT_TIME_MS)
     {
         config.IntermittentOffTime = MAX_INTERMITTENT_TIME_MS;
+        changed = true;
+    }
+
+    // Migrate the legacy RunOn setting to delayed-off-on-ignition if the new
+    // setting is not already configured.
+    if (config.RunOn && !config.DelayedOff)
+    {
+        config.DelayedOff = 1;
+        config.DelayedOffTime = config.RunOnTime;
+        config.DelayedOffTrigger = DELAYED_OFF_IGNITION_OFF;
+        changed = true;
+    }
+
+    if (config.RunOn != 0)
+    {
+        config.RunOn = 0;
+        changed = true;
+    }
+    if (config.RunOnTime != 0)
+    {
+        config.RunOnTime = 0;
+        changed = true;
+    }
+
+    uint8_t normalizedDelayedOn = config.DelayedOn ? 1 : 0;
+    if (config.DelayedOn != normalizedDelayedOn)
+    {
+        config.DelayedOn = normalizedDelayedOn;
+        changed = true;
+    }
+    if (config.DelayedOnTime > MAX_DELAY_TIME_MS)
+    {
+        config.DelayedOnTime = MAX_DELAY_TIME_MS;
+        changed = true;
+    }
+    if (config.DelayedOn && config.DelayedOnTime < MIN_DELAY_TIME_MS)
+    {
+        config.DelayedOnTime = MIN_DELAY_TIME_MS;
+        changed = true;
+    }
+
+    uint8_t normalizedDelayedOff = config.DelayedOff ? 1 : 0;
+    if (config.DelayedOff != normalizedDelayedOff)
+    {
+        config.DelayedOff = normalizedDelayedOff;
+        changed = true;
+    }
+    if (config.DelayedOffTime > MAX_DELAY_TIME_MS)
+    {
+        config.DelayedOffTime = MAX_DELAY_TIME_MS;
+        changed = true;
+    }
+    if (config.DelayedOff && config.DelayedOffTime < MIN_DELAY_TIME_MS)
+    {
+        config.DelayedOffTime = MIN_DELAY_TIME_MS;
+        changed = true;
+    }
+
+    if (config.DelayedOffTrigger > DELAYED_OFF_IGNITION_OFF)
+    {
+        config.DelayedOffTrigger = DELAYED_OFF_ASSIGNED_INPUT;
+        changed = true;
     }
 
     if (!(config.CurrentSenseKILIS >= MIN_CHANNEL_CURRENT_SENSE_KILIS &&
           config.CurrentSenseKILIS <= MAX_CHANNEL_CURRENT_SENSE_KILIS))
     {
         config.CurrentSenseKILIS = DEFAULT_CHANNEL_CURRENT_SENSE_KILIS;
+        changed = true;
     }
+
+    return changed;
 }
 

@@ -40,7 +40,7 @@ BO_ 1792 ChannelStatusRequest: 8 ECU
  SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
 
 BO_ 1793 ChannelStatusResponse: 8 PDM
- SG_ FrameIndex M : 7|8@0+ (1,0) [0|2] "" Vector__XXX
+ SG_ FrameIndex M : 7|8@0+ (1,0) [0|3] "" Vector__XXX
  SG_ ChannelType m0 : 15|8@0+ (1,0) [0|6] "" Vector__XXX
  SG_ ChannelCurrent m0 : 23|8@0+ (0.1,0) [0|25.5] "Amps" Vector__XXX
  SG_ Enabled m0 : 31|8@0+ (1,0) [0|1] "" Vector__XXX
@@ -50,9 +50,12 @@ BO_ 1793 ChannelStatusResponse: 8 PDM
  SG_ RetryCount m1 : 15|8@0+ (1,0) [0|255] "" Vector__XXX
  SG_ InrushDelay m1 : 23|32@0+ (1,0) [0|2000] "Milliseconds" Vector__XXX
  SG_ ActiveHigh m1 : 55|8@0+ (1,0) [0|1] "" Vector__XXX
- SG_ RunOn m1 : 63|8@0+ (1,0) [0|1] "" Vector__XXX
- SG_ RunOnTime m2 : 15|32@0+ (1,0) [0|3600000] "Milliseconds" Vector__XXX
+ SG_ DelayedOn m1 : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DelayedOnTime m2 : 15|32@0+ (1,0) [0|3600000] "Milliseconds" Vector__XXX
  SG_ InrushCurrentThreshold m2 : 47|8@0+ (1,0) [0|50] "Amps" Vector__XXX
+ SG_ DelayedOff m2 : 55|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DelayedOffTrigger m2 : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DelayedOffTime m3 : 15|32@0+ (1,0) [0|3600000] "Milliseconds" Vector__XXX
 
 BO_ 1808 DigitalInputStatusRequest: 8 ECU
  SG_ Reserved : 7|8@0+ (1,0) [0|0] "" Vector__XXX
@@ -78,6 +81,8 @@ BO_ 1824 SystemStatus1: 8 PDM
  SG_ ECUVoltage : 31|8@0+ (0.1,0) [0|25.5] "Volts" Vector__XXX
  SG_ SystemCurrent : 39|16@0+ (0.1,0) [0|6553.5] "Amps" Vector__XXX
  SG_ ErrorFlags : 55|16@0+ (1,0) [0|65535] "" Vector__XXX
+
+CM_ SG_ 1824 ErrorFlags "Bit mask: 0x0001 Overcurrent, 0x0002 Overtemperature, 0x0004 Undervoltage, 0x0008 CRC check failed, 0x0010 SD card error, 0x0020 PC communications checksum error, 0x0040 GPS error, 0x0080 temperature warning, 0x0100 telemetry offline.";
 
 BO_ 1825 SystemStatus2: 8 PDM
  SG_ AliveCounter : 7|8@0+ (1,0) [0|255] "" Vector__XXX
@@ -115,12 +120,10 @@ BO_ 1858 ChannelConfigF2: 8 ECU
  SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
  SG_ InrushDelay : 15|32@0+ (1,0) [0|2000] "Milliseconds" Vector__XXX
  SG_ ActiveHigh : 47|8@0+ (1,0) [0|1] "" Vector__XXX
- SG_ RunOn : 55|8@0+ (1,0) [0|1] "" Vector__XXX
- SG_ WriteBitMask : 63|8@0+ (1,0) [0|15] "" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|7] "" Vector__XXX
 
 BO_ 1859 ChannelConfigF3: 8 ECU
  SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
- SG_ RunOnTime : 15|32@0+ (1,0) [0|3600000] "Milliseconds" Vector__XXX
  SG_ SoftStart : 47|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ SoftStartTime : 55|8@0+ (1,0) [0|5] "Seconds" Vector__XXX
  SG_ WriteBitMask : 63|8@0+ (1,0) [0|15] "" Vector__XXX
@@ -130,10 +133,142 @@ BO_ 1860 ChannelConfigF4: 8 ECU
  SG_ InrushCurrentThreshold : 15|8@0+ (1,0) [0|50] "Amps" Vector__XXX
  SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
 
+BO_ 1861 ChannelConfigF5: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ PWMSetDuty : 47|8@0+ (1,0) [0|100] "Percent" Vector__XXX
+ SG_ Category : 55|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 1862 ChannelConfigF6: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ OnThresholdRaw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ PWMMin : 47|8@0+ (1,0) [0|100] "Percent" Vector__XXX
+ SG_ PWMMax : 55|8@0+ (1,0) [0|100] "Percent" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 1863 ChannelConfigF7: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ OffThresholdRaw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ SoftStop : 47|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ DelayFlags : 55|8@0+ (1,0) [0|3] "" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 1864 ChannelConfigF8: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ ScaleMinRaw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ DelayedOffTrigger : 47|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|255] "" Vector__XXX
+
+BO_ 1865 ChannelConfigF9: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ ScaleMaxRaw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1866 ChannelConfigF10: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ SoftStopTime : 15|32@0+ (1,0) [0|5000] "Milliseconds" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1867 ChannelConfigF11: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ IntermittentOnTime : 15|32@0+ (1,0) [0|10000] "Milliseconds" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1868 ChannelConfigF12: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ IntermittentOffTime : 15|32@0+ (1,0) [0|10000] "Milliseconds" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1869 ChannelConfigF13: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ DelayedOnTime : 15|32@0+ (1,0) [0|3600000] "Milliseconds" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1870 ChannelConfigF14: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1,0] [1|14] "" Vector__XXX
+ SG_ DelayedOffTime : 15|32@0+ (1,0) [0|3600000] "Milliseconds" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1871 AnalogueConfigF0: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ PullUpEnable : 15|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ PullDownEnable : 23|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ InputType : 31|8@0+ (1,0) [0|4] "" Vector__XXX
+ SG_ Units : 39|8@0+ (1,0) [0|9] "" Vector__XXX
+ SG_ CalibrationPoints : 47|8@0+ (1,0) [2|3] "" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|31] "" Vector__XXX
+
+BO_ 1872 AnalogueConfigF1: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ CalibrationVolt1Raw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1873 AnalogueConfigF2: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ CalibrationValue1Raw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1874 AnalogueConfigF3: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ CalibrationVolt2Raw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1875 AnalogueConfigF4: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ CalibrationValue2Raw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1876 AnalogueConfigF5: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ CalibrationVolt3Raw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1877 AnalogueConfigF6: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ CalibrationValue3Raw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1878 AnalogueConfigF7: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ NTCBetaRaw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1879 AnalogueConfigF8: 8 ECU
+ SG_ InputNumber : 7|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ NTCNominalResistanceRaw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1841 SystemConfigF1: 8 ECU
+ SG_ CANResEnabled : 7|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ ChannelDataCANID : 15|16@0+ (1,0) [0|2047] "" Vector__XXX
+ SG_ DigitalInputDataCANID : 31|16@0+ (1,0) [0|2047] "" Vector__XXX
+ SG_ AnalogueInputDataCANID : 47|16@0+ (1,0) [0|2047] "" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|15] "" Vector__XXX
+
+BO_ 1842 SystemConfigF2: 8 ECU
+ SG_ SystemDataCANID : 15|16@0+ (1,0) [0|2047] "" Vector__XXX
+ SG_ ChannelConfigDataCANID : 31|16@0+ (1,0) [0|2047] "" Vector__XXX
+ SG_ SystemConfigDataCANID : 47|16@0+ (1,0) [0|2047] "" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|7] "" Vector__XXX
+
+BO_ 1843 SystemConfigF3: 8 ECU
+ SG_ IMUwakeWindow : 31|32@0+ (1,0) [0|4294967295] "Milliseconds" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1844 SystemConfigF4: 8 ECU
+ SG_ CANBusBitrate : 31|32@0+ (1,0) [125000|1000000] "BitsPerSecond" Vector__XXX
+ SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
+BO_ 1845 SystemConfigF5: 8 ECU
+ SG_ TimeZoneRuleBytes0_7 : 7|64@0+ (1,0) [0|18446744073709551615] "RawBytes" Vector__XXX
+
+BO_ 1846 SystemConfigF6: 8 ECU
+ SG_ TimeZoneRuleBytes8_14 : 7|56@0+ (1,0) [0|72057594037927935] "RawBytes" Vector__XXX
+
 
 CM_ BO_ 1792 "Request a single channel status block. Set ChannelNumber to 1..14.";
-CM_ BO_ 1793 "Multiplexed 3-frame response on ChannelDataCANID + 1. FrameIndex selects the payload layout.";
-CM_ SG_ 1793 FrameIndex "0 = status/core config, 1 = timing/config, 2 = run-on/inrush config.";
+CM_ BO_ 1793 "Multiplexed 4-frame response on ChannelDataCANID + 1. FrameIndex selects the payload layout.";
+CM_ SG_ 1793 FrameIndex "0 = status/core config, 1 = retry/inrush/input config, 2 = delayed-on/inrush/delayed-off flags, 3 = delayed-off time.";
 CM_ SG_ 1793 ChannelName "Three uppercase letters packed into 16 bits as ((c0-'A') << 10) | ((c1-'A') << 5) | (c2-'A').";
 CM_ BO_ 1808 "Digital input snapshot request. Payload is ignored by the controller.";
 CM_ BO_ 1809 "Digital input snapshot response.";
@@ -154,15 +289,47 @@ CM_ SG_ 1856 ControlValue "0 disables the channel. Any non-zero value enables it
 CM_ BO_ 1857 "Extended channel configuration write. Firmware reads byte 0 = ChannelNumber, byte 1 = ChannelType, bytes 2-3 = ChannelName, byte 4 = CurrentThresholdLow, byte 5 = CurrentThresholdHigh, byte 6 = RetryCount, byte 7 = WriteBitMask. Motorola start bits 23, 39, 47, and 55 therefore map to bytes 2, 4, 5, and 6 respectively.";
 CM_ SG_ 1857 ChannelName "Three uppercase letters packed into 16 bits as ((c0-'A') << 10) | ((c1-'A') << 5) | (c2-'A').";
 CM_ SG_ 1857 WriteBitMask "Bits 0,1,3,4,5 are implemented for ChannelType, ChannelName, CurrentThresholdLow, CurrentThresholdHigh, and RetryCount. Bit 2 is unused. Firmware also checks bit 6, but byte 7 is the mask itself, so use ChannelConfigF4 to set InrushCurrentThreshold.";
-CM_ SG_ 1858 WriteBitMask "Bits 1,2,3 gate InrushDelay, ActiveHigh, and RunOn respectively. Bit 0 is unused.";
-CM_ SG_ 1859 WriteBitMask "Bits 1,2,3 gate RunOnTime, SoftStart, and SoftStartTime respectively. Bit 0 is unused.";
+CM_ SG_ 1858 WriteBitMask "Bits 1 and 2 gate InrushDelay and ActiveHigh respectively. Bits 0 and 3 are unused.";
+CM_ SG_ 1859 WriteBitMask "Bits 2 and 3 gate SoftStart and SoftStartTime respectively. Bits 0 and 1 are unused.";
 CM_ BO_ 1860 "Dedicated inrush current threshold write message. Firmware reads byte 0 = ChannelNumber, byte 1 = InrushCurrentThreshold, byte 7 = WriteBitMask, and ignores bytes 2-6.";
 CM_ SG_ 1860 WriteBitMask "Bit 0 gates InrushCurrentThreshold. When clear, the controller ignores byte 1. Bytes 2-6 are unused padding and should be sent as zero.";
-VAL_ 1793 FrameIndex 0 "Frame0" 1 "Frame1" 2 "Frame2" ;
+CM_ BO_ 1861 "ChannelConfigF5 writes stored PWMSetDuty and Category. Only WriteBitMask bits 4 and 5 are implemented; bytes 1-4 remain reserved.";
+CM_ BO_ 1862 "ChannelConfigF6 writes OnThreshold plus PWMMin/PWMMax for analogue/scaled channel modes.";
+CM_ BO_ 1863 "ChannelConfigF7 writes OffThreshold, SoftStop, and delayed-on/off enable flags packed into DelayFlags.";
+CM_ SG_ 1863 DelayFlags "Bit 0 = DelayedOn, bit 1 = DelayedOff.";
+CM_ BO_ 1864 "ChannelConfigF8 writes ScaleMin and DelayedOffTrigger.";
+CM_ BO_ 1865 "ChannelConfigF9 writes ScaleMax using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1866 "ChannelConfigF10 writes SoftStopTime in milliseconds using bytes 1-4.";
+CM_ BO_ 1867 "ChannelConfigF11 writes IntermittentOnTime in milliseconds using bytes 1-4.";
+CM_ BO_ 1868 "ChannelConfigF12 writes IntermittentOffTime in milliseconds using bytes 1-4.";
+CM_ BO_ 1869 "ChannelConfigF13 writes DelayedOnTime in milliseconds using bytes 1-4.";
+CM_ BO_ 1870 "ChannelConfigF14 writes DelayedOffTime in milliseconds using bytes 1-4.";
+CM_ BO_ 1871 "AnalogueConfigF0 writes analogue input flags, type, units, and calibration-point count.";
+CM_ BO_ 1872 "AnalogueConfigF1 writes CalibrationVolt1 using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1873 "AnalogueConfigF2 writes CalibrationValue1 using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1874 "AnalogueConfigF3 writes CalibrationVolt2 using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1875 "AnalogueConfigF4 writes CalibrationValue2 using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1876 "AnalogueConfigF5 writes CalibrationVolt3 using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1877 "AnalogueConfigF6 writes CalibrationValue3 using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1878 "AnalogueConfigF7 writes NTCBeta using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1879 "AnalogueConfigF8 writes NTCNominalResistance using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1841 "SystemConfigF1 writes CAN termination and request CAN IDs not covered by SystemConfig.";
+CM_ BO_ 1842 "SystemConfigF2 writes the remaining status/config CAN IDs.";
+CM_ BO_ 1843 "SystemConfigF3 writes IMUwakeWindow in milliseconds using bytes 0-3.";
+CM_ BO_ 1844 "SystemConfigF4 writes CANBusBitrate in bits per second using bytes 0-3. Firmware only accepts supported presets.";
+CM_ BO_ 1845 "SystemConfigF5 carries TimeZoneRule bytes 0-7. Firmware buffers this frame until SystemConfigF6 arrives.";
+CM_ BO_ 1846 "SystemConfigF6 carries TimeZoneRule bytes 8-14 in bytes 0-6. Firmware applies the packed rule once both timezone frames have arrived.";
+CM_ SG_ 1841 WriteBitMask "Bit 0 gates CANResEnabled, bit 1 ChannelDataCANID, bit 2 DigitalInputDataCANID, bit 3 AnalogueInputDataCANID.";
+CM_ SG_ 1842 WriteBitMask "Bit 0 gates SystemDataCANID, bit 1 ChannelConfigDataCANID, bit 2 SystemConfigDataCANID.";
+CM_ SG_ 1843 WriteBitMask "Bit 0 gates IMUwakeWindow. Bytes 4-6 are unused padding and should be sent as zero.";
+CM_ SG_ 1844 WriteBitMask "Bit 0 gates CANBusBitrate. Bytes 4-6 are unused padding and should be sent as zero.";
+VAL_ 1793 FrameIndex 0 "Frame0" 1 "Frame1" 2 "Frame2" 3 "Frame3" ;
 VAL_ 1793 ChannelType 0 "Digital" 1 "DigitalPWM" 2 "AnalogueThreshold" 3 "AnalogueScaled" 4 "CANDigital" 5 "CANPWM" 6 "DigitalIntermittent" ;
 VAL_ 1793 Enabled 0 "OutputOff" 1 "OutputOn" ;
 VAL_ 1793 ActiveHigh 0 "ActiveLow" 1 "ActiveHigh" ;
-VAL_ 1793 RunOn 0 "Disabled" 1 "Enabled" ;
+VAL_ 1793 DelayedOn 0 "Disabled" 1 "Enabled" ;
+VAL_ 1793 DelayedOff 0 "Disabled" 1 "Enabled" ;
+VAL_ 1793 DelayedOffTrigger 0 "AssignedInput" 1 "IgnitionOff" ;
 VAL_ 1811 FrameIndex 0 "Frame0" 1 "Frame1" ;
 VAL_ 1811 InputType 0 "RawVoltage" 1 "Active" 2 "Passive" 3 "NTC" 4 "Digital" ;
 VAL_ 1811 Units 0 "Volts" 1 "Amps" 2 "Celsius" 3 "Fahrenheit" 4 "Percent" 5 "RPM" 6 "KPH" 7 "MPH" 8 "Bar" 9 "PSI" ;
@@ -178,6 +345,12 @@ VAL_ 1840 AllowGPS 0 "False" 1 "True" ;
 VAL_ 1840 AllowMotionDetect 0 "False" 1 "True" ;
 VAL_ 1857 ChannelType 0 "Digital" 1 "DigitalPWM" 2 "AnalogueThreshold" 3 "AnalogueScaled" 4 "CANDigital" 5 "CANPWM" 6 "DigitalIntermittent" ;
 VAL_ 1858 ActiveHigh 0 "ActiveLow" 1 "ActiveHigh" ;
-VAL_ 1858 RunOn 0 "Disabled" 1 "Enabled" ;
 VAL_ 1859 SoftStart 0 "Disabled" 1 "Enabled" ;
+VAL_ 1863 SoftStop 0 "Disabled" 1 "Enabled" ;
+VAL_ 1864 DelayedOffTrigger 0 "AssignedInput" 1 "IgnitionOff" ;
+VAL_ 1871 PullUpEnable 0 "False" 1 "True" ;
+VAL_ 1871 PullDownEnable 0 "False" 1 "True" ;
+VAL_ 1871 InputType 0 "RawVoltage" 1 "Active" 2 "Passive" 3 "NTC" 4 "Digital" ;
+VAL_ 1871 Units 0 "Volts" 1 "Amps" 2 "Celsius" 3 "Fahrenheit" 4 "Percent" 5 "RPM" 6 "KPH" 7 "MPH" 8 "Bar" 9 "PSI" ;
+VAL_ 1841 CANResEnabled 0 "Disabled" 1 "Enabled" ;
 

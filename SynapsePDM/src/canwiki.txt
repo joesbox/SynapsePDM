@@ -1,0 +1,683 @@
+## Network Configuration
+
+This wiki is intended as a practical guide to the controller's CAN protocol: what each message is for, when to use it, and how to interpret it at a system level.
+
+If you need the strict signal-level definition for tooling, import the DBC instead. The DBC is the better source for machine-readable CAN decoding; this page is the better source for understanding how the controller behaves.
+
+- **CAN format**: Standard 11-bit identifiers
+- **Default bitrate**: 500 kbps
+- **Supported bitrates in firmware**: 125 kbps, 250 kbps, 500 kbps, 1 Mbps
+- **Multi-byte encoding**: Big-endian for all 16-bit and 32-bit fields
+
+---
+
+## System Status Messages
+
+The controller publishes two recurring status frames. Together they provide a quick health snapshot of the PDM itself: electrical load, temperature, battery voltage, faults, and key feature-enable states.
+
+### SystemStatus1 (0x720 / 1824)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes | **Cycle Time**: 100 ms
+
+Provides real-time system status including current, voltage, temperature, and system error flags.
+
+| Signal | Bit Position | Length | Scale | Unit | Range | Type | Notes |
+|--------|--------------|--------|-------|------|-------|------|-------|
+| **AliveCounter** | 0-7 | 8 bits | 1 | - | 0-255 | Unsigned | Increments once per status cycle and wraps naturally |
+| **SystemCurrentLimit** | 8-15 | 8 bits | 1 | A | 0-150 | Unsigned | Configured global current limit |
+| **SystemTemp** | 16-23 | 8 bits | 1 | C | 0-255 | Unsigned | Internal system temperature |
+| **ECUVoltage** | 24-31 | 8 bits | x0.1 | V | 0-25.5 | Unsigned | Battery voltage |
+| **SystemCurrent** | 32-47 | 16 bits | x0.1 | A | 0-6553.5 | Unsigned | Total measured system current |
+| **ErrorFlags** | 48-63 | 16 bits | 1 | - | 0-65535 | Unsigned | System error bitmask |
+
+**Byte Layout**:
+```
+Byte 0: AliveCounter
+Byte 1: SystemCurrentLimit
+Byte 2: SystemTemp
+Byte 3: ECUVoltage
+Byte 4: SystemCurrent MSB
+Byte 5: SystemCurrent LSB
+Byte 6: ErrorFlags MSB
+Byte 7: ErrorFlags LSB
+```
+
+**Error Flag Bitmask**:
+```
+0x0001: Overcurrent
+0x0002: Overtemp
+0x0004: Undervoltage
+0x0008: CRC check failed
+0x0010: SD card error
+0x0020: PC comms checksum error
+0x0040: GPS error
+0x0080: Temperature warning
+0x0100: Telemetry offline - no successful telemetry publish for more than the greater of 120 seconds or 10 configured publish intervals; only monitored while cellular data and MQTT are configured and OpenRemote provisioning is inactive
+```
+
+---
+
+### SystemStatus2 (0x721 / 1825)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes | **Cycle Time**: 100 ms
+
+Configuration status and feature enable state.
+
+| Signal | Bit Position | Length | Unit | Range | Values | Notes |
+|--------|--------------|--------|------|-------|--------|-------|
+| **AliveCounter** | 0-7 | 8 bits | - | 0-255 | - | Carries the post-increment counter value for the same cycle |
+| **SpeedUnits** | 8-15 | 8 bits | - | 0-1 | 0=Metric, 1=Imperial | Speed display preference |
+| **DistanceUnits** | 16-23 | 8 bits | - | 0-1 | 0=Metric, 1=Imperial | Distance display preference |
+| **AllowData** | 24-31 | 8 bits | - | 0-1 | 0=False, 1=True | Cellular/mobile data enabled |
+| **AllowGPS** | 32-39 | 8 bits | - | 0-1 | 0=False, 1=True | GPS enabled |
+| **AllowMotionDetect** | 40-47 | 8 bits | - | 0-1 | 0=False, 1=True | Motion wake enabled |
+| **MotionDeadTime** | 48-55 | 8 bits | Minutes | 0-254 | - | Motion-ignore time after wake/sleep transition |
+| **Reserved** | 56-63 | 8 bits | - | 0 | - | Currently always zero |
+
+---
+
+## Channel Status Messages
+
+Channel status is request/response based rather than periodic. Ask for one channel by number and the controller returns a four-frame snapshot covering the live output state plus the most relevant protection and timing settings.
+
+### ChannelStatusRequest (0x700 / 1792)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Requests the current status and timing/config snapshot for one channel.
+
+| Signal | Bit Position | Length | Unit | Range | Notes |
+|--------|--------------|--------|------|-------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | - | 1-14 | Channel index to query |
+| **Reserved** | 8-63 | 56 bits | - | 0 | Ignored by the controller |
+
+---
+
+### ChannelStatusResponseF0 (0x701 / 1793, Frame 0)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes
+
+Basic channel identity and live electrical state.
+
+| Signal | Bit Position | Length | Scale | Unit | Range | Values | Notes |
+|--------|--------------|--------|-------|------|-------|--------|-------|
+| **FrameIndex** | 0-7 | 8 bits | 1 | - | 0 | - | Frame selector |
+| **ChannelType** | 8-15 | 8 bits | 1 | - | 0-6 | 0=Digital, 1=DigitalPWM, 2=AnalogueThreshold, 3=AnalogueScaled, 4=CANDigital, 5=CANPWM, 6=DigitalIntermittent | Current channel type |
+| **ChannelCurrent** | 16-23 | 8 bits | x0.1 | A | 0-25.5 | - | Live measured channel current |
+| **Enabled** | 24-31 | 8 bits | 1 | - | 0-1 | 0=Off, 1=On | Live runtime enabled state |
+| **ChannelName** | 32-47 | 16 bits | 1 | - | 0-32767 | PackedLetters | Three uppercase letters packed as `((c0-'A')<<10) | ((c1-'A')<<5) | (c2-'A')` |
+| **CurrentThresholdLow** | 48-55 | 8 bits | x0.1 | A | 0-25.5 | - | Low-current/open-circuit threshold |
+| **CurrentThresholdHigh** | 56-63 | 8 bits | x0.1 | A | 0-25.5 | - | High-current cutoff threshold |
+
+---
+
+### ChannelStatusResponseF1 (0x701 / 1793, Frame 1)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes
+
+Protection retry settings plus the first part of the timing configuration.
+
+| Signal | Bit Position | Length | Unit | Range | Values | Notes |
+|--------|--------------|--------|------|-------|--------|-------|
+| **FrameIndex** | 0-7 | 8 bits | - | 1 | - | Frame selector |
+| **RetryCount** | 8-15 | 8 bits | - | 0-255 | - | Automatic retry attempts after fault |
+| **InrushDelay** | 16-47 | 32 bits | Milliseconds | 0-2000 | - | Startup period using inrush threshold |
+| **ActiveHigh** | 48-55 | 8 bits | - | 0-1 | 0=ActiveLow, 1=ActiveHigh | Output polarity |
+| **DelayedOn** | 56-63 | 8 bits | - | 0-1 | 0=Disabled, 1=Enabled | Delayed-on feature enabled |
+
+---
+
+### ChannelStatusResponseF2 (0x701 / 1793, Frame 2)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes
+
+The remainder of the delay configuration, including the delayed-off mode source.
+
+| Signal | Bit Position | Length | Unit | Range | Values | Notes |
+|--------|--------------|--------|------|-------|--------|-------|
+| **FrameIndex** | 0-7 | 8 bits | - | 2 | - | Frame selector |
+| **DelayedOnTime** | 8-39 | 32 bits | Milliseconds | 0-3600000 | - | Delayed-on timer duration |
+| **InrushCurrentThreshold** | 40-47 | 8 bits | A | 0-50 | - | Temporary current limit used during inrush delay |
+| **DelayedOff** | 48-55 | 8 bits | - | 0-1 | 0=Disabled, 1=Enabled | Delayed-off feature enabled |
+| **DelayedOffTrigger** | 56-63 | 8 bits | - | 0-1 | 0=AssignedInput, 1=IgnitionOff | Source that starts delayed-off timing |
+
+---
+
+### ChannelStatusResponseF3 (0x701 / 1793, Frame 3)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes
+
+Final timing frame carrying the delayed-off duration.
+
+| Signal | Bit Position | Length | Unit | Range | Notes |
+|--------|--------------|--------|------|-------|-------|
+| **FrameIndex** | 0-7 | 8 bits | - | 3 | Frame selector |
+| **DelayedOffTime** | 8-39 | 32 bits | Milliseconds | 0-3600000 | Delayed-off timer duration |
+| **Reserved** | 40-63 | 24 bits | - | 0 | Currently always zero |
+
+---
+
+## Digital Input Messages
+
+Digital inputs are exposed as a single bitmask snapshot. This is the lightest-weight way to poll all eight digital inputs at once.
+
+### DigitalInputStatusRequest (0x710 / 1808)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Requests a snapshot of all digital input states. Payload contents are ignored.
+
+---
+
+### DigitalInputStatusResponse (0x711 / 1809)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes
+
+Digital input snapshot response.
+
+| Signal | Bit Position | Length | Unit | Range | Notes |
+|--------|--------------|--------|------|-------|-------|
+| **DigitalInputMask** | 0-7 | 8 bits | - | 0-255 | Bit 0 = DI1 through bit 7 = DI8. Set means the sampled input is logically high |
+| **Reserved** | 8-63 | 56 bits | - | 0 | Currently zero |
+
+---
+
+## Analogue Input Messages
+
+Analogue inputs are queried one at a time. The response is split into metadata and value frames so a receiver can interpret the engineering value correctly.
+
+### AnalogueInputStatusRequest (0x712 / 1810)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Requests a snapshot for a specific analogue input.
+
+| Signal | Bit Position | Length | Unit | Range | Notes |
+|--------|--------------|--------|------|-------|-------|
+| **InputNumber** | 0-7 | 8 bits | - | 1-8 | Which analogue input to query |
+
+---
+
+### AnalogueInputStatusResponseF0 (0x713 / 1811, Frame 0)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes
+
+Analogue input metadata and measured input voltage.
+
+| Signal | Bit Position | Length | Scale | Unit | Range | Values | Notes |
+|--------|--------------|--------|-------|------|-------|--------|-------|
+| **FrameIndex** | 0-7 | 8 bits | 1 | - | 0 | - | Frame selector |
+| **InputType** | 8-15 | 8 bits | 1 | - | 0-4 | 0=RawVoltage, 1=Active, 2=Passive, 3=NTC, 4=Digital | Input processing mode |
+| **Units** | 16-23 | 8 bits | 1 | - | 0-9 | 0=Volts, 1=Amps, 2=Celsius, 3=Fahrenheit, 4=Percent, 5=RPM, 6=KPH, 7=MPH, 8=Bar, 9=PSI | Engineering units for converted value |
+| **Flags** | 24-31 | 8 bits | 1 | - | 0-7 | - | Bit 0=PullUpEnable, Bit 1=PullDownEnable, Bit 2=current logical digital state |
+| **InputVoltage** | 32-47 | 16 bits | x0.001 | V | 0-65.535 | - | Measured source/input voltage encoded in millivolts |
+| **Reserved** | 48-63 | 16 bits | - | 0 | - | Currently zero |
+
+---
+
+### AnalogueInputStatusResponseF1 (0x713 / 1811, Frame 1)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes
+
+Converted engineering value.
+
+| Signal | Bit Position | Length | Scale | Unit | Range | Notes |
+|--------|--------------|--------|-------|------|-------|-------|
+| **FrameIndex** | 0-7 | 8 bits | 1 | - | 1 | Frame selector |
+| **ConvertedValue** | 8-39 | 32 bits | x0.001 | EngineeringUnits | -2147483.648 to +2147483.647 | Signed engineering value; interpret using `Units` from Frame 0 |
+| **Reserved** | 40-63 | 24 bits | - | 0 | Currently zero |
+
+---
+
+## Channel Configuration Messages
+
+Channel configuration is split across several message IDs. `ChannelConfigF0` is live runtime control for CAN-driven outputs, while `F1-F4` write stored per-channel settings.
+
+### ChannelConfigF0 (0x740 / 1856)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Live control message for channels that are meant to be driven over CAN.
+
+| Signal | Bit Position | Length | Unit | Range | Notes |
+|--------|--------------|--------|------|-------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | - | 1-14 | Target channel |
+| **ControlValue** | 8-15 | 8 bits | - | 0-255 | `0` disables the channel. Any non-zero value enables it. For `CANPWM` channels, values `0-100` also set PWM duty percent |
+| **Reserved** | 16-63 | 48 bits | - | 0 | Ignored |
+
+**Notes**:
+- This message updates live runtime state only.
+- `CANPWM` duty is taken from the same `ControlValue` byte.
+
+---
+
+### ChannelConfigF1 (0x741 / 1857)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Primary per-channel identity and protection configuration.
+
+| Signal | Bit Position | Length | Scale | Unit | Range | Values | Notes |
+|--------|--------------|--------|-------|------|-------|--------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | 1 | - | 1-14 | - | Target channel |
+| **ChannelType** | 8-15 | 8 bits | 1 | - | 0-6 | 0=Digital, 1=DigitalPWM, 2=AnalogueThreshold, 3=AnalogueScaled, 4=CANDigital, 5=CANPWM, 6=DigitalIntermittent | Applied when WriteBitMask bit 0 is set |
+| **ChannelName** | 16-31 | 16 bits | 1 | - | 0-32767 | PackedLetters | Applied when WriteBitMask bit 1 is set |
+| **CurrentThresholdLow** | 32-39 | 8 bits | x0.1 | A | 0-25.5 | - | Applied when WriteBitMask bit 3 is set |
+| **CurrentThresholdHigh** | 40-47 | 8 bits | x0.1 | A | 0-25.5 | - | Applied when WriteBitMask bit 4 is set |
+| **RetryCount** | 48-55 | 8 bits | 1 | - | 0-255 | - | Applied when WriteBitMask bit 5 is set |
+| **WriteBitMask** | 56-63 | 8 bits | 1 | - | 0-255 | - | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: Channel Type
+Bit 1: Channel Name
+Bit 2: Unused
+Bit 3: CurrentThresholdLow
+Bit 4: CurrentThresholdHigh
+Bit 5: RetryCount
+Bits 6-7: Reserved
+```
+
+---
+
+### ChannelConfigF2 (0x742 / 1858)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Secondary protection and polarity configuration.
+
+| Signal | Bit Position | Length | Unit | Range | Notes |
+|--------|--------------|--------|------|-------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | - | 1-14 | Target channel |
+| **InrushDelay** | 8-39 | 32 bits | Milliseconds | 0-2000 | Applied when WriteBitMask bit 1 is set |
+| **ActiveHigh** | 40-47 | 8 bits | - | 0-1 | `0=ActiveLow`, `1=ActiveHigh`; applied when WriteBitMask bit 2 is set |
+| **Reserved** | 48-55 | 8 bits | - | 0 | Currently ignored |
+| **WriteBitMask** | 56-63 | 8 bits | - | 0-255 | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: Unused
+Bit 1: InrushDelay
+Bit 2: ActiveHigh
+Bits 3-7: Reserved
+```
+
+---
+
+### ChannelConfigF3 (0x743 / 1859)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Soft-start related settings.
+
+| Signal | Bit Position | Length | Unit | Range | Notes |
+|--------|--------------|--------|------|-------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | - | 1-14 | Target channel |
+| **ReservedA** | 8-39 | 32 bits | - | 0 | Currently ignored |
+| **SoftStart** | 40-47 | 8 bits | - | 0-1 | `0=Disabled`, `1=Enabled`; applied when WriteBitMask bit 2 is set |
+| **SoftStartTime** | 48-55 | 8 bits | Seconds | 0-5 | Applied when WriteBitMask bit 3 is set; stored internally as milliseconds |
+| **WriteBitMask** | 56-63 | 8 bits | - | 0-255 | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: Unused
+Bit 1: Unused
+Bit 2: SoftStart
+Bit 3: SoftStartTime
+Bits 4-7: Reserved
+```
+
+---
+
+### ChannelConfigF4 (0x744 / 1860)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Dedicated write path for the inrush current limit.
+
+| Signal | Bit Position | Length | Unit | Range | Notes |
+|--------|--------------|--------|------|-------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | - | 1-14 | Target channel |
+| **InrushCurrentThreshold** | 8-15 | 8 bits | A | 0-50 | Applied only when WriteBitMask bit 0 is set |
+| **Reserved** | 16-55 | 40 bits | - | 0 | Currently ignored |
+| **WriteBitMask** | 56-63 | 8 bits | - | 0-255 | Bit 0 gates byte 1 |
+
+**WriteBitMask Details**:
+```
+Bit 0: InrushCurrentThreshold
+Bits 1-7: Reserved
+```
+
+---
+
+### ChannelConfigF5 (0x745 / 1861)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Additional per-channel configuration fields that remain exposed over CAN.
+
+| Signal | Bit Position | Length | Notes |
+|--------|--------------|--------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | Target channel |
+| **ReservedA** | 8-39 | 32 bits | Currently ignored |
+| **PWMSetDuty** | 40-47 | 8 bits | Stored PWM duty percent |
+| **Category** | 48-55 | 8 bits | Output category enum |
+| **WriteBitMask** | 56-63 | 8 bits | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 4: PWMSetDuty
+Bit 5: Category
+Bits 0-3, 6-7: Reserved
+```
+
+---
+
+### ChannelConfigF6 (0x746 / 1862)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Analogue-threshold and PWM limit configuration for a channel.
+
+| Signal | Bit Position | Length | Notes |
+|--------|--------------|--------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | Target channel |
+| **OnThreshold** | 8-39 | 32 bits | IEEE-754 float, big-endian |
+| **PWMMin** | 40-47 | 8 bits | Minimum PWM percent |
+| **PWMMax** | 48-55 | 8 bits | Maximum PWM percent |
+| **WriteBitMask** | 56-63 | 8 bits | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: OnThreshold
+Bit 1: PWMMin
+Bit 2: PWMMax
+Bits 3-7: Reserved
+```
+
+---
+
+### ChannelConfigF7 (0x747 / 1863)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Off-threshold plus delayed/soft-stop enable flags.
+
+| Signal | Bit Position | Length | Notes |
+|--------|--------------|--------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | Target channel |
+| **OffThreshold** | 8-39 | 32 bits | IEEE-754 float, big-endian |
+| **SoftStop** | 40-47 | 8 bits | 0=Disabled, 1=Enabled |
+| **DelayFlags** | 48-55 | 8 bits | Bit 0=DelayedOn, Bit 1=DelayedOff |
+| **WriteBitMask** | 56-63 | 8 bits | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: OffThreshold
+Bit 1: SoftStop
+Bit 2: DelayedOn
+Bit 3: DelayedOff
+Bits 4-7: Reserved
+```
+
+---
+
+### ChannelConfigF8 (0x748 / 1864)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Scale minimum and delayed-off trigger selection.
+
+| Signal | Bit Position | Length | Notes |
+|--------|--------------|--------|-------|
+| **ChannelNumber** | 0-7 | 8 bits | Target channel |
+| **ScaleMin** | 8-39 | 32 bits | IEEE-754 float, big-endian |
+| **DelayedOffTrigger** | 40-47 | 8 bits | 0=AssignedInput, 1=IgnitionOff |
+| **Reserved** | 48-55 | 8 bits | Currently ignored |
+| **WriteBitMask** | 56-63 | 8 bits | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: ScaleMin
+Bit 1: DelayedOffTrigger
+Bits 2-7: Reserved
+```
+
+---
+
+### ChannelConfigF9-F14 (0x749-0x74E / 1865-1870)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes each
+
+Single-value timing and scale frames using the same layout: `ChannelNumber` in byte 0, a 32-bit big-endian value in bytes 1-4, reserved bytes 5-6, and `WriteBitMask` in byte 7 with bit 0 enabling the payload.
+
+| Message | Payload Value |
+|---------|---------------|
+| **ChannelConfigF9** | `ScaleMax` (float) |
+| **ChannelConfigF10** | `SoftStopTime` (uint32 milliseconds) |
+| **ChannelConfigF11** | `IntermittentOnTime` (uint32 milliseconds) |
+| **ChannelConfigF12** | `IntermittentOffTime` (uint32 milliseconds) |
+| **ChannelConfigF13** | `DelayedOnTime` (uint32 milliseconds) |
+| **ChannelConfigF14** | `DelayedOffTime` (uint32 milliseconds) |
+
+---
+
+### AnalogueConfigF0 (0x74F / 1871)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Primary analogue-input configuration.
+
+| Signal | Bit Position | Length | Notes |
+|--------|--------------|--------|-------|
+| **InputNumber** | 0-7 | 8 bits | Target analogue input |
+| **PullUpEnable** | 8-15 | 8 bits | 0=False, 1=True |
+| **PullDownEnable** | 16-23 | 8 bits | 0=False, 1=True |
+| **InputType** | 24-31 | 8 bits | Analogue input mode enum |
+| **Units** | 32-39 | 8 bits | Engineering units enum |
+| **CalibrationPoints** | 40-47 | 8 bits | 2 or 3 |
+| **Reserved** | 48-55 | 8 bits | Currently ignored |
+| **WriteBitMask** | 56-63 | 8 bits | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: PullUpEnable
+Bit 1: PullDownEnable
+Bit 2: InputType
+Bit 3: Units
+Bit 4: CalibrationPoints
+Bits 5-7: Reserved
+```
+
+---
+
+### AnalogueConfigF1-F8 (0x750-0x757 / 1872-1879)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes each
+
+Single-value analogue calibration/config frames using the same layout: `InputNumber` in byte 0, a 32-bit big-endian float in bytes 1-4, reserved bytes 5-6, and `WriteBitMask` in byte 7 with bit 0 enabling the payload.
+
+| Message | Payload Value |
+|---------|---------------|
+| **AnalogueConfigF1** | `CalibrationVolt1` |
+| **AnalogueConfigF2** | `CalibrationValue1` |
+| **AnalogueConfigF3** | `CalibrationVolt2` |
+| **AnalogueConfigF4** | `CalibrationValue2` |
+| **AnalogueConfigF5** | `CalibrationVolt3` |
+| **AnalogueConfigF6** | `CalibrationValue3` |
+| **AnalogueConfigF7** | `NTCBeta` |
+| **AnalogueConfigF8** | `NTCNominalResistance` |
+
+---
+
+## System Configuration
+
+System configuration is a single-frame write message for the main controller-wide settings that affect reporting and feature enable state.
+
+### SystemConfig (0x730 / 1840)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+System-wide configuration parameters.
+
+| Signal | Bit Position | Length | Unit | Range | Values | Notes |
+|--------|--------------|--------|------|-------|--------|-------|
+| **SystemCurrentLimit** | 0-7 | 8 bits | A | 0-150 | - | Global system current limit |
+| **SpeedUnits** | 8-15 | 8 bits | - | 0-1 | 0=Metric, 1=Imperial | Speed display preference |
+| **DistanceUnits** | 16-23 | 8 bits | - | 0-1 | 0=Metric, 1=Imperial | Distance display preference |
+| **AllowData** | 24-31 | 8 bits | - | 0-1 | 0=False, 1=True | Cellular/mobile data enable |
+| **AllowGPS** | 32-39 | 8 bits | - | 0-1 | 0=False, 1=True | GPS enable |
+| **AllowMotionDetect** | 40-47 | 8 bits | - | 0-1 | 0=False, 1=True | Motion wake enable |
+| **MotionDeadTime** | 48-55 | 8 bits | Minutes | 0-254 | - | Motion-ignore timer |
+| **WriteBitMask** | 56-63 | 8 bits | - | 0-255 | - | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: SystemCurrentLimit
+Bit 1: SpeedUnits
+Bit 2: DistanceUnits
+Bit 3: AllowData
+Bit 4: AllowGPS
+Bit 5: AllowMotionDetect
+Bit 6: MotionDeadTime
+Bit 7: Reserved
+```
+
+---
+
+### SystemConfigF1 (0x731 / 1841)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Additional CAN-routing settings not covered by `SystemConfig`.
+
+| Signal | Bit Position | Length | Notes |
+|--------|--------------|--------|-------|
+| **CANResEnabled** | 0-7 | 8 bits | 0=Disabled, 1=Enabled |
+| **ChannelDataCANID** | 8-23 | 16 bits | Big-endian |
+| **DigitalInputDataCANID** | 24-39 | 16 bits | Big-endian |
+| **AnalogueInputDataCANID** | 40-55 | 16 bits | Big-endian |
+| **WriteBitMask** | 56-63 | 8 bits | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: CANResEnabled
+Bit 1: ChannelDataCANID
+Bit 2: DigitalInputDataCANID
+Bit 3: AnalogueInputDataCANID
+Bits 4-7: Reserved
+```
+
+---
+
+### SystemConfigF2 (0x732 / 1842)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Remaining CAN ID routing settings.
+
+| Signal | Bit Position | Length | Notes |
+|--------|--------------|--------|-------|
+| **SystemDataCANID** | 0-15 | 16 bits | Big-endian |
+| **ChannelConfigDataCANID** | 16-31 | 16 bits | Big-endian |
+| **SystemConfigDataCANID** | 32-47 | 16 bits | Big-endian |
+| **Reserved** | 48-55 | 8 bits | Currently ignored |
+| **WriteBitMask** | 56-63 | 8 bits | Selects which fields to apply |
+
+**WriteBitMask Details**:
+```
+Bit 0: SystemDataCANID
+Bit 1: ChannelConfigDataCANID
+Bit 2: SystemConfigDataCANID
+Bits 3-7: Reserved
+```
+
+---
+
+### SystemConfigF3 (0x733 / 1843)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+IMU wake window configuration.
+
+| Signal | Bit Position | Length | Notes |
+|--------|--------------|--------|-------|
+| **IMUwakeWindow** | 0-31 | 32 bits | Milliseconds, big-endian |
+| **Reserved** | 32-55 | 24 bits | Currently ignored |
+| **WriteBitMask** | 56-63 | 8 bits | Bit 0 gates the wake window |
+
+---
+
+### SystemConfigF4 (0x734 / 1844)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+CAN bus bitrate configuration.
+
+| Signal | Bit Position | Length | Notes |
+|--------|--------------|--------|-------|
+| **CANBusBitrate** | 0-31 | 32 bits | Big-endian, supported presets only |
+| **Reserved** | 32-55 | 24 bits | Currently ignored |
+| **WriteBitMask** | 56-63 | 8 bits | Bit 0 gates the bitrate |
+
+---
+
+### SystemConfigF5 (0x735 / 1845)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+First eight bytes of the packed `TimeZoneRule` blob.
+
+| Byte | Meaning |
+|------|---------|
+| 0-7 | `TimeZoneRule` bytes `0-7` |
+
+---
+
+### SystemConfigF6 (0x736 / 1846)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+Final seven bytes of the packed `TimeZoneRule` blob.
+
+| Byte | Meaning |
+|------|---------|
+| 0-6 | `TimeZoneRule` bytes `8-14` |
+| 7 | Reserved |
+
+---
+
+## Signal Summary by Message ID
+
+| Default Message ID | Name | Direction | Payload Shape | Purpose |
+|:-------------------|:-----|:----------|:--------------|:--------|
+| 0x700 (1792) | ChannelStatusRequest | ECU -> PDM | Single frame | Query one channel snapshot |
+| 0x701 (1793) | ChannelStatusResponse | PDM -> ECU | 4 multiplexed frames | Return current channel state and delay/inrush settings |
+| 0x710 (1808) | DigitalInputStatusRequest | ECU -> PDM | Single frame | Request digital input snapshot |
+| 0x711 (1809) | DigitalInputStatusResponse | PDM -> ECU | Single frame | Return digital input bitmask |
+| 0x712 (1810) | AnalogueInputStatusRequest | ECU -> PDM | Single frame | Request one analogue input snapshot |
+| 0x713 (1811) | AnalogueInputStatusResponse | PDM -> ECU | 2 multiplexed frames | Return analogue metadata and value |
+| 0x720 (1824) | SystemStatus1 | PDM -> ECU | Single frame | Power, voltage, temperature, error flags |
+| 0x721 (1825) | SystemStatus2 | PDM -> ECU | Single frame | Unit preferences and feature enables |
+| 0x730 (1840) | SystemConfig | ECU -> PDM | Single frame | Configure system parameters |
+| 0x740 (1856) | ChannelConfigF0 | ECU -> PDM | Single frame | Runtime enable and CAN PWM duty |
+| 0x741 (1857) | ChannelConfigF1 | ECU -> PDM | Single frame | Channel type, name, thresholds, retry count |
+| 0x742 (1858) | ChannelConfigF2 | ECU -> PDM | Single frame | Inrush delay and polarity |
+| 0x743 (1859) | ChannelConfigF3 | ECU -> PDM | Single frame | Soft-start settings |
+| 0x744 (1860) | ChannelConfigF4 | ECU -> PDM | Single frame | Inrush current threshold |
+| 0x745 (1861) | ChannelConfigF5 | ECU -> PDM | Single frame | Stored PWM duty and output category |
+| 0x746 (1862) | ChannelConfigF6 | ECU -> PDM | Single frame | On-threshold and PWM min/max |
+| 0x747 (1863) | ChannelConfigF7 | ECU -> PDM | Single frame | Off-threshold, soft-stop, delayed enable flags |
+| 0x748 (1864) | ChannelConfigF8 | ECU -> PDM | Single frame | Scale minimum and delayed-off trigger |
+| 0x749-0x74E (1865-1870) | ChannelConfigF9-F14 | ECU -> PDM | Single frame | Scale/timing extension frames |
+| 0x74F-0x757 (1871-1879) | AnalogueConfigF0-F8 | ECU -> PDM | Single frame | Analogue input configuration extension frames |
+| 0x731 (1841) | SystemConfigF1 | ECU -> PDM | Single frame | CAN resistor and request-ID routing |
+| 0x732 (1842) | SystemConfigF2 | ECU -> PDM | Single frame | System/config CAN IDs |
+| 0x733 (1843) | SystemConfigF3 | ECU -> PDM | Single frame | IMU wake window |
+| 0x734 (1844) | SystemConfigF4 | ECU -> PDM | Single frame | CAN bitrate |
+| 0x735 (1845) | SystemConfigF5 | ECU -> PDM | Single frame | Time zone bytes 0-7 |
+| 0x736 (1846) | SystemConfigF6 | ECU -> PDM | Single frame | Time zone bytes 8-14 |
+
+---
+
+## Notes & Best Practices
+
+This section is intentionally more operational than the DBC. It calls out the parts of the protocol that tend to matter when integrating with the controller in a vehicle, test rig, or external ECU.
+
+### Request/Response ID Pairing
+- Channel status, digital input status, and analogue input status use `request ID` / `request ID + 1` pairings.
+- System status uses `SystemDataCANID` and `SystemDataCANID + 1`.
+
+### Delayed On/Off CAN Support
+- The current CAN status protocol reports `DelayedOn`, `DelayedOnTime`, `DelayedOff`, `DelayedOffTrigger`, and `DelayedOffTime` in ChannelStatusResponse frames.
+- The current CAN configuration messages provide delayed-on and delayed-off write paths through `ChannelConfigF7`, `ChannelConfigF8`, `ChannelConfigF13`, and `ChannelConfigF14`.
+
+### Deferred Save Behaviour
+- CAN configuration writes continue to follow the existing firmware behaviour: values are applied in RAM immediately and persisted after the normal EEPROM save timeout expires.
+- A single save persists channel, system, and analogue-input config together.
+
+### WriteBitMask Usage
+- `ChannelConfigF1-F14`, `AnalogueConfigF0-F8`, and `SystemConfig/SystemConfigF1-F4` use a write mask to decide which fields are applied.
+- Unset fields in a message are ignored.
+- Reserved bits should be transmitted as zero.
+
+### Channel Numbers
+- Valid channel numbers are `1-14`.
+- Requests outside that range are ignored.
+
+### Current Scaling
+- `SystemCurrent` and channel current fields are transmitted in `0.1 A` units.
+- `SystemCurrentLimit` and `InrushCurrentThreshold` are transmitted as whole-amp bytes.
+
+### Analogue Value Scaling
+- Input voltage is sent in millivolts using a 16-bit unsigned big-endian field.
+- Converted analogue values are sent as signed 32-bit big-endian integers scaled by `1000`.

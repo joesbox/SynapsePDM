@@ -40,6 +40,11 @@
 #define TZ_RULE_WEEK_LAST 5
 #define TZ_RULE_DAY_MASK 0x1F
 #define TZ_RULE_FIXED_DATE_FLAG 0x80
+#define CAN_BUS_BITRATE_125K 125000UL
+#define CAN_BUS_BITRATE_250K 250000UL
+#define CAN_BUS_BITRATE_500K 500000UL
+#define CAN_BUS_BITRATE_1M 1000000UL
+#define DEFAULT_CAN_BUS_BITRATE CAN_BUS_BITRATE_500K
 
 /* Analog read resolution */
 #define LL_ADC_RESOLUTION LL_ADC_RESOLUTION_12B
@@ -90,8 +95,11 @@ struct __attribute__((packed)) SystemParameters
   uint8_t AllowMotionDetect;       // Allow motion detection wake
   TimeZoneRule TimeZone;           // Stored time zone and DST rule received from Cortex
   uint8_t DSTActive;               // Current DST state applied to the RTC
-  uint8_t Reserved[10];            // Reserved for future use
+  uint32_t CANBusBitrate;          // CAN bus bitrate in bits per second
+  uint8_t Reserved[6];             // Reserved for future use
 };
+
+static_assert(sizeof(SystemParameters) == 50, "SystemParameters EEPROM layout must remain compatible with v0.9");
 
 /// @brief System runtime data structure
 struct __attribute__((packed)) SystemRuntime
@@ -155,6 +163,11 @@ void InitialiseSystemData();
 
 /// @brief Updates the system parameters
 void UpdateSystem();
+
+/// @brief Validate whether a CAN bus bitrate is supported.
+/// @param bitrate CAN bitrate in bits per second.
+/// @return True when the bitrate matches one of the supported presets.
+bool IsSupportedCANBusBitrate(uint32_t bitrate);
 
 /// @brief Validate whether a full date/time can be applied to the RTC.
 /// @param fullYear Four-digit year.

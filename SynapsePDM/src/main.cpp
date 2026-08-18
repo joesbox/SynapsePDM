@@ -28,6 +28,10 @@
     Version history:
     Date              Version       Description
     ----              -------       ------------------------------------------------------------
+    2026-06-10        v0.10         - Wake sequence and display optimisations.
+                                    - Added configurable CAN baud rates.
+                                    - Extended CAN config protocol to include more parameters (DBC updated and wiki markdown added to this repository).
+                                    - Telemetry implementation using OpenRemote. See https://wiki.joeblogs.uk for more info.
     2026-04-22        v0.9          - Wake/sleep bug fix.
                                     - Increase system temperature limit to 100°C. Max. STM32 operating junction temp is 105°C.
                                     - Further sleep current improvements down to ~1mA.
@@ -120,28 +124,30 @@ static void ResetLogScheduler()
   simTemperatureTimer = nowMs + SIM_TEMPERATURE_INTERVAL;
 }
 
-static bool runOnEligibilityCaptured = false;
+static bool ignitionDelayedOffStateCaptured = false;
 
-static void CaptureRunOnState(uint32_t now)
+static void CaptureIgnitionDelayedOffState(uint32_t now)
 {
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    runOnEligible[i] = Channels[i].RunOn && IsChannelRuntimeEnabled(i);
-    runOnDeadline[i] = runOnEligible[i] ? (now + Channels[i].RunOnTime) : 0;
+    bool ignitionTriggeredDelayedOff = Channels[i].DelayedOff &&
+                                       Channels[i].DelayedOffTrigger == DELAYED_OFF_IGNITION_OFF;
+    ignitionDelayedOffEligible[i] = ignitionTriggeredDelayedOff && IsChannelRuntimeEnabled(i);
+    ignitionDelayedOffDeadline[i] = ignitionDelayedOffEligible[i] ? (now + Channels[i].DelayedOffTime) : 0;
   }
 
-  runOnEligibilityCaptured = true;
+  ignitionDelayedOffStateCaptured = true;
 }
 
-static void ResetRunOnState()
+static void ResetIgnitionDelayedOffState()
 {
   for (int i = 0; i < NUM_CHANNELS; i++)
   {
-    runOnEligible[i] = false;
-    runOnDeadline[i] = 0;
+    ignitionDelayedOffEligible[i] = false;
+    ignitionDelayedOffDeadline[i] = 0;
   }
 
-  runOnEligibilityCaptured = false;
+  ignitionDelayedOffStateCaptured = false;
 }
 
 static void ClearWakeRequests()
@@ -154,12 +160,11 @@ void SleepFunctions()
 {
   if (saveEEPROMOnTimeout)
   {
-    // Do it now.
-    SaveChannelConfig();
-    SaveSystemConfig();
+    PersistPendingCANConfigChanges();
     saveEEPROMOnTimeout = false;
     EEPROMSaveTimout = 0;
   }
+  ResetChannelInputTimingStates();
   ResetGPSPlausibilityFilter();
   analogWrite(TFT_BL, 0);
   PullResistorSleep();
@@ -186,7 +191,6 @@ void setup()
   IWatchdog.begin(5000 * 1000); // 5 second watchdog (microseconds) on boot.
 
   InitialiseSystem();
-  InitialiseGSM(false);
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, LOW);
   rtc.setClockSource(STM32RTC::LSE_CLOCK);
@@ -212,6 +216,9 @@ void setup()
 
     InitialiseAnalogueData();
     SaveAnalogueConfig();
+
+    InitialiseCellularData();
+    SaveCellularConfig();
   }
 
   IWatchdog.reload();
@@ -256,6 +263,25 @@ void setup()
     AnalogueCRCValid = LoadAnalogueConfig();
   }
 
+  // Load cellular/OpenRemote data
+  CellularCRCValid = LoadCellularConfig();
+  if (!CellularCRCValid)
+  {
+    InitialiseCellularData();
+    SaveCellularConfig();
+    CellularCRCValid = LoadCellularConfig();
+  }
+
+  if (ChannelCRCValid && ChannelConfigNeedsRewriteAfterLoad)
+  {
+    SaveChannelConfig();
+  }
+
+  if (SystemCRCValid && SystemConfigNeedsRewriteAfterLoad)
+  {
+    SaveSystemConfig();
+  }
+
   InitialiseInputs();
 
   // Only initialise the SD card if we've got an accurate RTC
@@ -286,6 +312,7 @@ void setup()
   LowPower.enableWakeupFrom(&rtc, alarmMatch);
   ResetLogScheduler();
   IWatchdog.begin(2000 * 1000); // 2 second watchdog (microseconds) on boot.
+  InitialiseGSM();
 }
 
 void handlePowerState()
@@ -298,24 +325,24 @@ void handlePowerState()
       delay(WAKE_DEBOUNCE_TIME); // Debounce
       if (!digitalRead(IGN_INPUT) && bootToSleep)
       {
-        CaptureRunOnState(millis());
+        CaptureIgnitionDelayedOffState(millis());
         PowerState = PREPARE_SLEEP;
       }
     }
-    else if (runOnEligibilityCaptured)
+    else if (ignitionDelayedOffStateCaptured)
     {
-      ResetRunOnState();
+      ResetIgnitionDelayedOffState();
     }
     break;
   case PREPARE_SLEEP:
   {
-    // Delay sleep if any channel with RunOn flag is still within its RunOnTime
-    bool runOnActive = false;
+    // Delay sleep if any channel is still within its ignition-off delayed-off window.
+    bool ignitionDelayedOffActive = false;
     uint32_t now = millis();
 
     if (digitalRead(IGN_INPUT))
     {
-      ResetRunOnState();
+      ResetIgnitionDelayedOffState();
       analogWrite(TFT_BL, 1023);
       invalidateDisplay = true;
       PowerState = RUN;
@@ -323,35 +350,36 @@ void handlePowerState()
     }
 
     // Fallback capture in case PREPARE_SLEEP is entered from a path other than RUN.
-    if (!runOnEligibilityCaptured)
+    if (!ignitionDelayedOffStateCaptured)
     {
-      CaptureRunOnState(now);
+      CaptureIgnitionDelayedOffState(now);
     }
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
-      if (Channels[i].RunOn && runOnEligible[i])
+      bool ignitionTriggeredDelayedOff = Channels[i].DelayedOff &&
+                                         Channels[i].DelayedOffTrigger == DELAYED_OFF_IGNITION_OFF;
+      if (ignitionTriggeredDelayedOff && ignitionDelayedOffEligible[i])
       {
         analogWrite(TFT_BL, 0);
 
-        // Check if RunOnTime has elapsed
-        if (runOnDeadline[i] != 0 && (int32_t)(now - runOnDeadline[i]) < 0)
+        if (ignitionDelayedOffDeadline[i] != 0 && (int32_t)(now - ignitionDelayedOffDeadline[i]) < 0)
         {
-          runOnActive = true;
+          ignitionDelayedOffActive = true;
         }
         else
         {
-          runOnEligible[i] = false;
-          runOnDeadline[i] = 0;
+          ignitionDelayedOffEligible[i] = false;
+          ignitionDelayedOffDeadline[i] = 0;
         }
       }
       else
       {
-        runOnDeadline[i] = 0;
+        ignitionDelayedOffDeadline[i] = 0;
       }
     }
-    if (runOnActive)
+    if (ignitionDelayedOffActive)
     {
-      // Wait until all RunOn channels have expired, do not call any sleep functions yet
+      // Wait until all ignition-off delayed-off channels have expired before sleeping.
       IWatchdog.reload();
       HandleInputs();
       UpdateOutputs();
@@ -359,13 +387,12 @@ void handlePowerState()
     }
     else
     {
-      // Reset eligibility capture for next PREPARE_SLEEP event
-      ResetRunOnState();
+      ResetIgnitionDelayedOffState();
     }
 
     if (digitalRead(IGN_INPUT))
     {
-      ResetRunOnState();
+      ResetIgnitionDelayedOffState();
       analogWrite(TFT_BL, 1023);
       invalidateDisplay = true;
       PowerState = RUN;
@@ -376,7 +403,7 @@ void handlePowerState()
     IWatchdog.begin(32000 * 1000);
     IWatchdog.reload();
 
-    // Only call sleep functions after all RunOn channels have finished
+    // Only call sleep functions after all ignition-off delayed-off channels have finished.
     if (SystemParams.AllowMotionDetect)
     {
       EnableMotionDetect();
@@ -464,6 +491,7 @@ void handlePowerState()
   case IGNITION_WAKING:
     rtc.disableAlarm();
     ClearWakeRequests();
+    WakeSource = WAKE_SOURCE_IGNITION;
     IWatchdog.reload();
     wakeDebounceTimer = millis();
     PowerState = IGNITION_WAKE;
@@ -491,7 +519,10 @@ void handlePowerState()
       DisableMotionDetect();
       InitialiseCAN();
       InitialiseSerial();
-      InitialiseGSM(false);
+      InitialiseGSM();
+      // Check inputs and outputs again as an external ECU may have asserted I/O on power up.
+      HandleInputs();
+      UpdateOutputs();
       IWatchdog.reload();
       StartDisplay();
       DrawBackground();
@@ -501,12 +532,12 @@ void handlePowerState()
       ResetLogScheduler();
       IWatchdog.begin(2000 * 1000); // Restore the normal run watchdog once wake initialisation is complete.
       IWatchdog.reload();
-      // Reset RunOn eligibility and timers on wake
+      // Reset ignition-off delayed-off eligibility and timers on wake
       for (int i = 0; i < NUM_CHANNELS; i++)
       {
         enabledTimers[i] = 0;
       }
-      ResetRunOnState();
+      ResetIgnitionDelayedOffState();
       ClearWakeRequests();
       IMUWakeMode = false;
 
@@ -516,6 +547,7 @@ void handlePowerState()
   case IMU_WAKING:
     rtc.disableAlarm();
     ignitionWakePending = false;
+    WakeSource = WAKE_SOURCE_IMU;
     IWatchdog.reload();
     PowerState = IMU_WAKE;
     break;
@@ -539,7 +571,7 @@ void handlePowerState()
         DisableMotionDetect();
         InitialiseSerial();
         InitialiseCAN();
-        InitialiseGSM(false);
+        InitialiseGSM();
         IWatchdog.reload();
         ResumeSD();
         ResetLogScheduler();
@@ -587,116 +619,121 @@ void loop()
   {
     CheckSerial();
     bool logTransferActive = IsLogTransferActive();
+    bool cortexSaveActive = IsCortexConfigSaveActive();
     uint32_t now = millis();
     uint32_t logNow = micros();
 
-    if ((int32_t)(now - DisplayTimer) >= 0)
+    // Skip non-critical tasks during Cortex config saves to prioritize serial comms
+    if (!cortexSaveActive)
     {
-      DisplayTimer += DISPLAY_INTERVAL;
       if ((int32_t)(now - DisplayTimer) >= 0)
       {
-        DisplayTimer = now + DISPLAY_INTERVAL;
+        DisplayTimer += DISPLAY_INTERVAL;
+        if ((int32_t)(now - DisplayTimer) >= 0)
+        {
+          DisplayTimer = now + DISPLAY_INTERVAL;
+        }
+
+        // Update channel outputs
+        UpdateOutputs();
+
+        // Read input channel status
+        HandleInputs();
+
+        // If we're heading for sleep, don't update the display. Something with the DMA seems to keeep the SPI bus active. Drastically increases sleep current.
+        if (backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
+        {
+          UpdateDisplay();
+        }
+
+        UpdateSystem();
       }
 
-      // Update channel outputs
-      UpdateOutputs();
-
-      // Read input channel status
-      HandleInputs();
-
-      // If we're heading for sleep, don't update the display. Something with the DMA seems to keeep the SPI bus active. Drastically increases sleep current.
-      if (backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
+      if (!logTransferActive && (int32_t)(now - CommsTimer) >= 0)
       {
-        UpdateDisplay();
+        CommsTimer += COMMS_INTERVAL;
+        if ((int32_t)(now - CommsTimer) >= 0)
+        {
+          CommsTimer = now + COMMS_INTERVAL;
+        }
+
+        ReadIMU();
       }
 
-      UpdateSystem();
-    }
-
-    if (!logTransferActive && (int32_t)(now - CommsTimer) >= 0)
-    {
-      CommsTimer += COMMS_INTERVAL;
-      if ((int32_t)(now - CommsTimer) >= 0)
-      {
-        CommsTimer = now + COMMS_INTERVAL;
-      }
-
-      ReadIMU();
-    }
-
-    if ((int32_t)(logNow - LogTimer) >= 0)
-    {
-      LogTimer += LOG_INTERVAL_US;
       if ((int32_t)(logNow - LogTimer) >= 0)
       {
-        LogTimer = logNow + LOG_INTERVAL_US;
+        LogTimer += LOG_INTERVAL_US;
+        if ((int32_t)(logNow - LogTimer) >= 0)
+        {
+          LogTimer = logNow + LOG_INTERVAL_US;
+        }
+
+        if (GPSFix)
+        {
+          ApplyUtcRtcDateTime((uint16_t)year, (uint8_t)month, (uint8_t)day, (uint8_t)hour, (uint8_t)minute, (uint8_t)second);
+        }
+
+        if (RTCSet)
+        {
+          // RTC is set. log SD card data
+          LogData();
+        }
       }
 
-      if (GPSFix)
+      if (!logTransferActive && (int32_t)(now - GPSTimer) >= 0)
       {
-        ApplyUtcRtcDateTime((uint16_t)year, (uint8_t)month, (uint8_t)day, (uint8_t)hour, (uint8_t)minute, (uint8_t)second);
+        GPSTimer += GPS_INTERVAL;
+        if ((int32_t)(now - GPSTimer) >= 0)
+        {
+          GPSTimer = now + GPS_INTERVAL;
+        }
+
+        UpdateSIM7600(GPS);
       }
 
-      if (RTCSet)
+      if (!logTransferActive && (int32_t)(now - signalTimer) >= 0)
       {
-        // RTC is set. log SD card data
-        LogData();
-      }
-    }
+        signalTimer += SIGNAL_QUALITY_INTERVAL;
+        if ((int32_t)(now - signalTimer) >= 0)
+        {
+          signalTimer = now + SIGNAL_QUALITY_INTERVAL;
+        }
 
-    if (!logTransferActive && (int32_t)(now - GPSTimer) >= 0)
-    {
-      GPSTimer += GPS_INTERVAL;
-      if ((int32_t)(now - GPSTimer) >= 0)
+        UpdateSIM7600(SIGNAL_QUALITY);
+      }
+
+      if (!logTransferActive && (int32_t)(now - simTemperatureTimer) >= 0)
       {
-        GPSTimer = now + GPS_INTERVAL;
+        simTemperatureTimer += SIM_TEMPERATURE_INTERVAL;
+        if ((int32_t)(now - simTemperatureTimer) >= 0)
+        {
+          simTemperatureTimer = now + SIM_TEMPERATURE_INTERVAL;
+        }
+
+        UpdateSIM7600(MODULE_TEMPERATURE);
       }
 
-      UpdateSIM7600(GPS);
-    }
-
-    if (!logTransferActive && (int32_t)(now - signalTimer) >= 0)
-    {
-      signalTimer += SIGNAL_QUALITY_INTERVAL;
-      if ((int32_t)(now - signalTimer) >= 0)
+      if (!logTransferActive)
       {
-        signalTimer = now + SIGNAL_QUALITY_INTERVAL;
+        UpdateSIM7600();
       }
 
-      UpdateSIM7600(SIGNAL_QUALITY);
-    }
-
-    if (!logTransferActive && (int32_t)(now - simTemperatureTimer) >= 0)
-    {
-      simTemperatureTimer += SIM_TEMPERATURE_INTERVAL;
-      if ((int32_t)(now - simTemperatureTimer) >= 0)
-      {
-        simTemperatureTimer = now + SIM_TEMPERATURE_INTERVAL;
-      }
-
-      UpdateSIM7600(MODULE_TEMPERATURE);
-    }
-
-    if (!logTransferActive)
-    {
-      UpdateSIM7600();
-    }
-
-    if ((int32_t)(now - systemCANTimer) >= 0)
-    {
-      systemCANTimer += SYSTEM_CAN_INTERVAL;
       if ((int32_t)(now - systemCANTimer) >= 0)
       {
-        systemCANTimer = now + SYSTEM_CAN_INTERVAL;
+        systemCANTimer += SYSTEM_CAN_INTERVAL;
+        if ((int32_t)(now - systemCANTimer) >= 0)
+        {
+          systemCANTimer = now + SYSTEM_CAN_INTERVAL;
+        }
+
+        BroadcastSystemStatus();
       }
 
-      BroadcastSystemStatus();
-    }
-
-    if (!logTransferActive && (int32_t)(now - splashCounter) >= 0 && !backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
-    {
-      DrawBackground();
-      bootToSleep = true;
+      if (!logTransferActive && (int32_t)(now - splashCounter) >= 0 && !backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
+      {
+        DrawBackground();
+        bootToSleep = true;
+      }
     }
 
     if (logTransferActive)
@@ -704,14 +741,17 @@ void loop()
       CheckSerial();
     }
 
-    ReadCANMessages();
+    // Skip CAN reading during config saves to avoid SPI contention
+    if (!cortexSaveActive)
+    {
+      ReadCANMessages();
+    }
   }
 
   if (saveEEPROMOnTimeout && (int32_t)(millis() - EEPROMSaveTimout) >= 0)
   {
     saveEEPROMOnTimeout = false;
     EEPROMSaveTimout = 0;
-    SaveChannelConfig();
-    SaveSystemConfig();
+    PersistPendingCANConfigChanges();
   }
 }

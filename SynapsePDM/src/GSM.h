@@ -29,10 +29,20 @@
 
 #define GSM_BAUD_RATE 115200
 #define SIM7600_RESPONSE_TIMEOUT_MS 750
+#define SIM7600_DATA_RESPONSE_TIMEOUT_MS 30000UL
+#define SIM7600_DNS_RESPONSE_TIMEOUT_MS 12000UL
+#define SIM7600_MQTT_CONNECT_RESPONSE_TIMEOUT_MS 90000UL
+#define SIM7600_MQTT_PROMPT_TIMEOUT_MS 5000UL
+#define SIM7600_MQTT_PUBLISH_RESPONSE_TIMEOUT_MS 10000UL
+#define OPENREMOTE_PROVISIONING_TIMEOUT_MS 180000UL
+#define OPENREMOTE_PROVISIONING_MAX_REQUEST_BYTES 6143
+#define SIM7600_DATA_RETRY_MS 10000UL
 #define SIM7600_POWER_KEY_SETTLE_MS 50UL
 #define SIM7600_REGULATOR_STABLE_MS 150UL
 #define SIM7600_BOOT_WAIT_MS 5000UL
 #define SIM7600_GPS_ENABLE_RETRY_MS 2000UL
+#define SIM7600_GPS_RESPONSE_VERIFY_MS 10000UL
+#define SIM7600_GPS_RESTART_DELAY_MS 2500UL
 #define SIM7600_TEMP_RESPONSE_TOKEN "+CPMUTEMP"
 #define SIM7600_GNSSINFO_RESPONSE_TOKEN "+CGNSSINFO:"
 #define SIM7600_CSQ_RSSI_MAX 31
@@ -42,12 +52,76 @@
 #define GPS_FILTER_MAX_ACCEL_MPS2 12.0f
 #define GPS_FILTER_SPEED_MARGIN_MPS 5.0f
 #define GPS_FILTER_RESET_INTERVAL_MS 10000UL
-#define GPS_FIX_GRACE_PERIOD_MS 3000UL
+#define GPS_FIX_GRACE_PERIOD_MS 6000UL
 #define EARTH_RADIUS_METRES 6371000.0f
 #define SIM_ACTIVE_COMMAND_NONE 0
 #define SIM_ACTIVE_COMMAND_AT 1
 #define SIM_ACTIVE_COMMAND_GPS_POWER 2
 #define SIM_ACTIVE_COMMAND_QUEUED 3
+
+#define CELLULAR_CONFIG_VERSION 6
+#define CELLULAR_PROTOCOL_MQTT 1
+#define CELLULAR_DEFAULT_MQTT_PORT 1883
+#define CELLULAR_DEFAULT_MQTT_TLS_PORT 8883
+#define CELLULAR_DEFAULT_KEEPALIVE_SECONDS 60
+#define CELLULAR_DEFAULT_PUBLISH_INTERVAL_MS 5000UL
+#define CELLULAR_DEFAULT_OPENREMOTE_HOST "remote.mannelectronics.uk"
+#define CELLULAR_OPENREMOTE_ASSET_NAME_LENGTH 28
+#define TELEMETRY_UPLOAD_ANALOGUE1_VALUE (1UL << 0)
+#define TELEMETRY_UPLOAD_ANALOGUE2_VALUE (1UL << 1)
+#define TELEMETRY_UPLOAD_ANALOGUE3_VALUE (1UL << 2)
+#define TELEMETRY_UPLOAD_ANALOGUE4_VALUE (1UL << 3)
+#define TELEMETRY_UPLOAD_ANALOGUE5_VALUE (1UL << 4)
+#define TELEMETRY_UPLOAD_ANALOGUE6_VALUE (1UL << 5)
+#define TELEMETRY_UPLOAD_ANALOGUE7_VALUE (1UL << 6)
+#define TELEMETRY_UPLOAD_ANALOGUE8_VALUE (1UL << 7)
+#define TELEMETRY_UPLOAD_DIGITAL1_VALUE (1UL << 8)
+#define TELEMETRY_UPLOAD_DIGITAL2_VALUE (1UL << 9)
+#define TELEMETRY_UPLOAD_DIGITAL3_VALUE (1UL << 10)
+#define TELEMETRY_UPLOAD_DIGITAL4_VALUE (1UL << 11)
+#define TELEMETRY_UPLOAD_DIGITAL5_VALUE (1UL << 12)
+#define TELEMETRY_UPLOAD_DIGITAL6_VALUE (1UL << 13)
+#define TELEMETRY_UPLOAD_DIGITAL7_VALUE (1UL << 14)
+#define TELEMETRY_UPLOAD_DIGITAL8_VALUE (1UL << 15)
+#define TELEMETRY_UPLOAD_GPS_SPEED (1UL << 16)
+#define TELEMETRY_UPLOAD_IMU_DATA (1UL << 17)
+#define TELEMETRY_UPLOAD_LOCATION (1UL << 18)
+#define TELEMETRY_UPLOAD_SYSTEM_CURRENT (1UL << 19)
+#define TELEMETRY_UPLOAD_SYSTEM_TEMPERATURE (1UL << 20)
+#define TELEMETRY_UPLOAD_SYSTEM_VOLTAGE (1UL << 21)
+#define TELEMETRY_UPLOAD_UPTIME (1UL << 22)
+#define TELEMETRY_UPLOAD_CHANNEL_CURRENTS (1UL << 23)
+#define TELEMETRY_UPLOAD_DEFAULT_MASK TELEMETRY_UPLOAD_SYSTEM_VOLTAGE
+
+struct __attribute__((packed)) CellularParameters
+{
+  uint8_t ConfigVersion;
+  uint8_t Protocol;
+  uint8_t UseTLS;
+  char APN[64];
+  char APNUser[32];
+  char APNPassword[32];
+  char OpenRemoteHost[64];
+  uint16_t OpenRemotePort;
+  char ClientID[48];
+  char MQTTUsername[48];
+  char MQTTPassword[48];
+  char PublishTopic[128];
+  char SubscribeTopic[128];
+  uint16_t KeepAliveSeconds;
+  uint32_t PublishIntervalMs;
+  uint32_t TelemetryUploadMask;
+  char OpenRemoteAssetName[CELLULAR_OPENREMOTE_ASSET_NAME_LENGTH];
+};
+
+union CellularConfigUnion
+{
+  CellularParameters data;
+  byte dataBytes[sizeof(CellularParameters)];
+};
+
+extern CellularParameters CellularParams;
+extern CellularConfigUnion CellularConfigData;
 
 enum SIM7600Commands
 {
@@ -64,11 +138,13 @@ enum SIM7600Commands
   MQTT_STATUS,       // Get MQTT status
   SIGNAL_QUALITY,    // Get signal quality
   NETWORK_MODE,      // Get network mode
-  MODULE_TEMPERATURE // Get SIM module temperature
+  MODULE_TEMPERATURE, // Get SIM module temperature
+  CELLULAR_CONNECT,  // Progress cellular packet data connection
+  CELLULAR_DISCONNECT // Disconnect cellular packet data connection
 };
 
 /// @brief Initialise GSM/GPS
-void InitialiseGSM(bool enableData);
+void InitialiseGSM();
 
 /// @brief Trigger SIM7600 module update
 /// @param command Command to execute
@@ -83,6 +159,29 @@ void parseGPSData(const char *response);
 
 /// @brief Reset cached GPS plausibility state after GPS power-down or long gaps
 void ResetGPSPlausibilityFilter();
+
+/// @brief Request a cellular data connection attempt for diagnostics if configuration allows it.
+void RequestCellularConnectionTest();
+
+/// @brief Reset cellular data test state before starting a new explicit test.
+void ResetCellularConnectionTest();
+
+/// @brief Build a user-readable cellular/MQTT diagnostic report.
+/// @param buffer Destination buffer
+/// @param bufferSize Destination buffer size
+void GetCellularDiagnosticReport(char *buffer, size_t bufferSize);
+
+/// @brief Check whether configured telemetry has exceeded its allowed offline period.
+/// @return True when telemetry is configured and no publish has succeeded within the timeout.
+bool IsTelemetryOffline();
+
+/// @brief Publish an OpenRemote X.509 provisioning request over MQTT.
+/// @param requestJson OpenRemote provisioning request JSON
+/// @param requestLength Request JSON length in bytes
+/// @param resultBuffer Destination for a user-readable result
+/// @param resultBufferSize Destination buffer size
+/// @return True when the request publish is confirmed by the modem
+bool RunOpenRemoteProvisioningRequest(const char *requestJson, size_t requestLength, char *resultBuffer, size_t resultBufferSize);
 
 /// @brief Convert signal quality to bars
 /// @return Signal strength in bars
