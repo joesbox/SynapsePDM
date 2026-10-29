@@ -13,6 +13,7 @@ See https://wiki.joeblogs.uk/ for more info.
 + CAN channel control and diagnostics.
 + SD card logging.
 + Configuration and monitoring via USB.
++ Optional PIN-protected Cortex/USB sessions with one-time recovery keys (firmware support; Cortex integration pending). See the [protocol and security limitations](SynapsePDM/Documentation/PIN-lock-protocol.txt).
 + 9-DOF on-board IMU.
 + SIM card slot for tracking and telemetry.
 

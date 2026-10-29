@@ -23,11 +23,14 @@
 */
 
 #include "Globals.h"
+#include "MathHandler.h"
 
 ChannelConfigUnion ChannelConfigData;
 AnalogueConfigUnion AnalogueConfigData;
 ChannelConfig Channels[NUM_CHANNELS];
 ChannelConfigRuntime ChannelRuntime[NUM_CHANNELS];
+MathChannelConfig MathChannels[NUM_CHANNELS] = {};
+MathChannelRuntime MathChannelStates[NUM_CHANNELS] = {};
 AnalogueInputs AnalogueIns[NUM_ANA_CHANNELS];
 
 uint32_t imuWWtimer;
@@ -76,6 +79,8 @@ uint32_t ignitionDelayedOffDeadline[NUM_CHANNELS] = {0};
 
 void InitialiseChannelData()
 {
+  InitialiseMathChannelData();
+
   // Initialise channels to default values, ensure they are initially off
   for (int i = 0; i < NUM_CHANNELS; i++)
   {

@@ -38,10 +38,11 @@ BU_: ECU PDM
 
 BO_ 1792 ChannelStatusRequest: 8 ECU
  SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ MathRuleSelector : 15|8@0+ (1,0) [0|8] "" Vector__XXX
 
 BO_ 1793 ChannelStatusResponse: 8 PDM
- SG_ FrameIndex M : 7|8@0+ (1,0) [0|3] "" Vector__XXX
- SG_ ChannelType m0 : 15|8@0+ (1,0) [0|6] "" Vector__XXX
+ SG_ FrameIndex M : 7|8@0+ (1,0) [0|11] "" Vector__XXX
+ SG_ ChannelType m0 : 15|8@0+ (1,0) [0|7] "" Vector__XXX
  SG_ ChannelCurrent m0 : 23|8@0+ (0.1,0) [0|25.5] "Amps" Vector__XXX
  SG_ Enabled m0 : 31|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ ChannelName m0 : 39|16@0+ (1,0) [0|32767] "PackedLetters" Vector__XXX
@@ -56,6 +57,33 @@ BO_ 1793 ChannelStatusResponse: 8 PDM
  SG_ DelayedOff m2 : 55|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ DelayedOffTrigger m2 : 63|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ DelayedOffTime m3 : 15|32@0+ (1,0) [0|3600000] "Milliseconds" Vector__XXX
+ SG_ MathValueRaw m4 : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ MathError m4 : 47|8@0+ (1,0) [0|4] "" Vector__XXX
+ SG_ MathOutputMode m4 : 55|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ MathBooleanState m4 : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ MathRuleCount m5 : 15|8@0+ (1,0) [1|8] "" Vector__XXX
+ SG_ MathRootRule m5 : 23|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ MathOutputModeConfig m5 : 31|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ RequestedRule m5 : 39|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ RuleIndex m6 : 15|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ MathOperator m6 : 23|8@0+ (1,0) [0|16] "" Vector__XXX
+ SG_ MathHysteresisEnabled m6 : 31|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ OperandAType m6 : 39|8@0+ (1,0) [0|6] "" Vector__XXX
+ SG_ OperandAIndex m6 : 47|8@0+ (1,0) [0|99] "" Vector__XXX
+ SG_ OperandBType m6 : 55|8@0+ (1,0) [0|6] "" Vector__XXX
+ SG_ OperandBIndex m6 : 63|8@0+ (1,0) [0|99] "" Vector__XXX
+ SG_ RuleIndex m7 : 15|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ OperandAConstantRaw m7 : 23|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ RuleIndex m8 : 15|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ OperandBConstantRaw m8 : 23|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ RuleIndex m9 : 15|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ RuleOnThresholdRaw m9 : 23|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ RuleIndex m10 : 15|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ RuleOffThresholdRaw m10 : 23|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ RuleIndex m11 : 15|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ RuleValueRaw m11 : 23|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
+ SG_ RuleError m11 : 55|8@0+ (1,0) [0|4] "" Vector__XXX
+ SG_ RuleEvaluated m11 : 63|8@0+ (1,0) [0|1] "" Vector__XXX
 
 BO_ 1808 DigitalInputStatusRequest: 8 ECU
  SG_ Reserved : 7|8@0+ (1,0) [0|0] "" Vector__XXX
@@ -238,6 +266,33 @@ BO_ 1879 AnalogueConfigF8: 8 ECU
  SG_ NTCNominalResistanceRaw : 15|32@0+ (1,0) [0|4294967295] "IEEE754BE" Vector__XXX
  SG_ WriteBitMask : 63|8@0+ (1,0) [0|1] "" Vector__XXX
 
+BO_ 1880 ChannelConfigF15_MathRule: 8 ECU
+ SG_ ChannelNumber : 7|8@0+ (1,0) [1|14] "" Vector__XXX
+ SG_ RuleIndex : 15|8@0+ (1,0) [0|255] "" Vector__XXX
+ SG_ Parameter : 23|8@0+ (1,0) [0|12] "" Vector__XXX
+ SG_ DataRaw : 31|32@0+ (1,0) [0|4294967295] "uint32 or IEEE754BE" Vector__XXX
+ SG_ Reserved : 63|8@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1881 CustomCANConfigWrite: 8 ECU
+ SG_ RecordType : 7|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ RecordIndex : 15|8@0+ (1,0) [0|99] "" Vector__XXX
+ SG_ Parameter : 23|8@0+ (1,0) [0|5] "" Vector__XXX
+ SG_ DataRaw : 31|32@0+ (1,0) [0|4294967295] "uint32 or IEEE754BE" Vector__XXX
+ SG_ Reserved : 63|8@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1882 CustomCANConfigRead: 8 ECU
+ SG_ RecordType : 7|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ RecordIndex : 15|8@0+ (1,0) [0|99] "" Vector__XXX
+ SG_ Parameter : 23|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ Reserved : 31|40@0+ (1,0) [0|0] "" Vector__XXX
+
+BO_ 1883 CustomCANConfigResponse: 8 PDM
+ SG_ RecordType : 7|8@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ RecordIndex : 15|8@0+ (1,0) [0|99] "" Vector__XXX
+ SG_ Parameter : 23|8@0+ (1,0) [0|7] "" Vector__XXX
+ SG_ DataRaw : 31|32@0+ (1,0) [0|4294967295] "uint32 or IEEE754BE" Vector__XXX
+ SG_ Result : 63|8@0+ (1,0) [0|1] "" Vector__XXX
+
 BO_ 1841 SystemConfigF1: 8 ECU
  SG_ CANResEnabled : 7|8@0+ (1,0) [0|1] "" Vector__XXX
  SG_ ChannelDataCANID : 15|16@0+ (1,0) [0|2047] "" Vector__XXX
@@ -247,7 +302,7 @@ BO_ 1841 SystemConfigF1: 8 ECU
 
 BO_ 1842 SystemConfigF2: 8 ECU
  SG_ SystemDataCANID : 15|16@0+ (1,0) [0|2047] "" Vector__XXX
- SG_ ChannelConfigDataCANID : 31|16@0+ (1,0) [0|2047] "" Vector__XXX
+ SG_ ChannelConfigDataCANID : 31|16@0+ (1,0) [1|2020] "" Vector__XXX
  SG_ SystemConfigDataCANID : 47|16@0+ (1,0) [0|2047] "" Vector__XXX
  SG_ WriteBitMask : 63|8@0+ (1,0) [0|7] "" Vector__XXX
 
@@ -267,8 +322,8 @@ BO_ 1846 SystemConfigF6: 8 ECU
 
 
 CM_ BO_ 1792 "Request a single channel status block. Set ChannelNumber to 1..14.";
-CM_ BO_ 1793 "Multiplexed 4-frame response on ChannelDataCANID + 1. FrameIndex selects the payload layout.";
-CM_ SG_ 1793 FrameIndex "0 = status/core config, 1 = retry/inrush/input config, 2 = delayed-on/inrush/delayed-off flags, 3 = delayed-off time.";
+CM_ BO_ 1793 "Multiplexed response on ChannelDataCANID + 1. FrameIndex selects the payload layout; request byte 1 selects a MATH rule for frames 6-11.";
+CM_ SG_ 1793 FrameIndex "0-3 = existing channel status, 4 = MATH root value/state, 5 = MATH graph metadata, 6 = selected rule, 7-10 = selected rule constants/thresholds, 11 = selected rule runtime.";
 CM_ SG_ 1793 ChannelName "Three uppercase letters packed into 16 bits as ((c0-'A') << 10) | ((c1-'A') << 5) | (c2-'A').";
 CM_ BO_ 1808 "Digital input snapshot request. Payload is ignored by the controller.";
 CM_ BO_ 1809 "Digital input snapshot response.";
@@ -313,6 +368,16 @@ CM_ BO_ 1876 "AnalogueConfigF5 writes CalibrationVolt3 using bytes 1-4 as a raw 
 CM_ BO_ 1877 "AnalogueConfigF6 writes CalibrationValue3 using bytes 1-4 as a raw big-endian IEEE-754 float.";
 CM_ BO_ 1878 "AnalogueConfigF7 writes NTCBeta using bytes 1-4 as a raw big-endian IEEE-754 float.";
 CM_ BO_ 1879 "AnalogueConfigF8 writes NTCNominalResistance using bytes 1-4 as a raw big-endian IEEE-754 float.";
+CM_ BO_ 1880 "ChannelConfigF15 (ChannelConfigDataCANID + 24) writes one MATH channel or indexed rule parameter. Byte 1 is 0xFF for channel metadata or 0-7 for a rule; byte 2 is the parameter; bytes 3-6 are the uint32 or big-endian IEEE-754 payload.";
+CM_ BO_ 1881 "ChannelConfigDataCANID + 25. Type 0=message: parameters 0=ID, 1=timeout ms (1-60000), 2=DLC (1-8), 3=flags (bit0 enabled, bit1 extended). Type 1=signal: 0=message index, 1=start bit, 2=bit length (1-64), 3=flags (bit0 enabled, bit1 Motorola, bit2 signed), 4=factor float, 5=offset float. All indices zero-based. Writes validated before applying; response on base+27.";
+CM_ BO_ 1882 "ChannelConfigDataCANID + 26. Same selectors as CustomCANConfigWrite; additionally message parameter 4=status, signal 6=value float (fails if unavailable), 7=status. Response on base+27.";
+CM_ BO_ 1883 "ChannelConfigDataCANID + 27. Echoes selectors and write value or returns read value. Result 0=accepted, 1=rejected/unavailable. Status values: 0=valid, 1=disabled, 2=not received, 3=timeout, 4=invalid frame, 5=decode error, 6=invalid config.";
+VAL_ 1793 OperandAType 0 "Constant" 1 "Channel" 2 "AnalogueInput" 3 "SystemValue" 4 "Rule" 5 "DigitalInput" 6 "CustomCANSignal" ;
+VAL_ 1793 OperandBType 0 "Constant" 1 "Channel" 2 "AnalogueInput" 3 "SystemValue" 4 "Rule" 5 "DigitalInput" 6 "CustomCANSignal" ;
+VAL_ 1881 RecordType 0 "Message" 1 "Signal" ;
+VAL_ 1882 RecordType 0 "Message" 1 "Signal" ;
+VAL_ 1883 RecordType 0 "Message" 1 "Signal" ;
+VAL_ 1883 Result 0 "Accepted" 1 "RejectedOrUnavailable" ;
 CM_ BO_ 1841 "SystemConfigF1 writes CAN termination and request CAN IDs not covered by SystemConfig.";
 CM_ BO_ 1842 "SystemConfigF2 writes the remaining status/config CAN IDs.";
 CM_ BO_ 1843 "SystemConfigF3 writes IMUwakeWindow in milliseconds using bytes 0-3.";
@@ -353,4 +418,3 @@ VAL_ 1871 PullDownEnable 0 "False" 1 "True" ;
 VAL_ 1871 InputType 0 "RawVoltage" 1 "Active" 2 "Passive" 3 "NTC" 4 "Digital" ;
 VAL_ 1871 Units 0 "Volts" 1 "Amps" 2 "Celsius" 3 "Fahrenheit" 4 "Percent" 5 "RPM" 6 "KPH" 7 "MPH" 8 "Bar" 9 "PSI" ;
 VAL_ 1841 CANResEnabled 0 "Disabled" 1 "Enabled" ;
-

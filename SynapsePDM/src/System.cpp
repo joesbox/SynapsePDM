@@ -24,6 +24,7 @@
 #include "System.h"
 
 #include "GSM.h"
+#include "CustomCAN.h"
 
 SystemConfigUnion SystemConfigData;
 SystemParameters SystemParams;
@@ -682,6 +683,7 @@ bool ApplyRtcDateTime(uint16_t fullYear, uint8_t month, uint8_t day, uint8_t hou
 
 bool ApplyUtcRtcDateTime(uint16_t fullYear, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second)
 {
+    static time_t lastAcceptedGpsEpoch = 0;
     if (!IsValidRtcDateTime(fullYear, month, day, hour, minute, second))
     {
         return false;
@@ -690,14 +692,24 @@ bool ApplyUtcRtcDateTime(uint16_t fullYear, uint8_t month, uint8_t day, uint8_t 
     SanitizeTimeZoneRule(&SystemParams.TimeZone);
 
     const time_t utcEpoch = BuildEpochFromDateTime(fullYear, month, day, hour, minute, second);
+    if (lastAcceptedGpsEpoch != 0 && utcEpoch <= lastAcceptedGpsEpoch)
+    {
+        return true;
+    }
+    lastAcceptedGpsEpoch = utcEpoch;
     const bool dstActive = IsDSTActiveForUtcEpoch(utcEpoch);
     const int32_t localOffsetMinutes = (int32_t)SystemParams.TimeZone.StandardOffsetMinutes + (dstActive ? (int32_t)SystemParams.TimeZone.DSTOffsetMinutes : 0);
     const time_t targetLocalEpoch = (time_t)(utcEpoch + (time_t)(localOffsetMinutes * 60L));
     const bool currentDstActive = SystemParams.DSTActive != 0;
 
-    if (RTCSet && HasUsableRtcTime() && rtc.getEpoch() == targetLocalEpoch && currentDstActive == dstActive)
+    // Whole-second GNSS fixes arrive after capture; preserve the running subsecond phase.
+    if (RTCSet && HasUsableRtcTime() && currentDstActive == dstActive)
     {
-        return true;
+        const int64_t clockErrorSeconds = (int64_t)targetLocalEpoch - (int64_t)rtc.getEpoch();
+        if (clockErrorSeconds >= -1 && clockErrorSeconds <= 1)
+        {
+            return true;
+        }
     }
 
     UpdateRtcFromLocalEpoch(targetLocalEpoch);
@@ -718,8 +730,8 @@ bool ApplyUtcRtcDateTime(uint16_t fullYear, uint8_t month, uint8_t day, uint8_t 
 void UpdateSystem()
 {
     // Get system temperature
-    int32_t VRef = readVref();
-    SystemRuntimeParams.SystemTemperature = readTempSensor(VRef);
+    int32_t VRef = __LL_ADC_CALC_VREFANALOG_VOLTAGE(analogRead(AVREF), LL_ADC_RESOLUTION);
+    SystemRuntimeParams.SystemTemperature = __LL_ADC_CALC_TEMPERATURE(VRef, analogRead(ATEMP), LL_ADC_RESOLUTION);
     SystemRuntimeParams.SIMModuleTemp = simModuleTemp;
     SystemRuntimeParams.IMUTemp = imuTemp;
 
@@ -793,7 +805,7 @@ void UpdateSystem()
     }
 
     // Check CRC
-    if (!SystemCRCValid)
+    if (!SystemCRCValid || !CustomCANCRCValid)
     {
         SystemRuntimeParams.ErrorFlags |= CRC_CHECK_FAILED;
     }
@@ -865,7 +877,6 @@ void SleepSystem()
 
 void WakeSystem()
 {
-    // Set the analogue read resolution
     analogReadResolution(12);
     analogWriteResolution(10);
 
@@ -888,14 +899,4 @@ void WakeSystem()
 
     // Power up SIM7600
     digitalWrite(SIM_REGULATOR, HIGH);
-}
-
-static int32_t readTempSensor(int32_t VRef)
-{
-    return (__LL_ADC_CALC_TEMPERATURE(VRef, analogRead(ATEMP), LL_ADC_RESOLUTION));
-}
-
-static int32_t readVref()
-{
-    return (__LL_ADC_CALC_VREFANALOG_VOLTAGE(analogRead(AVREF), LL_ADC_RESOLUTION));
 }

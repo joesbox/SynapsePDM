@@ -21,5 +21,6 @@
         "random": "cpp",
         "cmath": "cpp"
     },
-    "cmake.configureOnOpen": false
+    "cmake.configureOnOpen": false,
+    "cmake.sourceDirectory": "C:/Users/joema/OneDrive/Documents/GitHub/JuicePDM/SynapsePDM/lib/TFT_eSPI"
 }

@@ -65,7 +65,7 @@ bool SanitizeChannelConfig(ChannelConfig &config)
 {
     bool changed = false;
 
-    if ((uint8_t)config.ChanType > (uint8_t)DIG_INTERMITTENT)
+    if ((uint8_t)config.ChanType > (uint8_t)MATH)
     {
         config.ChanType = DIG;
         changed = true;

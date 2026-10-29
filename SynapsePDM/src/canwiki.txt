@@ -4,7 +4,7 @@ This wiki is intended as a practical guide to the controller's CAN protocol: wha
 
 If you need the strict signal-level definition for tooling, import the DBC instead. The DBC is the better source for machine-readable CAN decoding; this page is the better source for understanding how the controller behaves.
 
-- **CAN format**: Standard 11-bit identifiers
+- **CAN format**: Standard 11-bit identifiers for controller commands/status; custom inputs also support extended 29-bit identifiers
 - **Default bitrate**: 500 kbps
 - **Supported bitrates in firmware**: 125 kbps, 250 kbps, 500 kbps, 1 Mbps
 - **Multi-byte encoding**: Big-endian for all 16-bit and 32-bit fields
@@ -76,7 +76,7 @@ Configuration status and feature enable state.
 
 ## Channel Status Messages
 
-Channel status is request/response based rather than periodic. Ask for one channel by number and the controller returns a four-frame snapshot covering the live output state plus the most relevant protection and timing settings.
+Channel status is request/response based rather than periodic. Ask for one channel by number; the controller returns the existing status frames plus MATH graph metadata. Set request byte 1 to 1-8 to additionally read back that zero-based MATH rule.
 
 ### ChannelStatusRequest (0x700 / 1792)
 **Direction**: ECU -> PDM | **DLC**: 8 bytes
@@ -86,7 +86,8 @@ Requests the current status and timing/config snapshot for one channel.
 | Signal | Bit Position | Length | Unit | Range | Notes |
 |--------|--------------|--------|------|-------|-------|
 | **ChannelNumber** | 0-7 | 8 bits | - | 1-14 | Channel index to query |
-| **Reserved** | 8-63 | 56 bits | - | 0 | Ignored by the controller |
+| **MathRuleSelector** | 8-15 | 8 bits | - | 0-8 | 0 requests channel/root status only; 1-8 requests rule index 0-7 |
+| **Reserved** | 16-63 | 48 bits | - | 0 | Ignored by the controller |
 
 ---
 
@@ -98,7 +99,7 @@ Basic channel identity and live electrical state.
 | Signal | Bit Position | Length | Scale | Unit | Range | Values | Notes |
 |--------|--------------|--------|-------|------|-------|--------|-------|
 | **FrameIndex** | 0-7 | 8 bits | 1 | - | 0 | - | Frame selector |
-| **ChannelType** | 8-15 | 8 bits | 1 | - | 0-6 | 0=Digital, 1=DigitalPWM, 2=AnalogueThreshold, 3=AnalogueScaled, 4=CANDigital, 5=CANPWM, 6=DigitalIntermittent | Current channel type |
+| **ChannelType** | 8-15 | 8 bits | 1 | - | 0-7 | 0=Digital, 1=DigitalPWM, 2=AnalogueThreshold, 3=AnalogueScaled, 4=CANDigital, 5=CANPWM, 6=DigitalIntermittent, 7=MATH | Current channel type |
 | **ChannelCurrent** | 16-23 | 8 bits | x0.1 | A | 0-25.5 | - | Live measured channel current |
 | **Enabled** | 24-31 | 8 bits | 1 | - | 0-1 | 0=Off, 1=On | Live runtime enabled state |
 | **ChannelName** | 32-47 | 16 bits | 1 | - | 0-32767 | PackedLetters | Three uppercase letters packed as `((c0-'A')<<10) | ((c1-'A')<<5) | (c2-'A')` |
@@ -147,6 +148,26 @@ Final timing frame carrying the delayed-off duration.
 | **FrameIndex** | 0-7 | 8 bits | - | 3 | Frame selector |
 | **DelayedOffTime** | 8-39 | 32 bits | Milliseconds | 0-3600000 | Delayed-off timer duration |
 | **Reserved** | 40-63 | 24 bits | - | 0 | Currently always zero |
+
+---
+
+### ChannelStatusResponseF4 (0x701 / 1793, Frame 4)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes
+
+MATH evaluation state. `MathValueRaw` is a big-endian IEEE-754 single-precision value.
+
+| Byte | Signal | Meaning |
+|------|--------|---------|
+| 0 | FrameIndex | Always 4 |
+| 1-4 | MathValueRaw | Current calculated value |
+| 5 | MathError | 0=None, 1=Configuration, 2=Reference, 3=Dependency/cycle, 4=Evaluation (including divide by zero/non-finite result) |
+| 6 | MathOutputMode | 0=Digital, 1=PWM |
+| 7 | MathBooleanState | 0=false, 1=true; numeric zero is false and non-zero is true |
+
+### ChannelStatusResponseF5-F11 (0x701 / 1793, Frames 5-11)
+**Direction**: PDM -> ECU | **DLC**: 8 bytes each
+
+Frame 5 always reports `RuleCount`, `RootRule`, output mode, and the selected rule (`0xFF` when no rule was requested). When request byte 1 selects a rule, frames 6-11 return that rule's operator/operand types and indexes, two constants, ON/OFF thresholds, and runtime value/error/evaluated state. Float payloads are IEEE-754 single-precision, big-endian. Rule indexes are zero-based.
 
 ---
 
@@ -246,7 +267,7 @@ Primary per-channel identity and protection configuration.
 | Signal | Bit Position | Length | Scale | Unit | Range | Values | Notes |
 |--------|--------------|--------|-------|------|-------|--------|-------|
 | **ChannelNumber** | 0-7 | 8 bits | 1 | - | 1-14 | - | Target channel |
-| **ChannelType** | 8-15 | 8 bits | 1 | - | 0-6 | 0=Digital, 1=DigitalPWM, 2=AnalogueThreshold, 3=AnalogueScaled, 4=CANDigital, 5=CANPWM, 6=DigitalIntermittent | Applied when WriteBitMask bit 0 is set |
+| **ChannelType** | 8-15 | 8 bits | 1 | - | 0-7 | 0=Digital, 1=DigitalPWM, 2=AnalogueThreshold, 3=AnalogueScaled, 4=CANDigital, 5=CANPWM, 6=DigitalIntermittent, 7=MATH | Applied when WriteBitMask bit 0 is set |
 | **ChannelName** | 16-31 | 16 bits | 1 | - | 0-32767 | PackedLetters | Applied when WriteBitMask bit 1 is set |
 | **CurrentThresholdLow** | 32-39 | 8 bits | x0.1 | A | 0-25.5 | - | Applied when WriteBitMask bit 3 is set |
 | **CurrentThresholdHigh** | 40-47 | 8 bits | x0.1 | A | 0-25.5 | - | Applied when WriteBitMask bit 4 is set |
@@ -438,6 +459,145 @@ Single-value timing and scale frames using the same layout: `ChannelNumber` in b
 | **ChannelConfigF13** | `DelayedOnTime` (uint32 milliseconds) |
 | **ChannelConfigF14** | `DelayedOffTime` (uint32 milliseconds) |
 
+### ChannelConfigF15_MathRule (0x758 / 1880)
+**Direction**: ECU -> PDM | **DLC**: 8 bytes
+
+One indexed write per MATH channel metadata field or rule field. Byte 0 is channel number, byte 1 is `0xFF` for channel metadata or rule index 0-7, byte 2 is parameter ID, bytes 3-6 carry the value (big-endian IEEE-754 for floats), and byte 7 is reserved. Channel parameters are `0=RuleCount`, `1=RootRule`, `2=OutputMode`. Rule parameters are `3=Operator`, `4=HysteresisEnabled`, `5=OnThreshold`, `6=OffThreshold`, `7=OperandAType`, `8=OperandAIndex`, `9=OperandAConstant`, `10=OperandBType`, `11=OperandBIndex`, `12=OperandBConstant`.
+
+Each physical MATH output supports up to eight structured rule nodes; one selected root drives that output. Operand types are `0=Constant`, `1=Channel`, `2=AnalogueInput`, `3=SystemValue`, `4=Rule` (same-channel rule reference), `5=DigitalInput`, `6=CustomCANSignal` (global slot 0-99). Digital-input indices 0-7 select DI1-DI8 and return the sampled pin level as 0 (low) or 1 (high), matching digital-input status reporting; they do not use output-channel overrides or delays. System-value indices are `0=SystemTemperature`, `1=SIMModuleTemperature`, `2=IMUTemperature`, `3=BatteryVoltage`, `4=SystemCurrent`, `5=AccelerationX`, `6=AccelerationY`, `7=AccelerationZ`, `8=GyroscopeX`, `9=GyroscopeY`, `10=GyroscopeZ`, `11=MagneticFieldX`, `12=MagneticFieldY`, `13=MagneticFieldZ`. Channel type value `7` is MATH; values 0-6 are unchanged.
+
+Numeric zero converts to Boolean false and any finite non-zero value to true; Boolean results are encoded numerically as 0 or 1. No unit conversion is performed. In PWM output mode, the selected root result is a percentage, clamped to 0-100 and rounded to the existing integer duty setting; existing output ramps and current protection still apply. Hysteresis on `GREATER_THAN`, `GREATER_EQUAL`, `LESS_THAN`, or `LESS_EQUAL` uses that rule's separate ON/OFF thresholds and operand A as the signal.
+
+Operator 17 is `TOGGLE`, a unary edge-triggered latch: each rising edge of operand A's truth value flips the rule's stored 0/1 state, so a momentary input (for example a CAN keypad key) can drive push-on/push-off behavior. The latch starts at 0, holds through both input levels, and resets to 0 whenever the rule is reconfigured, errors, or its channel stops evaluating. Hysteresis cannot be combined with `TOGGLE`.
+
+### Global Custom CAN Messages (0x759-0x75B / 1881-1883)
+
+The controller has 100 message slots and 100 global signal slots. A message definition is shared by every signal using that CAN ID and frame format; duplicate enabled **RX** message definitions are rejected, while TX definitions may freely share an ID with each other or with an RX definition (for example separate on/off command frames). Any number of math rules may reference the same signal slot. Names and units are Cortex metadata, not PDM configuration.
+
+Message flag bit 2 marks a definition as **transmit**: the PDM sends the frame instead of receiving it. A TX message is gated by its trigger source (parameter 5): an output-channel index 0-13 whose runtime output is read with MATH channel-operand semantics (MATH channels report their root value, PWM channels their duty while enabled, other channels 1/0), or `255` for always-true. Without flag bit 3 the frame is sent **once per rising edge** of the trigger's truth value (an off-command is simply a second TX definition triggered by an inverted/NOT math channel). With flag bit 3 (periodic, requires bit 2) the frame is sent immediately on the rising edge and then every `TimeoutMs` milliseconds (1-60000) while the trigger stays true. Each enabled signal mapped to a TX message encodes `raw = (value - offset) / factor` (factor must be non-zero) from its value source (signal parameter 8): a channel index 0-13, or `255` for a constant, in which case `round(offset)` is the raw field value and factor is ignored. Raw values are clamped to the field's signed/unsigned range; unmapped bits are zero. A frame whose trigger or value source is unavailable, or that cannot be queued, is retried on the next CAN service pass without losing the edge. TX definitions are never matched against received frames, report status `disabled`, and their signals cannot be read by math rules. DLC 0 is allowed for TX definitions only (data-less frames such as CANopen SYNC) and such definitions cannot carry signals.
+
+All three configuration frames use DLC 8 and follow the configured `ChannelConfigDataCANID`:
+
+Controller commands accept standard data frames only; extended frames are
+decoded exclusively as custom inputs. The configuration base ID must be 1-2020
+so all offsets through +27 fit in an 11-bit ID. New out-of-range writes are
+rejected; a stored out-of-range base is normalized to the default 0x740 at boot.
+
+| Offset | Default ID | Operation |
+|--------|------------|-----------|
+| +25 | 0x759 | Write one parameter |
+| +26 | 0x75A | Read one parameter |
+| +27 | 0x75B | Write acknowledgement or read response |
+
+Bytes 0-2 are record type (`0=message`, `1=signal`), slot index (0-99), and parameter. Bytes 3-6 contain a big-endian uint32 or IEEE-754 float. Request byte 7 is reserved. Response byte 7 is `0=accepted`, `1=rejected/unavailable`; it echoes the selectors and written value or returns the requested value.
+
+| Parameter | Message (type 0) | Signal (type 1) |
+|-----------|------------------|-----------------|
+| 0 | CAN ID | Message slot index |
+| 1 | RX timeout in ms, 0-60000 (0 = never expire) or TX period, 1-60000 | Start bit, 0-63 |
+| 2 | Expected DLC, 1-8 (0 allowed for TX) | Bit length, 1-64 |
+| 3 | Flags: bit 0 enabled, bit 1 extended, bit 2 transmit, bit 3 periodic transmit | Flags: bit 0 enabled, bit 1 Motorola, bit 2 signed |
+| 4 | Current status (read-only) | Factor (float) |
+| 5 | TX trigger source: channel 0-13 or 255 = always true | Offset (float) |
+| 6 | Not supported | Current value (read-only; rejected unless valid) |
+| 7 | Not supported | Current status (read-only) |
+| 8 | Not supported | TX value source: channel 0-13 or 255 = constant (raw = round(offset)) |
+
+Configure the message first, then its signals, with enable flags last. Set the extended flag before assigning a 29-bit ID, and the transmit flag before assigning DLC 0 or a zero factor on a constant-source signal. Each update is validated transactionally; ID/flag combinations, DLC, timeout/period, trigger and value sources, finite factor/offset, non-zero factor for non-constant TX signals, and the entire bit range must be valid. DLC reductions that would invalidate an associated signal are rejected, as is flipping a message to TX while an attached enabled signal has a zero factor. Disable/delete or relocate those signal definitions first. To clear a definition, restore its disabled defaults.
+
+Intel start bits identify the least-significant bit and increase through the payload. Motorola uses DBC sawtooth numbering: the start bit identifies the most-significant bit, moves down to bit 0 of a byte, then continues at bit 7 of the next byte. Non-byte-aligned and cross-byte signals are supported. Signed values use two's complement. Results are `raw * factor + offset`, converted to the math engine's float32 representation; integers wider than 24 significant bits may lose precision. TX encoding is the exact inverse and uses the same bit numbering. Multiplexing, IEEE-754 source payloads, and CAN FD are not implemented.
+
+Status values are `0=valid`, `1=disabled`, `2=not received`, `3=timeout`, `4=invalid frame`, `5=decode error`, `6=invalid configuration`. Timeout occurs at elapsed time **greater than or equal to** the message timeout; a timeout of **zero disables expiry**, latching the last received value until the next frame, reconfiguration, or sleep (intended for event-driven transmitters such as CAN keypads — pair them with a separate heartbeat message that has a normal timeout to keep a fail-safe). The receive service expires messages even if no math rule currently reads them; expiry remains latched until fresh data arrives. Each message has one timestamp; no frame is cached per signal. A matching data frame decodes all its enabled signals. Wrong DLC or a remote frame invalidates the associated signals until another valid frame arrives. Unrelated IDs/formats do not refresh timestamps. Configuration changes and sleep/CAN reinitialization invalidate affected caches and re-arm TX edge detection and schedules.
+
+Unavailable signals produce a math reference error, propagating through dependent rules to the existing math-output error/off path. Values are not silently treated as zero. CAN reception updates the cache in the main loop; math/output scheduling retains its existing 50 ms cadence and existing output timing. Input reception can be delayed by blocking operations/configuration saves, so timeout and receive-queue behavior must be tested at the intended bus load.
+
+#### EEPROM and RAM layout
+
+Message definitions are 9 bytes (`uint32 ID`, `uint16 TimeoutMs`, `uint8 DLC`, `uint8 Flags`, `uint8 TxTrigger`). Signal definitions are 13 bytes (`uint8 MessageIndex`, `uint8 StartBit`, `uint8 BitLength`, `uint8 Flags`, `float Factor`, `float Offset`, `uint8 ValueSource`). Both are stored packed. All persistent sizes are compile-time checked.
+
+The version-2 record is anchored immediately before the existing math record, not inserted into the legacy configuration blocks. It occupies addresses **3468-5676**: 5-byte magic/version header, 2200-byte payload, and 4-byte CRC32. Existing blocks occupy 0-2653, the PIN records sit immediately below the custom record, and math remains at 5677-8191, leaving **494 bytes free**. The magic is `0x43414E31`; header/payload fields use the STM32 little-endian representation and the CRC is stored big-endian. CRC32 covers the header and entire payload. There is no in-place migration from version 1 (development firmware): after flashing, the bank reports the existing CRC error and runs disabled defaults until the custom CAN configuration is saved again.
+
+Boot loads and validates the record before CAN starts. An entirely erased record is initialized with disabled defaults (message timeout 1000 ms, DLC 8; signal length 1, factor 1, offset 0). A corrupt, semantically invalid, or unsupported-version record disables the bank and raises the existing system CRC error instead of silently overwriting the record. Explicit configuration/save or factory reset can replace it. Legacy and math records do not move or require migration. Writes use the existing EEPROM page helpers and verify readback; CRC detects interrupted writes but there is no redundant/atomic second copy.
+
+Static RAM is 2200 bytes for definitions plus 2400 bytes for message/signal/transmit states: **4600 bytes**, independent of the number of math references. EEPROM operations use a 32-byte verification buffer, not a second bank or full-bank stack copy.
+
+Custom CAN saves compare the entire record against EEPROM and only program
+changed page fragments, including the CRC. An unchanged bank needs no write
+cycles; a single changed 13-byte signal needs at most two payload page writes
+plus one CRC write, instead of rewriting all record fragments. All 2209 bytes
+are still readback-verified before success is acknowledged. This applies to
+both serial and CAN-triggered custom bank saves, without changing the EEPROM
+format. Failed verification keeps the bank dirty for retry. Other configuration
+banks retain their existing save behavior.
+
+The EEPROM page writer also uses a 32-byte scratch copy: the M95640R driver's
+SPI write overwrites its supplied buffer. Never pass live configuration or
+read-only data directly to `EepromWrite`; use the shared block writer.
+
+#### Cortex serial interface
+
+The existing `n` framed configuration command adds config types `5=custom CAN message`, `6=custom CAN signal`. Parameter IDs match the CAN table; the data index is the zero-based slot. Single-parameter payload values are exactly four **little-endian** bytes (uint32 or IEEE-754 bits), including small integer fields. Existing packet header/trailer/checksum and `c`/`f` acknowledgements apply. `S` persists dirty custom CAN configuration with readback verification.
+
+For fast Cortex edits, two additional **serial-only** parameter IDs are supported:
+
+| Parameter | Operation | Message payload (type 5) | Signal payload (type 6) |
+|-----------|-----------|--------------------------|------------------------|
+| 254 (0xFE) | Clear slot to disabled defaults | Empty (0 bytes) | Empty (0 bytes) |
+| 255 (0xFF) | Replace whole record | 9-byte message definition | 13-byte signal definition |
+
+Whole-record writes use the definition layouts above, with all multibyte fields
+little-endian and floats encoded as IEEE-754 float32. They validate the final
+record once and apply it atomically in RAM: a rejected write leaves the previous
+record and runtime cache unchanged. This allows setting an extended ID and its
+flags, or relocating a signal and changing its bit range, in one operation
+without invalid intermediate parameter combinations. Unchanged writes do not
+invalidate caches or mark the bank dirty. Wrong payload sizes, invalid slot
+indices, and invalid definitions return `f`.
+
+The wire format (including the leading command) is:
+
+`'n' | 84 19 | type | parameter | slot | payload | 24 20 | checksum32LE`
+
+The checksum is the uint32 sum of every byte from `84 19` through `24 20`
+inclusive; the leading `n` and checksum bytes are excluded. Total command sizes
+are 12 bytes for clear, 21 for a message record, 25 for a signal record, and
+16 for an existing single-parameter write. Send no padding. Custom-CAN commands
+are acknowledged as soon as their exact frame length arrives, rather than
+waiting for the serial idle/settling timeout. Other configuration types retain
+their existing framing behavior.
+
+Recommended Cortex flow:
+
+1. Send the whole message definition with type 5, parameter 255 if it changed,
+   then the whole signal definition with type 6, parameter 255. Await `c` after
+   each command; stop on `f`. A failed second command does not undo the first.
+2. To delete a signal, send type 6, parameter 254 with its slot and **no payload**.
+   Clearing a message (type 5) does not clear its signals or math references;
+   only clear a shared message if Cortex no longer needs it. Signals referencing
+   a disabled message remain configured but unavailable. Deleting a signal
+   leaves its math references in the existing unavailable/error state.
+3. For a multi-edit operation, stage all accepted edits, then send **one** `S`
+   and await `c` before reporting persistent success. `f` means persistence failed;
+   the dirty bank is retained for retry. Record/clear `c` only confirms the RAM edit,
+   not EEPROM durability. Existing parameter commands remain supported.
+4. If a refreshed snapshot is needed, request `B` once after the operation,
+   not after each field. The edited records can otherwise update Cortex's local view.
+
+There is no multi-record transaction or automatic save: disconnecting or losing
+power before a successful `S` can lose staged edits. The 254/255 operations require
+this firmware build; older firmware rejects them with `f`. The CAN parameter
+protocol and the `B` snapshot format are unchanged.
+
+Command `B` returns an existing-style framed status packet with:
+
+1. Version byte (2), CRC-valid byte, message count (100), signal count (100).
+2. For each message: its 9-byte definition followed by one status byte.
+3. For each signal: its 13-byte definition, float32 value, and one status byte.
+
+Version byte 1 was the pre-TX development layout (8-byte message / 12-byte signal records); version 2 adds the trailing `TxTrigger` and `ValueSource` bytes to the respective definitions. Parsers should branch on the version byte.
+
+The packet totals 2613 bytes, fitting the existing 4096-byte status buffer. Multibyte fields are little-endian. Unavailable values are encoded as zero **with their non-valid status**; consumers must check status. This does not change existing live/static/math status packet layouts.
+
 ---
 
 ### AnalogueConfigF0 (0x74F / 1871)
@@ -621,7 +781,7 @@ Final seven bytes of the packed `TimeZoneRule` blob.
 | Default Message ID | Name | Direction | Payload Shape | Purpose |
 |:-------------------|:-----|:----------|:--------------|:--------|
 | 0x700 (1792) | ChannelStatusRequest | ECU -> PDM | Single frame | Query one channel snapshot |
-| 0x701 (1793) | ChannelStatusResponse | PDM -> ECU | 4 multiplexed frames | Return current channel state and delay/inrush settings |
+| 0x701 (1793) | ChannelStatusResponse | PDM -> ECU | 6 base frames; 12 when a rule is selected | Return channel state, MATH graph metadata, and paged rule details |
 | 0x710 (1808) | DigitalInputStatusRequest | ECU -> PDM | Single frame | Request digital input snapshot |
 | 0x711 (1809) | DigitalInputStatusResponse | PDM -> ECU | Single frame | Return digital input bitmask |
 | 0x712 (1810) | AnalogueInputStatusRequest | ECU -> PDM | Single frame | Request one analogue input snapshot |
@@ -640,6 +800,10 @@ Final seven bytes of the packed `TimeZoneRule` blob.
 | 0x748 (1864) | ChannelConfigF8 | ECU -> PDM | Single frame | Scale minimum and delayed-off trigger |
 | 0x749-0x74E (1865-1870) | ChannelConfigF9-F14 | ECU -> PDM | Single frame | Scale/timing extension frames |
 | 0x74F-0x757 (1871-1879) | AnalogueConfigF0-F8 | ECU -> PDM | Single frame | Analogue input configuration extension frames |
+| 0x758 (1880) | ChannelConfigF15_MathRule | ECU -> PDM | Single frame | MATH graph metadata or indexed rule parameter |
+| 0x759 (1881) | CustomCANConfigWrite | ECU -> PDM | Single frame | Write message/signal parameter |
+| 0x75A (1882) | CustomCANConfigRead | ECU -> PDM | Single frame | Read message/signal parameter or state |
+| 0x75B (1883) | CustomCANConfigResponse | PDM -> ECU | Single frame | Acknowledgement or requested value |
 | 0x731 (1841) | SystemConfigF1 | ECU -> PDM | Single frame | CAN resistor and request-ID routing |
 | 0x732 (1842) | SystemConfigF2 | ECU -> PDM | Single frame | System/config CAN IDs |
 | 0x733 (1843) | SystemConfigF3 | ECU -> PDM | Single frame | IMU wake window |
@@ -663,7 +827,7 @@ This section is intentionally more operational than the DBC. It calls out the pa
 
 ### Deferred Save Behaviour
 - CAN configuration writes continue to follow the existing firmware behaviour: values are applied in RAM immediately and persisted after the normal EEPROM save timeout expires.
-- A single save persists channel, system, and analogue-input config together.
+- A single save persists channel, system, analogue-input config, and any dirty custom CAN config. Custom CAN writes are readback-verified; failures raise the CRC error and remain pending for retry.
 
 ### WriteBitMask Usage
 - `ChannelConfigF1-F14`, `AnalogueConfigF0-F8`, and `SystemConfig/SystemConfigF1-F4` use a write mask to decide which fields are applied.

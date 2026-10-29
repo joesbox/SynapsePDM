@@ -1,4 +1,4 @@
-/*  SerialComms.cpp Serial comms variables, functions and data handling.
+ /*  SerialComms.cpp Serial comms variables, functions and data handling.
     Copyright (c) 2023 Joe Mann.  All right reserved.
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -25,12 +25,23 @@
 #include "OutputHandler.h"
 #include "GSM.h"
 #include "IMU.h"
+#include "MathHandler.h"
+#include "CustomCAN.h"
+#include "AdcSampler.h"
+#include "CortexPort.h"
+#include <math.h>
+
+static PinLock cortexPINLock(ReadPINLockRecord, WritePINLockRecord);
+static void FeedCortexWatchdog() { IWatchdog.reload(); }
+static CortexPort cortexSerial(Serial, cortexPINLock, FeedCortexWatchdog);
 
 ChannelConfigUnion SerialChannelData;
 byte configBuffer[1000] = {0};
 
 byte statusBuffer[4096] = {0};
 int statusIndex = 0;
+static_assert(9 + 1 + NUM_CHANNELS * (10 + (MAX_MATH_RULES_PER_CHANNEL * 28)) <= sizeof(statusBuffer),
+              "MATH status packet must fit the serial status buffer");
 
 bool receivingConfig = false;
 
@@ -53,13 +64,15 @@ unsigned int readBufIdx = 0;
 
 static const size_t LOG_TRANSFER_CHUNK_BYTES = 2048;
 static const uint16_t LOG_BULK_MAGIC = 0x4C42;
-static char logChunkTextBuffer[LOG_TRANSFER_CHUNK_BYTES] = {0};
+// Keep the terminator outside the sector-aligned data capacity.
+static char logChunkTextBuffer[LOG_TRANSFER_CHUNK_BYTES + 1] = {0};
 static char openRemoteProvisioningRequestBuffer[OPENREMOTE_PROVISIONING_MAX_REQUEST_BYTES + 1] = {0};
 static byte logChunkPayloadBuffer[4 + sizeof(logChunkTextBuffer)] = {0};
 static byte framedPacketBuffer[sizeof(logChunkPayloadBuffer) + 16] = {0};
 static byte rawBulkPacketBuffer[6 + sizeof(logChunkTextBuffer) + 4] = {0};
 static bool logTransferStreaming = false;
 static bool logTransferBulkStreaming = false;
+static bool logTransferPlaintext = false;
 static bool serialCalibrationModeEnabled = false;
 static char cellularDiagnosticBuffer[1024] = {0};
 
@@ -308,6 +321,9 @@ static bool FactoryResetController()
     SaveCellularConfig();
     CellularCRCValid = LoadCellularConfig();
 
+    InitialiseCustomCANData();
+    bool customCANSaved = SaveCustomCANConfig();
+
     InitialiseInputs();
     backgroundDrawn = false;
     invalidateDisplay = true;
@@ -317,7 +333,7 @@ static bool FactoryResetController()
     pendingAnalogueConfigSave = false;
     pendingCellularConfigSave = false;
 
-    return ChannelCRCValid && SystemCRCValid && StorageCRCValid && AnalogueCRCValid && CellularCRCValid;
+    return ChannelCRCValid && SystemCRCValid && StorageCRCValid && AnalogueCRCValid && CellularCRCValid && customCANSaved;
 }
 
 static void AppendStatusByte(byte value, uint32_t &checksum)
@@ -358,7 +374,39 @@ static void FinalizeStatusPacket(uint32_t checksum)
         statusBuffer[statusIndex++] = checksumBytes[i];
     }
 
-    Serial.write(statusBuffer, statusIndex);
+    cortexSerial.write(statusBuffer, statusIndex);
+}
+
+static void SendCustomCANStatusPacket()
+{
+    static_assert(9 + 4 + sizeof(CustomCANConfiguration) + MAX_CUSTOM_CAN_MESSAGES +
+                  MAX_CUSTOM_CAN_SIGNALS * 5 <= sizeof(statusBuffer), "Custom CAN status packet capacity");
+    uint32_t checksum = 0;
+    uint32_t now = millis();
+    BeginStatusPacket(COMMAND_ID_CUSTOM_CAN_STATUS, checksum);
+    // Packet layout version: 2 = packed 9-byte message / 13-byte signal records with TX fields
+    AppendStatusByte(2, checksum);
+    AppendStatusByte(CustomCANCRCValid ? 1 : 0, checksum);
+    AppendStatusByte(MAX_CUSTOM_CAN_MESSAGES, checksum);
+    AppendStatusByte(MAX_CUSTOM_CAN_SIGNALS, checksum);
+    for (uint8_t i = 0; i < MAX_CUSTOM_CAN_MESSAGES; i++)
+    {
+        AppendStatusBytes(&CustomCANConfig.Messages[i], sizeof(CustomCANMessageConfig), checksum);
+        AppendStatusByte(GetCustomCANMessageStatus(i, now), checksum);
+    }
+    for (uint8_t i = 0; i < MAX_CUSTOM_CAN_SIGNALS; i++)
+    {
+        AppendStatusBytes(&CustomCANConfig.Signals[i], sizeof(CustomCANSignalConfig), checksum);
+        float value = 0.0f;
+        CustomCANStatus status = GetCustomCANSignalStatus(i, now);
+        if (status == CUSTOM_CAN_VALID)
+        {
+            ReadCustomCANSignal(i, now, &value);
+        }
+        AppendStatusBytes(&value, sizeof(value), checksum);
+        AppendStatusByte(status, checksum);
+    }
+    FinalizeStatusPacket(checksum);
 }
 
 static void SendLiveStatusPacket()
@@ -393,6 +441,20 @@ static void SendLiveStatusPacket()
 
     uint8_t mobileSignalBars = csq_to_bars();
     AppendStatusByte(mobileSignalBars, checksum);
+
+    FinalizeStatusPacket(checksum);
+}
+
+static void SendDigitalInputStatusPacket()
+{
+    uint32_t checksum = 0;
+    BeginStatusPacket(COMMAND_ID_DIGITAL_INPUT_STATUS, checksum);
+
+    AppendStatusByte(NUM_DI_CHANNELS, checksum);
+    for (uint8_t inputIndex = 0; inputIndex < NUM_DI_CHANNELS; inputIndex++)
+    {
+        AppendStatusByte(ReadDigitalInputState(inputIndex) ? 1 : 0, checksum);
+    }
 
     FinalizeStatusPacket(checksum);
 }
@@ -508,10 +570,48 @@ static void SendStaticStatusPacket()
     FinalizeStatusPacket(checksum);
 }
 
+static void SendMathStatusPacket()
+{
+    uint32_t checksum = 0;
+    BeginStatusPacket(COMMAND_ID_MATH_STATUS, checksum);
+    AppendStatusByte(NUM_CHANNELS, checksum);
+    for (uint8_t i = 0; i < NUM_CHANNELS; i++)
+    {
+        MathChannelConfig &config = MathChannels[i];
+        AppendStatusByte((uint8_t)Channels[i].ChanType, checksum);
+        AppendStatusByte(config.RuleCount, checksum);
+        AppendStatusByte(config.RootRule, checksum);
+        AppendStatusByte(config.OutputMode, checksum);
+        AppendStatusBytes(&MathChannelStates[i].Value, sizeof(MathChannelStates[i].Value), checksum);
+        AppendStatusByte(MathChannelStates[i].Error, checksum);
+        AppendStatusByte(IsChannelRuntimeEnabled(i) ? 1 : 0, checksum);
+        for (uint8_t ruleIndex = 0; ruleIndex < MAX_MATH_RULES_PER_CHANNEL; ruleIndex++)
+        {
+            MathRuleConfig &rule = config.Rules[ruleIndex];
+            MathRuleRuntime &runtime = MathChannelStates[i].Rules[ruleIndex];
+            AppendStatusByte((uint8_t)rule.Operation, checksum);
+            AppendStatusByte(rule.HysteresisEnabled, checksum);
+            AppendStatusBytes(&rule.OnThreshold, sizeof(rule.OnThreshold), checksum);
+            AppendStatusBytes(&rule.OffThreshold, sizeof(rule.OffThreshold), checksum);
+            AppendStatusByte(rule.OperandA.Type, checksum);
+            AppendStatusByte(rule.OperandA.Index, checksum);
+            AppendStatusBytes(&rule.OperandA.Constant, sizeof(rule.OperandA.Constant), checksum);
+            AppendStatusByte(rule.OperandB.Type, checksum);
+            AppendStatusByte(rule.OperandB.Index, checksum);
+            AppendStatusBytes(&rule.OperandB.Constant, sizeof(rule.OperandB.Constant), checksum);
+            AppendStatusBytes(&runtime.Value, sizeof(runtime.Value), checksum);
+            AppendStatusByte(runtime.Error, checksum);
+            AppendStatusByte(runtime.Evaluated, checksum);
+        }
+    }
+    FinalizeStatusPacket(checksum);
+}
+
 static bool WaitForSerialBytes(uint16_t requiredBytes, uint32_t timeoutMs)
 {
+    if (cortexSerial.InPacket()) return cortexSerial.available() >= requiredBytes;
     uint32_t start = millis();
-    while (Serial.available() < requiredBytes)
+    while (cortexSerial.available() < requiredBytes)
     {
         if ((millis() - start) >= timeoutMs)
         {
@@ -531,14 +631,15 @@ static bool ReadSerialBytesExact(uint8_t *buffer, uint16_t length, uint32_t time
     {
         return false;
     }
+    if (cortexSerial.InPacket() && cortexSerial.available() < length) return false;
 
     uint32_t start = millis();
     uint16_t bytesRead = 0;
     while (bytesRead < length)
     {
-        while (Serial.available() > 0 && bytesRead < length)
+        while (cortexSerial.available() > 0 && bytesRead < length)
         {
-            buffer[bytesRead++] = (uint8_t)Serial.read();
+            buffer[bytesRead++] = (uint8_t)cortexSerial.read();
             start = millis();
         }
 
@@ -563,16 +664,20 @@ static bool WriteSerialBytes(const byte *buffer, size_t length)
 {
     size_t bytesRemaining = length;
     size_t offset = 0;
+    uint32_t lastProgress = millis();
+    const bool protectedWrite = cortexSerial.HasSession() || cortexPINLock.Enabled();
     while (bytesRemaining > 0)
     {
-        size_t written = Serial.write(&buffer[offset], bytesRemaining);
+        size_t written = cortexSerial.write(&buffer[offset], bytesRemaining);
         if (written == 0)
         {
+            if (protectedWrite || uint32_t(millis() - lastProgress) >= 1000) return false;
             IWatchdog.reload();
             delayMicroseconds(100);
             continue;
         }
 
+        lastProgress = millis();
         offset += written;
         bytesRemaining -= written;
         lastComms = millis();
@@ -763,6 +868,10 @@ static bool SendRawBulkLogPacket(const char *chunkText, uint16_t chunkBytes, uin
     rawBulkPacketBuffer[writeIndex++] = (byte)((checksum >> 16) & 0xFF);
     rawBulkPacketBuffer[writeIndex++] = (byte)((checksum >> 24) & 0xFF);
 
+    if (logTransferPlaintext)
+    {
+        return cortexSerial.WritePlaintextLogPacket(rawBulkPacketBuffer, writeIndex);
+    }
     return WriteSerialBytes(rawBulkPacketBuffer, writeIndex);
 }
 
@@ -977,11 +1086,24 @@ void InitialiseSerial()
 
 void SleepComms()
 {
+    cortexSerial.Reset();
     Serial.end();
+}
+
+void InitialiseCortexPINLock()
+{
+    cortexPINLock.Begin(millis());
 }
 
 void CheckSerial()
 {
+    if (!Serial.dtr()) cortexSerial.Reset();
+    cortexSerial.Poll(millis());
+    if (cortexSerial.HasSession())
+    {
+        pcCommsOK = true;
+        lastComms = cortexSerial.LastActivity();
+    }
     if (previousConnectionStatus != pcCommsOK)
     {
         previousConnectionStatus = pcCommsOK;
@@ -994,13 +1116,15 @@ void CheckSerial()
             IWatchdog.set(2000 * 1000); // 2 second watchdog when PC comms inactive (microseconds)
         }
     }
-    if ((millis() - lastComms > COMMS_TIMEOUT))
+    const bool secureSessionEnded = cortexSerial.ConsumeLockEvent();
+    if ((millis() - lastComms > COMMS_TIMEOUT) || secureSessionEnded)
     {
         connectionStatus = 0; // Timeout - reset connection
         pcCommsOK = false;
         receivingConfig = false;
         logTransferStreaming = false;
         logTransferBulkStreaming = false;
+        logTransferPlaintext = false;
         serialCalibrationModeEnabled = false;
         CancelLogTransfer();
         readBufIdx = 0;
@@ -1010,19 +1134,26 @@ void CheckSerial()
             ChannelRuntime[i].Override = false; // Clear any overrides
         }
     }
-    while (Serial.available() && !receivingConfig)
+    constexpr uint8_t maxCommandsPerPass = 8;
+    constexpr uint32_t maxServiceTimeMs = 5;
+    const uint32_t serviceStartedAt = millis();
+    uint8_t commandsProcessed = 0;
+    while (!receivingConfig && commandsProcessed < maxCommandsPerPass &&
+           (uint32_t)(millis() - serviceStartedAt) < maxServiceTimeMs &&
+           cortexSerial.NextCommand(millis()))
     {
+        commandsProcessed++;
         pcCommsOK = true;
         lastComms = millis();
-        byte nextByte = Serial.read();
+        byte nextByte = cortexSerial.read();
         switch (nextByte)
         {
         case COMMAND_ID_BEGIN:
-            Serial.write(COMMAND_ID_CONFIM);
+            cortexSerial.write(COMMAND_ID_CONFIM);
             break;
 
         case COMMAND_ID_SKIP:
-            Serial.write(COMMAND_ID_CONFIM);
+            cortexSerial.write(COMMAND_ID_CONFIM);
             connectionStatus = 1;
             break;
 
@@ -1039,6 +1170,22 @@ void CheckSerial()
 
             break;
         }
+        case COMMAND_ID_MATH_STATUS:
+            SendMathStatusPacket();
+            break;
+        case COMMAND_ID_DIGITAL_INPUT_STATUS:
+            SendDigitalInputStatusPacket();
+            break;
+        case COMMAND_ID_CUSTOM_CAN_STATUS:
+            SendCustomCANStatusPacket();
+            break;
+        case COMMAND_ID_ADC_DIAGNOSTIC:
+        {
+            AdcSamplerDiagnostics diagnostics = GetAdcSamplerDiagnostics();
+            static_assert(sizeof(diagnostics) == 40, "ADC diagnostic protocol size");
+            SendFramedPacket(COMMAND_ID_ADC_DIAGNOSTIC, (const byte *)&diagnostics, sizeof(diagnostics));
+            break;
+        }
         case COMMAND_ID_NEWCONFIG:
         {
             connectionStatus = 2;
@@ -1049,24 +1196,41 @@ void CheckSerial()
             receivingConfig = true;
             unsigned long firstByteDeadline = millis() + 30;
             unsigned long settleDeadline = 0;
+            uint16_t customPacketLength = 0;
 
             while (millis() <= firstByteDeadline || settleDeadline != 0)
             {
-                if (Serial.available())
+                if (cortexSerial.available())
                 {
                     connectionStatus = 3; // Receiving config data
-                    while (Serial.available())
+                    while (cortexSerial.available())
                     {
                         if (readBufIdx < 1000)
                         {
-                            configBuffer[readBufIdx] = Serial.read();
+                            configBuffer[readBufIdx] = cortexSerial.read();
                             readBufIdx++;
                             recBytesRead = readBufIdx;
+                            if (readBufIdx == CONFIG_DATA_START_INDEX &&
+                                (configBuffer[CONFIG_TYPE_INDEX] == CONFIG_DATA_CUSTOM_CAN_MESSAGE ||
+                                 configBuffer[CONFIG_TYPE_INDEX] == CONFIG_DATA_CUSTOM_CAN_SIGNAL))
+                            {
+                                customPacketLength = CONFIG_DATA_START_INDEX + 6 + GetCustomCANWriteSize(
+                                    configBuffer[CONFIG_TYPE_INDEX] - CONFIG_DATA_CUSTOM_CAN_MESSAGE,
+                                    configBuffer[CONFIG_PARAMETER_INDEX]);
+                            }
+                            if (customPacketLength != 0 && readBufIdx == customPacketLength)
+                            {
+                                break;
+                            }
                         }
                         else
                         {
-                            Serial.read(); // Overflow - discard byte
+                            cortexSerial.read(); // Overflow - discard byte
                         }
+                    }
+                    if (customPacketLength != 0 && readBufIdx == customPacketLength)
+                    {
+                        break;
                     }
                     settleDeadline = millis() + 4;
                 }
@@ -1121,6 +1285,11 @@ void CheckSerial()
                             case 0: // Channel type
                             {
                                 uint8_t channelIndex = configBuffer[CONFIG_DATA_INDEX];
+                                if (channelIndex >= NUM_CHANNELS || configBuffer[CONFIG_DATA_START_INDEX] > MATH)
+                                {
+                                    validPacket = false;
+                                    break;
+                                }
                                 ChannelType previousType = Channels[channelIndex].ChanType;
                                 Channels[channelIndex].ChanType = (ChannelType)configBuffer[CONFIG_DATA_START_INDEX];
                                 if (previousType != DIG_INTERMITTENT && Channels[channelIndex].ChanType == DIG_INTERMITTENT)
@@ -1320,6 +1489,145 @@ void CheckSerial()
                                         ? configBuffer[CONFIG_DATA_START_INDEX]
                                         : DELAYED_OFF_ASSIGNED_INPUT;
                                 break;
+                            case SERIAL_MATH_RULE_COUNT:
+                            case SERIAL_MATH_ROOT_RULE:
+                            case SERIAL_MATH_OUTPUT_MODE:
+                            case SERIAL_MATH_RULE_OPERATION:
+                            case SERIAL_MATH_RULE_HYSTERESIS:
+                            case SERIAL_MATH_RULE_ON_THRESHOLD:
+                            case SERIAL_MATH_RULE_OFF_THRESHOLD:
+                            case SERIAL_MATH_RULE_OPERAND_A_TYPE:
+                            case SERIAL_MATH_RULE_OPERAND_A_INDEX:
+                            case SERIAL_MATH_RULE_OPERAND_A_CONSTANT:
+                            case SERIAL_MATH_RULE_OPERAND_B_TYPE:
+                            case SERIAL_MATH_RULE_OPERAND_B_INDEX:
+                            case SERIAL_MATH_RULE_OPERAND_B_CONSTANT:
+                            {
+                                uint8_t channelIndex = configBuffer[CONFIG_DATA_INDEX];
+                                uint8_t parameter = configBuffer[CONFIG_PARAMETER_INDEX];
+                                bool perRule = parameter >= SERIAL_MATH_RULE_OPERATION;
+                                size_t valueIndex = CONFIG_DATA_START_INDEX + (perRule ? 1 : 0);
+                                size_t payloadEnd = (readBufIdx >= 6) ? readBufIdx - 6 : 0;
+                                if (channelIndex >= NUM_CHANNELS || payloadEnd < valueIndex + 1)
+                                {
+                                    validPacket = false;
+                                    break;
+                                }
+                                MathChannelConfig &math = MathChannels[channelIndex];
+                                uint8_t ruleIndex = perRule ? configBuffer[CONFIG_DATA_START_INDEX] : 0;
+                                if (perRule && ruleIndex >= MAX_MATH_RULES_PER_CHANNEL)
+                                {
+                                    validPacket = false;
+                                    break;
+                                }
+                                uint8_t value = configBuffer[valueIndex];
+                                MathRuleConfig &rule = math.Rules[ruleIndex];
+                                if (parameter == SERIAL_MATH_RULE_COUNT)
+                                {
+                                    if (value == 0 || value > MAX_MATH_RULES_PER_CHANNEL)
+                                    {
+                                        validPacket = false;
+                                    }
+                                    else math.RuleCount = value;
+                                }
+                                else if (parameter == SERIAL_MATH_ROOT_RULE)
+                                {
+                                    if (value >= math.RuleCount)
+                                    {
+                                        validPacket = false;
+                                    }
+                                    else math.RootRule = value;
+                                }
+                                else if (parameter == SERIAL_MATH_OUTPUT_MODE)
+                                {
+                                    if (value > MATH_OUTPUT_PWM)
+                                    {
+                                        validPacket = false;
+                                    }
+                                    else math.OutputMode = value;
+                                }
+                                else if (parameter == SERIAL_MATH_RULE_OPERATION)
+                                {
+                                    if (value >= MATH_OPERATOR_COUNT)
+                                    {
+                                        validPacket = false;
+                                    }
+                                    else rule.Operation = (MathOperator)value;
+                                }
+                                else if (parameter == SERIAL_MATH_RULE_HYSTERESIS)
+                                {
+                                    rule.HysteresisEnabled = value ? 1 : 0;
+                                }
+                                else if (parameter == SERIAL_MATH_RULE_ON_THRESHOLD || parameter == SERIAL_MATH_RULE_OFF_THRESHOLD ||
+                                         parameter == SERIAL_MATH_RULE_OPERAND_A_CONSTANT || parameter == SERIAL_MATH_RULE_OPERAND_B_CONSTANT)
+                                {
+                                    if (payloadEnd < valueIndex + sizeof(float))
+                                    {
+                                        validPacket = false;
+                                    }
+                                    else
+                                    {
+                                        float constant = 0.0f;
+                                        memcpy(&constant, &configBuffer[valueIndex], sizeof(constant));
+                                        if (!isfinite(constant))
+                                        {
+                                            validPacket = false;
+                                        }
+                                        else if (parameter == SERIAL_MATH_RULE_ON_THRESHOLD)
+                                        {
+                                            rule.OnThreshold = constant;
+                                        }
+                                        else if (parameter == SERIAL_MATH_RULE_OFF_THRESHOLD)
+                                        {
+                                            rule.OffThreshold = constant;
+                                        }
+                                        else (parameter == SERIAL_MATH_RULE_OPERAND_A_CONSTANT ? rule.OperandA : rule.OperandB).Constant = constant;
+                                    }
+                                }
+                                else if (parameter == SERIAL_MATH_RULE_OPERAND_A_TYPE || parameter == SERIAL_MATH_RULE_OPERAND_B_TYPE)
+                                {
+                                    if (value >= MATH_OPERAND_TYPE_COUNT)
+                                    {
+                                        validPacket = false;
+                                    }
+                                    else (parameter == SERIAL_MATH_RULE_OPERAND_A_TYPE ? rule.OperandA : rule.OperandB).Type = value;
+                                }
+                                else
+                                {
+                                    MathOperand &operand = parameter == SERIAL_MATH_RULE_OPERAND_A_INDEX ? rule.OperandA : rule.OperandB;
+                                    uint8_t limit = NUM_CHANNELS;
+                                    if (operand.Type == MATH_OPERAND_ANALOGUE_INPUT)
+                                    {
+                                        limit = NUM_ANA_CHANNELS;
+                                    }
+                                    else if (operand.Type == MATH_OPERAND_DIGITAL_INPUT)
+                                    {
+                                        limit = NUM_DI_CHANNELS;
+                                    }
+                                    else if (operand.Type == MATH_OPERAND_SYSTEM_VALUE)
+                                    {
+                                        limit = MATH_SYSTEM_VALUE_COUNT;
+                                    }
+                                    else if (operand.Type == MATH_OPERAND_RULE)
+                                    {
+                                        limit = MAX_MATH_RULES_PER_CHANNEL;
+                                    }
+                                    else if (operand.Type == MATH_OPERAND_CAN_SIGNAL)
+                                    {
+                                        limit = MAX_CUSTOM_CAN_SIGNALS;
+                                    }
+                                    if (operand.Type != MATH_OPERAND_CONSTANT && value >= limit)
+                                    {
+                                        validPacket = false;
+                                    }
+                                    else operand.Index = value;
+                                }
+                                if (validPacket)
+                                {
+                                    pendingChannelConfigSave = true;
+                                }
+                                break;
+                            }
 
                             default:
                                 // Channel parameter out of range. Ignore packet
@@ -1466,8 +1774,21 @@ void CheckSerial()
                                 memcpy(&SystemParams.SystemDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.SystemDataCANID));
                                 break;
                             case 5: // Config CAN ID
-                                memcpy(&SystemParams.ChannelConfigDataCANID, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.ChannelConfigDataCANID));
+                            {
+                                uint16_t canId = 0;
+                                if (readBufIdx < CONFIG_DATA_START_INDEX + sizeof(canId) + 6)
+                                {
+                                    validPacket = false;
+                                    break;
+                                }
+                                memcpy(&canId, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(canId));
+                                if (canId == 0 || canId > MAX_CHANNEL_CONFIG_CAN_ID)
+                                {
+                                    validPacket = false;
+                                }
+                                else SystemParams.ChannelConfigDataCANID = canId;
                                 break;
+                            }
                             case 6: // IMU wake window
                                 memcpy(&SystemParams.IMUwakeWindow, &configBuffer[CONFIG_DATA_START_INDEX], sizeof(SystemParams.IMUwakeWindow));
                                 break;
@@ -1604,6 +1925,16 @@ void CheckSerial()
                             connectionStatus = 14;
                             break;
 
+                        case CONFIG_DATA_CUSTOM_CAN_MESSAGE:
+                        case CONFIG_DATA_CUSTOM_CAN_SIGNAL:
+                        {
+                            validPacket = readBufIdx >= CONFIG_DATA_START_INDEX + 6 &&
+                                ApplyCustomCANWrite(
+                                    configBuffer[CONFIG_TYPE_INDEX] - CONFIG_DATA_CUSTOM_CAN_MESSAGE,
+                                    configBuffer[CONFIG_DATA_INDEX], configBuffer[CONFIG_PARAMETER_INDEX],
+                                    &configBuffer[CONFIG_DATA_START_INDEX], readBufIdx - CONFIG_DATA_START_INDEX - 6);
+                            break;
+                        }
                         default:
                             // Config type out of range. Ignore packet
                             validPacket = false;
@@ -1625,7 +1956,7 @@ void CheckSerial()
 
             if (validPacket)
             {
-                Serial.write(COMMAND_ID_CONFIM);
+                cortexSerial.write(COMMAND_ID_CONFIM);
                 connectionStatus = 10;
                 if (inputConfigChanged)
                 {
@@ -1634,7 +1965,7 @@ void CheckSerial()
             }
             else
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
             }
 
             readBufIdx = 0;
@@ -1646,11 +1977,11 @@ void CheckSerial()
         case COMMAND_ID_SAVECHANGES:
         {
             bool allSaved = true;
-            bool anySaveRequested = pendingChannelConfigSave || pendingSystemConfigSave || pendingAnalogueConfigSave || pendingCellularConfigSave;
+            bool anySaveRequested = pendingChannelConfigSave || pendingSystemConfigSave || pendingAnalogueConfigSave || pendingCellularConfigSave || CustomCANConfigDirty;
 
 #ifdef DEBUG
             uint32_t saveStartMs = millis();
-            Serial.println("=== SAVE START ===");
+            cortexSerial.println("=== SAVE START ===");
 #endif
 
             if (pendingChannelConfigSave)
@@ -1661,17 +1992,17 @@ void CheckSerial()
                 SaveChannelConfig();
 #ifdef DEBUG
                 uint32_t t2 = millis();
-                Serial.print("SaveChannelConfig: ");
-                Serial.print(t2 - t1);
-                Serial.println("ms");
+                cortexSerial.print("SaveChannelConfig: ");
+                cortexSerial.print(t2 - t1);
+                cortexSerial.println("ms");
 #endif
                 IWatchdog.reload();
                 LoadChannelConfig();
 #ifdef DEBUG
                 uint32_t t3 = millis();
-                Serial.print("LoadChannelConfig: ");
-                Serial.print(t3 - t2);
-                Serial.println("ms");
+                cortexSerial.print("LoadChannelConfig: ");
+                cortexSerial.print(t3 - t2);
+                cortexSerial.println("ms");
 #endif
                 IWatchdog.reload();
                 if (!ChannelCRCValid)
@@ -1695,9 +2026,9 @@ void CheckSerial()
                 SystemCRCValid = LoadSystemConfig();
 #ifdef DEBUG
                 uint32_t t2 = millis();
-                Serial.print("System Save/Load: ");
-                Serial.print(t2 - t1);
-                Serial.println("ms");
+                cortexSerial.print("System Save/Load: ");
+                cortexSerial.print(t2 - t1);
+                cortexSerial.println("ms");
 #endif
                 IWatchdog.reload();
                 if (!SystemCRCValid)
@@ -1715,9 +2046,9 @@ void CheckSerial()
                         InitialiseCAN();
 #ifdef DEBUG
                         uint32_t t2 = millis();
-                        Serial.print("InitialiseCAN: ");
-                        Serial.print(t2 - t1);
-                        Serial.println("ms");
+                        cortexSerial.print("InitialiseCAN: ");
+                        cortexSerial.print(t2 - t1);
+                        cortexSerial.println("ms");
 #endif
                         pendingCANBitrateReinitialise = false;
                     }
@@ -1735,9 +2066,9 @@ void CheckSerial()
                 AnalogueCRCValid = LoadAnalogueConfig();
 #ifdef DEBUG
                 uint32_t t2 = millis();
-                Serial.print("Analogue Save/Load: ");
-                Serial.print(t2 - t1);
-                Serial.println("ms");
+                cortexSerial.print("Analogue Save/Load: ");
+                cortexSerial.print(t2 - t1);
+                cortexSerial.println("ms");
 #endif
                 IWatchdog.reload();
                 if (!AnalogueCRCValid)
@@ -1762,9 +2093,9 @@ void CheckSerial()
                 CellularCRCValid = LoadCellularConfig();
 #ifdef DEBUG
                 uint32_t t2 = millis();
-                Serial.print("Cellular Save/Load: ");
-                Serial.print(t2 - t1);
-                Serial.println("ms");
+                cortexSerial.print("Cellular Save/Load: ");
+                cortexSerial.print(t2 - t1);
+                cortexSerial.println("ms");
 #endif
                 IWatchdog.reload();
                 if (!CellularCRCValid)
@@ -1778,6 +2109,12 @@ void CheckSerial()
                 }
             }
 
+            if (CustomCANConfigDirty && !SaveCustomCANConfig())
+            {
+                allSaved = false;
+                connectionStatus = 15;
+            }
+
             if (anySaveRequested)
             {
                 invalidateDisplay = true;
@@ -1785,12 +2122,12 @@ void CheckSerial()
 
 #ifdef DEBUG
             uint32_t saveEndMs = millis();
-            Serial.print("=== SAVE COMPLETE: ");
-            Serial.print(saveEndMs - saveStartMs);
-            Serial.println("ms ===");
+            cortexSerial.print("=== SAVE COMPLETE: ");
+            cortexSerial.print(saveEndMs - saveStartMs);
+            cortexSerial.println("ms ===");
 #endif
 
-            Serial.write(allSaved ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            cortexSerial.write(allSaved ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
         }
         case COMMAND_ID_FW_VER:
@@ -1810,16 +2147,16 @@ void CheckSerial()
             RtcCommandPayload rtcPayload = {0};
             if (!ReadRtcCommandPayload(&rtcPayload))
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
-            Serial.write(ApplyRtcDateTime(rtcPayload.Year, rtcPayload.Month, rtcPayload.Day, rtcPayload.Hour, rtcPayload.Minute, rtcPayload.Second) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            cortexSerial.write(ApplyRtcDateTime(rtcPayload.Year, rtcPayload.Month, rtcPayload.Day, rtcPayload.Hour, rtcPayload.Minute, rtcPayload.Second) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
         }
 
         case COMMAND_ID_FACTORY_RESET:
-            Serial.write(FactoryResetController() ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            cortexSerial.write(FactoryResetController() ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
 
         case COMMAND_ID_CELLULAR_TEST:
@@ -1856,19 +2193,19 @@ void CheckSerial()
             CalibrationModePayload payload = {0};
             if (!ReadSerialBytesExact((uint8_t *)&payload, sizeof(payload), 2000))
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
             SetCalibrationModeEnabled(payload.Enabled != 0);
-            Serial.write(COMMAND_ID_CONFIM);
+            cortexSerial.write(COMMAND_ID_CONFIM);
             break;
         }
 
         case COMMAND_ID_CALIBRATION_SAMPLE:
             if (!serialCalibrationModeEnabled)
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
@@ -1880,11 +2217,11 @@ void CheckSerial()
             CalibrationOverridePayload payload = {0};
             if (!ReadSerialBytesExact((uint8_t *)&payload, sizeof(payload), 2000))
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
-            Serial.write((serialCalibrationModeEnabled && ApplyCalibrationOverride(payload)) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            cortexSerial.write((serialCalibrationModeEnabled && ApplyCalibrationOverride(payload)) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
         }
 
@@ -1893,11 +2230,11 @@ void CheckSerial()
             CalibrationSetKilisPayload payload = {0};
             if (!ReadSerialBytesExact((uint8_t *)&payload, sizeof(payload), 2000))
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
-            Serial.write((serialCalibrationModeEnabled && ApplyCalibrationKilis(payload)) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            cortexSerial.write((serialCalibrationModeEnabled && ApplyCalibrationKilis(payload)) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
         }
 
@@ -1911,13 +2248,13 @@ void CheckSerial()
             if (!ReadSerialBytesExact(beginPayload, sizeof(beginPayload), 2000))
             {
                 SetFirmwareUpdateDiagnostic("upload begin payload timeout");
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
             uint8_t assetType = beginPayload[0];
 
-            Serial.write(BeginFirmwareAssetUpload(assetType) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            cortexSerial.write(BeginFirmwareAssetUpload(assetType) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
         }
 
@@ -1927,16 +2264,16 @@ void CheckSerial()
             {
                 SetFirmwareUpdateDiagnostic("upload chunk header timeout");
                 CancelFirmwareAssetUpload();
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
-            uint16_t chunkLength = (uint8_t)Serial.read();
-            chunkLength |= (uint16_t)((uint8_t)Serial.read() << 8);
+            uint16_t chunkLength = (uint8_t)cortexSerial.read();
+            chunkLength |= (uint16_t)((uint8_t)cortexSerial.read() << 8);
             if (chunkLength == 0)
             {
                 SetFirmwareUpdateDiagnostic("upload chunk empty ack");
-                Serial.write(COMMAND_ID_CONFIM);
+                cortexSerial.write(COMMAND_ID_CONFIM);
                 break;
             }
 
@@ -1945,7 +2282,7 @@ void CheckSerial()
             {
                 SetFirmwareUpdateDiagnostic("upload chunk too large");
                 CancelFirmwareAssetUpload();
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
@@ -1953,36 +2290,36 @@ void CheckSerial()
             {
                 SetFirmwareUpdateDiagnostic("upload chunk payload timeout");
                 CancelFirmwareAssetUpload();
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
-            Serial.write(WriteFirmwareAssetChunk(chunkBuffer, chunkLength) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            cortexSerial.write(WriteFirmwareAssetChunk(chunkBuffer, chunkLength) ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
         }
 
         case COMMAND_ID_FW_UPLOAD_END:
-            Serial.write(FinishFirmwareAssetUpload() ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            cortexSerial.write(FinishFirmwareAssetUpload() ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
 
         case COMMAND_ID_FW_UPLOAD_CANCEL:
             CancelFirmwareAssetUpload();
-            Serial.write(COMMAND_ID_CONFIM);
+            cortexSerial.write(COMMAND_ID_CONFIM);
             break;
 
         case COMMAND_ID_FW_INSTALL:
             SetOutputsInhibited(true);
             if (InstallStagedFirmware())
             {
-                Serial.write(COMMAND_ID_CONFIM);
-                Serial.flush();
+                cortexSerial.write(COMMAND_ID_CONFIM);
+                cortexSerial.flush();
                 delay(150);
                 NVIC_SystemReset();
             }
             else
             {
                 SetOutputsInhibited(false);
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
             }
             break;
 
@@ -2032,28 +2369,29 @@ void CheckSerial()
             pcCommsOK = true;
             logTransferStreaming = false;
             logTransferBulkStreaming = false;
+            logTransferPlaintext = false;
 
             uint32_t waitStart = millis();
-            while (!Serial.available() && (millis() - waitStart < 750))
+            while (!cortexSerial.available() && (millis() - waitStart < 750) && !cortexSerial.InPacket())
             {
                 IWatchdog.reload();
                 delay(1);
             }
 
-            if (!Serial.available())
+            if (!cortexSerial.available())
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                 break;
             }
 
-            uint8_t fileIndex = Serial.read();
+            uint8_t fileIndex = cortexSerial.read();
             if (BeginLogTransfer(fileIndex))
             {
-                Serial.write(COMMAND_ID_CONFIM);
+                cortexSerial.write(COMMAND_ID_CONFIM);
             }
             else
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
             }
             break;
         }
@@ -2064,10 +2402,11 @@ void CheckSerial()
             pcCommsOK = true;
             logTransferStreaming = false;
             logTransferBulkStreaming = false;
+            logTransferPlaintext = false;
 
             if (!SendNextLogTransferChunk())
             {
-                Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
             }
             break;
         }
@@ -2077,11 +2416,12 @@ void CheckSerial()
             lastComms = millis();
             pcCommsOK = true;
             logTransferBulkStreaming = false;
+            logTransferPlaintext = false;
             if (!logTransferStreaming)
             {
                 if (!SendNextLogTransferChunk())
                 {
-                    Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+                    cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
                     logTransferStreaming = false;
                     break;
                 }
@@ -2097,8 +2437,9 @@ void CheckSerial()
             pcCommsOK = true;
             logTransferStreaming = false;
             logTransferBulkStreaming = false;
+            logTransferPlaintext = false;
             CancelLogTransfer();
-            Serial.write(COMMAND_ID_CONFIM);
+            cortexSerial.write(COMMAND_ID_CONFIM);
             break;
 
         case COMMAND_ID_LOG_RESET:
@@ -2106,7 +2447,8 @@ void CheckSerial()
             pcCommsOK = true;
             logTransferStreaming = false;
             logTransferBulkStreaming = false;
-            Serial.write(ResetAllLogs() ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
+            logTransferPlaintext = false;
+            cortexSerial.write(ResetAllLogs() ? COMMAND_ID_CONFIM : COMMAND_ID_CHECKSUM_FAIL);
             break;
 
         case COMMAND_ID_LOG_BULK:
@@ -2115,6 +2457,22 @@ void CheckSerial()
             pcCommsOK = true;
             logTransferStreaming = false;
 
+            bool plaintext = false;
+            if (cortexSerial.InPacket() && cortexSerial.available())
+            {
+                if (cortexSerial.available() != 1 || cortexSerial.read() != 1)
+                {
+                    cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
+                    break;
+                }
+                plaintext = true;
+            }
+            if (logTransferBulkStreaming && plaintext != logTransferPlaintext)
+            {
+                cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
+                break;
+            }
+            logTransferPlaintext = plaintext;
             if (!logTransferBulkStreaming)
             {
                 if (!SendNextRawBulkLogChunk())
@@ -2128,6 +2486,7 @@ void CheckSerial()
             break;
         }
         }
+        cortexSerial.FinishCommand();
     }
 
     if (logTransferStreaming && !receivingConfig)
@@ -2137,7 +2496,7 @@ void CheckSerial()
         {
             logTransferStreaming = false;
             CancelLogTransfer();
-            Serial.write(COMMAND_ID_CHECKSUM_FAIL);
+            cortexSerial.write(COMMAND_ID_CHECKSUM_FAIL);
         }
     }
 

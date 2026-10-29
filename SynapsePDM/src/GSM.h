@@ -28,7 +28,11 @@
 #include <Globals.h>
 
 #define GSM_BAUD_RATE 115200
-#define SIM7600_RESPONSE_TIMEOUT_MS 750
+#define SIM7600_RESPONSE_TIMEOUT_MS 2000UL
+#define SIM7600_ASYNC_ACCEPT_TIMEOUT_MS 5000UL
+#define SIM7600_RESYNC_TIMEOUT_MS 1000UL
+#define SIM7600_RESYNC_QUIET_MS 50UL
+#define SIM7600_INTER_COMMAND_QUIET_MS 10UL
 #define SIM7600_DATA_RESPONSE_TIMEOUT_MS 30000UL
 #define SIM7600_DNS_RESPONSE_TIMEOUT_MS 12000UL
 #define SIM7600_MQTT_CONNECT_RESPONSE_TIMEOUT_MS 90000UL
@@ -37,6 +41,7 @@
 #define OPENREMOTE_PROVISIONING_TIMEOUT_MS 180000UL
 #define OPENREMOTE_PROVISIONING_MAX_REQUEST_BYTES 6143
 #define SIM7600_DATA_RETRY_MS 10000UL
+#define SIM7600_REGISTRATION_POLL_MS 5000UL
 #define SIM7600_POWER_KEY_SETTLE_MS 50UL
 #define SIM7600_REGULATOR_STABLE_MS 150UL
 #define SIM7600_BOOT_WAIT_MS 5000UL
@@ -47,7 +52,8 @@
 #define SIM7600_GNSSINFO_RESPONSE_TOKEN "+CGNSSINFO:"
 #define SIM7600_CSQ_RSSI_MAX 31
 #define SIM7600_CSQ_RSSI_UNKNOWN 99
-#define SIM_NON_GPS_GUARD_TIME_MS (SIM7600_RESPONSE_TIMEOUT_MS + 100UL)
+// Must stay below GPS_INTERVAL so low-priority polls still get a dispatch window between GPS polls.
+#define SIM_NON_GPS_GUARD_TIME_MS 850UL
 #define GPS_FILTER_MAX_SPEED_MPS 120.0f
 #define GPS_FILTER_MAX_ACCEL_MPS2 12.0f
 #define GPS_FILTER_SPEED_MARGIN_MPS 5.0f
@@ -58,6 +64,7 @@
 #define SIM_ACTIVE_COMMAND_AT 1
 #define SIM_ACTIVE_COMMAND_GPS_POWER 2
 #define SIM_ACTIVE_COMMAND_QUEUED 3
+#define SIM_ACTIVE_COMMAND_RESYNC 4
 
 #define CELLULAR_CONFIG_VERSION 6
 #define CELLULAR_PROTOCOL_MQTT 1
@@ -159,6 +166,9 @@ void parseGPSData(const char *response);
 
 /// @brief Reset cached GPS plausibility state after GPS power-down or long gaps
 void ResetGPSPlausibilityFilter();
+
+/// @brief Expire a GPS fix when no recent valid GNSS fix has been received.
+void RefreshGPSFixState();
 
 /// @brief Request a cellular data connection attempt for diagnostics if configuration allows it.
 void RequestCellularConnectionTest();

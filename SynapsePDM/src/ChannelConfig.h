@@ -31,6 +31,7 @@
 #define DEFAULT_CHANNEL_CURRENT_SENSE_KILIS 18407.72F
 #define MIN_CHANNEL_CURRENT_SENSE_KILIS 1000.0F
 #define MAX_CHANNEL_CURRENT_SENSE_KILIS 100000.0F
+#define MAX_MATH_RULES_PER_CHANNEL 8
 
 /// @brief Defines available channel types
 enum ChannelType
@@ -41,7 +42,125 @@ enum ChannelType
   ANA_PWM,         // Analogue input, PWM output (scaled)
   CAN_DIGITAL,     // CAN bus controlled digital output
   CAN_PWM,         // CAN bus controlled PWM output
-  DIG_INTERMITTENT // Digital input, intermittent digital output
+  DIG_INTERMITTENT, // Digital input, intermittent digital output
+  MATH             // Structured expression-driven output
+};
+
+static_assert(DIG == 0 && DIG_PWM == 1 && ANA == 2 && ANA_PWM == 3 &&
+                  CAN_DIGITAL == 4 && CAN_PWM == 5 && DIG_INTERMITTENT == 6 && MATH == 7,
+              "ChannelType EEPROM and protocol values must remain stable");
+
+enum MathOperator : uint8_t
+{
+  MATH_ADD = 0,
+  MATH_SUBTRACT,
+  MATH_MULTIPLY,
+  MATH_DIVIDE,
+  MATH_GREATER_THAN,
+  MATH_GREATER_EQUAL,
+  MATH_LESS_THAN,
+  MATH_LESS_EQUAL,
+  MATH_EQUAL,
+  MATH_NOT_EQUAL,
+  MATH_AND,
+  MATH_OR,
+  MATH_XOR,
+  MATH_NOT,
+  MATH_MIN,
+  MATH_MAX,
+  MATH_ABS,
+  MATH_TOGGLE,
+  MATH_OPERATOR_COUNT
+};
+
+enum MathOperandType : uint8_t
+{
+  MATH_OPERAND_CONSTANT = 0,
+  MATH_OPERAND_CHANNEL,
+  MATH_OPERAND_ANALOGUE_INPUT,
+  MATH_OPERAND_SYSTEM_VALUE,
+  MATH_OPERAND_RULE,
+  MATH_OPERAND_DIGITAL_INPUT,
+  MATH_OPERAND_CAN_SIGNAL,
+  MATH_OPERAND_TYPE_COUNT
+};
+
+enum MathSystemValue : uint8_t
+{
+  MATH_SYSTEM_TEMPERATURE = 0,
+  MATH_SYSTEM_SIM_TEMPERATURE,
+  MATH_SYSTEM_IMU_TEMPERATURE,
+  MATH_SYSTEM_BATTERY_VOLTAGE,
+  MATH_SYSTEM_CURRENT,
+  MATH_SYSTEM_ACCEL_X,
+  MATH_SYSTEM_ACCEL_Y,
+  MATH_SYSTEM_ACCEL_Z,
+  MATH_SYSTEM_GYRO_X,
+  MATH_SYSTEM_GYRO_Y,
+  MATH_SYSTEM_GYRO_Z,
+  MATH_SYSTEM_MAG_X,
+  MATH_SYSTEM_MAG_Y,
+  MATH_SYSTEM_MAG_Z,
+  MATH_SYSTEM_VALUE_COUNT
+};
+
+enum MathOutputMode : uint8_t
+{
+  MATH_OUTPUT_DIGITAL = 0,
+  MATH_OUTPUT_PWM = 1
+};
+
+struct __attribute__((packed)) MathOperand
+{
+  uint8_t Type;
+  uint8_t Index;
+  float Constant;
+};
+
+struct __attribute__((packed)) MathRuleConfig
+{
+  MathOperator Operation;
+  MathOperand OperandA;
+  MathOperand OperandB;
+  uint8_t HysteresisEnabled;
+  float OnThreshold;
+  float OffThreshold;
+};
+
+static_assert(sizeof(MathRuleConfig) == 22, "MATH rule EEPROM layout must remain stable");
+
+struct __attribute__((packed)) MathChannelConfig
+{
+  uint8_t RuleCount;
+  uint8_t RootRule;
+  uint8_t OutputMode;
+  MathRuleConfig Rules[MAX_MATH_RULES_PER_CHANNEL];
+};
+
+static_assert(sizeof(MathChannelConfig) == 179, "MATH channel EEPROM layout must remain stable");
+
+struct MathRuleRuntime
+{
+  float Value;
+  uint8_t Error;
+  uint8_t Evaluated;
+};
+
+struct MathChannelRuntime
+{
+  float Value;
+  uint8_t Error;
+  uint8_t Evaluated;
+  MathRuleRuntime Rules[MAX_MATH_RULES_PER_CHANNEL];
+};
+
+enum MathRuntimeError : uint8_t
+{
+  MATH_ERROR_NONE = 0,
+  MATH_ERROR_CONFIGURATION = 1,
+  MATH_ERROR_REFERENCE = 2,
+  MATH_ERROR_DEPENDENCY = 3,
+  MATH_ERROR_EVALUATION = 4
 };
 
 /// @brief Defines supported output channel categories

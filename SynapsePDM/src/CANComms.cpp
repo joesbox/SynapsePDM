@@ -22,9 +22,51 @@
 
 #include "CANComms.h"
 #include "InputHandler.h"
+#include "MathHandler.h"
+#include "CustomCAN.h"
+#include <math.h>
 
 // Use CAN1 with ALT_2 pin configuration (PD0/PD1)
 STM32_CAN Can(CAN1, ALT_2);
+
+static_assert(CUSTOM_CAN_TX_CHANNEL_SOURCES == NUM_CHANNELS,
+              "Custom CAN TX sources mirror the output channel count");
+
+static bool CustomCANTxValueReader(uint8_t channelIndex, float *value)
+{
+    return ReadChannelOutputValue(channelIndex, value);
+}
+
+static bool CustomCANTxFrameSender(uint32_t id, bool extended, const uint8_t *data, uint8_t dlc)
+{
+    CAN_message_t frame;
+    frame.id = id;
+    frame.len = dlc;
+    frame.flags.extended = extended ? 1 : 0;
+    frame.flags.remote = 0;
+    memcpy(frame.buf, data, dlc);
+    return Can.write(frame);
+}
+
+static const uint8_t CAN_MATH_CONFIG_OFFSET = 24;
+static const uint8_t CAN_MATH_CHANNEL_RULE_INDEX = 0xFF;
+
+enum CANMathParameter : uint8_t
+{
+    CAN_MATH_RULE_COUNT = 0,
+    CAN_MATH_ROOT_RULE,
+    CAN_MATH_OUTPUT_MODE,
+    CAN_MATH_RULE_OPERATION,
+    CAN_MATH_RULE_HYSTERESIS,
+    CAN_MATH_RULE_ON_THRESHOLD,
+    CAN_MATH_RULE_OFF_THRESHOLD,
+    CAN_MATH_RULE_OPERAND_A_TYPE,
+    CAN_MATH_RULE_OPERAND_A_INDEX,
+    CAN_MATH_RULE_OPERAND_A_CONSTANT,
+    CAN_MATH_RULE_OPERAND_B_TYPE,
+    CAN_MATH_RULE_OPERAND_B_INDEX,
+    CAN_MATH_RULE_OPERAND_B_CONSTANT
+};
 
 static uint8_t BuildDigitalInputMask()
 {
@@ -133,7 +175,7 @@ static bool ApplyExtendedChannelParameter(uint8_t channelIndex, uint8_t paramete
     {
     case 0:
     {
-        if (payload[0] > 6)
+        if (payload[0] > MATH)
         {
             return false;
         }
@@ -827,6 +869,10 @@ static bool ApplyExtendedSystemParameter(uint8_t parameter, const uint8_t *paylo
     case 5:
     {
         uint16_t canId = LoadUint16BigEndian(payload);
+        if (canId == 0 || canId > MAX_CHANNEL_CONFIG_CAN_ID)
+        {
+            return false;
+        }
         if (SystemParams.ChannelConfigDataCANID != canId)
         {
             SystemParams.ChannelConfigDataCANID = canId;
@@ -1011,6 +1057,7 @@ bool saveEEPROMOnTimeout = false;
 
 void InitialiseCAN()
 {
+    ResetCustomCANRuntime();
     pinMode(CAN_BUS_RESISTOR_ENABLE, OUTPUT);
     if (SystemParams.CANResEnabled)
     {
@@ -1032,20 +1079,51 @@ void InitialiseCAN()
 
     // Accept all messages by default (bank 0 with mask 0 = accept all)
     Can.setFilterSingleMask(0, 0x000, 0x000, STD);
+    Can.setFilterSingleMask(1, 0x000, 0x000, EXT);
 }
 
 void SleepCAN()
 {
+    ResetCustomCANRuntime();
     pinMode(CAN_BUS_RESISTOR_ENABLE, OUTPUT);
     digitalWrite(CAN_BUS_RESISTOR_ENABLE, LOW);
 }
 
 void ReadCANMessages()
 {
+    UpdateCustomCANTimeouts(millis());
+    ServiceCustomCANTransmits(millis(), CustomCANTxValueReader, CustomCANTxFrameSender);
     CAN_message_t msg;
     bool inputConfigChanged = false;
     while (Can.read(msg))
     {
+        ProcessCustomCANFrame(msg.id, msg.flags.extended, msg.flags.remote, msg.buf, msg.len, millis());
+        if (msg.flags.extended || msg.flags.remote)
+        {
+            continue;
+        }
+
+        if ((msg.id == SystemParams.ChannelConfigDataCANID + CUSTOM_CAN_CONFIG_WRITE_OFFSET ||
+             msg.id == SystemParams.ChannelConfigDataCANID + CUSTOM_CAN_CONFIG_READ_OFFSET) && msg.len == 8)
+        {
+            uint32_t value = LoadUint32BigEndian(&msg.buf[3]);
+            bool write = msg.id == SystemParams.ChannelConfigDataCANID + CUSTOM_CAN_CONFIG_WRITE_OFFSET;
+            bool accepted = write ? SetCustomCANParameter(msg.buf[0], msg.buf[1], msg.buf[2], value) :
+                GetCustomCANParameter(msg.buf[0], msg.buf[1], msg.buf[2], millis(), &value);
+            CAN_message_t response;
+            response.id = SystemParams.ChannelConfigDataCANID + CUSTOM_CAN_CONFIG_RESPONSE_OFFSET;
+            response.len = 8;
+            response.buf[0] = msg.buf[0];
+            response.buf[1] = msg.buf[1];
+            response.buf[2] = msg.buf[2];
+            StoreUint32BigEndian(&response.buf[3], value);
+            response.buf[7] = accepted ? 0 : 1;
+            Can.write(response);
+            if (accepted && write && CustomCANConfigDirty)
+            {
+                ScheduleCANConfigSave();
+            }
+        }
         if (msg.id == SystemParams.DigitalInputDataCANID)
         {
             CAN_message_t response;
@@ -1078,7 +1156,8 @@ void ReadCANMessages()
 
         if (msg.id == SystemParams.ChannelDataCANID)
         {
-            // Channel status request. Reply on data CAN ID + 1 over 4 frames.
+            // Request byte 1 selects rule 1..8; zero preserves the base channel-status query.
+            uint8_t requestedRule = msg.buf[1];
             for (int i = 0; i < NUM_CHANNELS; i++)
             {
                 if (msg.buf[0] - 1 == i)
@@ -1137,6 +1216,85 @@ void ReadCANMessages()
                     frame3.buf[6] = 0;
                     frame3.buf[7] = 0;
                     Can.write(frame3);
+
+                    CAN_message_t frame4;
+                    frame4.id = SystemParams.ChannelDataCANID + 1;
+                    frame4.len = 8;
+                    frame4.flags.extended = 0;
+                    frame4.flags.remote = 0;
+                    frame4.buf[0] = 4;
+                    uint32_t mathValueBits = 0;
+                    float mathValue = GetMathChannelValue(i);
+                    memcpy(&mathValueBits, &mathValue, sizeof(mathValueBits));
+                    StoreUint32BigEndian(&frame4.buf[1], mathValueBits);
+                    frame4.buf[5] = GetMathChannelError(i);
+                    frame4.buf[6] = (Channels[i].ChanType == MATH) ? MathChannels[i].OutputMode : 0;
+                    frame4.buf[7] = IsChannelRuntimeEnabled(i) ? 1 : 0;
+                    Can.write(frame4);
+
+                    CAN_message_t frame5;
+                    frame5.id = SystemParams.ChannelDataCANID + 1;
+                    frame5.len = 8;
+                    frame5.flags.extended = 0;
+                    frame5.flags.remote = 0;
+                    frame5.buf[0] = 5;
+                    frame5.buf[1] = MathChannels[i].RuleCount;
+                    frame5.buf[2] = MathChannels[i].RootRule;
+                    frame5.buf[3] = MathChannels[i].OutputMode;
+                    frame5.buf[4] = (requestedRule > 0 && requestedRule <= MAX_MATH_RULES_PER_CHANNEL)
+                                        ? requestedRule - 1
+                                        : 0xFF;
+                    frame5.buf[5] = 0;
+                    frame5.buf[6] = 0;
+                    frame5.buf[7] = 0;
+                    Can.write(frame5);
+
+                    if (Channels[i].ChanType == MATH && requestedRule > 0 &&
+                        requestedRule <= MathChannels[i].RuleCount)
+                    {
+                        uint8_t ruleIndex = requestedRule - 1;
+                        MathRuleConfig &rule = MathChannels[i].Rules[ruleIndex];
+
+                        CAN_message_t ruleFrame;
+                        ruleFrame.id = SystemParams.ChannelDataCANID + 1;
+                        ruleFrame.len = 8;
+                        ruleFrame.flags.extended = 0;
+                        ruleFrame.flags.remote = 0;
+                        ruleFrame.buf[0] = 6;
+                        ruleFrame.buf[1] = ruleIndex;
+                        ruleFrame.buf[2] = (uint8_t)rule.Operation;
+                        ruleFrame.buf[3] = rule.HysteresisEnabled;
+                        ruleFrame.buf[4] = rule.OperandA.Type;
+                        ruleFrame.buf[5] = rule.OperandA.Index;
+                        ruleFrame.buf[6] = rule.OperandB.Type;
+                        ruleFrame.buf[7] = rule.OperandB.Index;
+                        Can.write(ruleFrame);
+
+                        const float ruleValues[] = {rule.OperandA.Constant, rule.OperandB.Constant,
+                                                    rule.OnThreshold, rule.OffThreshold,
+                                                    MathChannelStates[i].Rules[ruleIndex].Value};
+                        for (uint8_t valueIndex = 0; valueIndex < 5; valueIndex++)
+                        {
+                            CAN_message_t valueFrame;
+                            valueFrame.id = SystemParams.ChannelDataCANID + 1;
+                            valueFrame.len = 8;
+                            valueFrame.flags.extended = 0;
+                            valueFrame.flags.remote = 0;
+                            valueFrame.buf[0] = 7 + valueIndex;
+                            valueFrame.buf[1] = ruleIndex;
+                            uint32_t floatBits = 0;
+                            memcpy(&floatBits, &ruleValues[valueIndex], sizeof(floatBits));
+                            StoreUint32BigEndian(&valueFrame.buf[2], floatBits);
+                            valueFrame.buf[6] = 0;
+                            valueFrame.buf[7] = 0;
+                            if (valueIndex == 4)
+                            {
+                                valueFrame.buf[6] = MathChannelStates[i].Rules[ruleIndex].Error;
+                                valueFrame.buf[7] = MathChannelStates[i].Rules[ruleIndex].Evaluated;
+                            }
+                            Can.write(valueFrame);
+                        }
+                    }
                 }
             }
         }
@@ -1173,7 +1331,7 @@ void ReadCANMessages()
                     // Channel type
                     if ((paramMask) & 0x01)
                     {
-                        if (msg.buf[1] <= 6)
+                        if (msg.buf[1] <= MATH)
                         {
                             ChannelType newType;
                             switch (msg.buf[1])
@@ -1204,6 +1362,9 @@ void ReadCANMessages()
 
                             case 6: // Digital intermittent
                                 newType = DIG_INTERMITTENT;
+                                break;
+                            case 7: // MATH
+                                newType = MATH;
                                 break;
                             }
 
@@ -1511,6 +1672,141 @@ void ReadCANMessages()
             }
         }
 
+        if (msg.id == SystemParams.ChannelConfigDataCANID + CAN_MATH_CONFIG_OFFSET && msg.len >= 8 &&
+            msg.buf[0] >= 1 && msg.buf[0] <= NUM_CHANNELS)
+        {
+            uint8_t channelIndex = msg.buf[0] - 1;
+            uint8_t ruleIndex = msg.buf[1];
+            uint8_t parameter = msg.buf[2];
+            uint8_t value = msg.buf[3];
+            MathChannelConfig &math = MathChannels[channelIndex];
+            bool channelParameter = parameter <= CAN_MATH_OUTPUT_MODE;
+            bool valid = channelParameter ? (ruleIndex == CAN_MATH_CHANNEL_RULE_INDEX)
+                                          : (ruleIndex < MAX_MATH_RULES_PER_CHANNEL);
+
+            if (valid && channelParameter)
+            {
+                if (parameter == CAN_MATH_RULE_COUNT)
+                {
+                    valid = value > 0 && value <= MAX_MATH_RULES_PER_CHANNEL;
+                    if (valid)
+                    {
+                        math.RuleCount = value;
+                    }
+                }
+                else if (parameter == CAN_MATH_ROOT_RULE)
+                {
+                    valid = value < math.RuleCount;
+                    if (valid)
+                    {
+                        math.RootRule = value;
+                    }
+                }
+                else
+                {
+                    valid = value <= MATH_OUTPUT_PWM;
+                    if (valid)
+                    {
+                        math.OutputMode = value;
+                    }
+                }
+            }
+            else if (valid)
+            {
+                MathRuleConfig &rule = math.Rules[ruleIndex];
+                switch (parameter)
+                {
+                case CAN_MATH_RULE_OPERATION:
+                    valid = value < MATH_OPERATOR_COUNT;
+                    if (valid)
+                    {
+                        rule.Operation = (MathOperator)value;
+                    }
+                    break;
+                case CAN_MATH_RULE_HYSTERESIS:
+                    valid = value <= 1;
+                    if (valid)
+                    {
+                        rule.HysteresisEnabled = value;
+                    }
+                    break;
+                case CAN_MATH_RULE_ON_THRESHOLD:
+                case CAN_MATH_RULE_OFF_THRESHOLD:
+                case CAN_MATH_RULE_OPERAND_A_CONSTANT:
+                case CAN_MATH_RULE_OPERAND_B_CONSTANT:
+                {
+                    float floatValue = LoadFloatBigEndian(&msg.buf[3]);
+                    valid = isfinite(floatValue);
+                    if (valid && parameter == CAN_MATH_RULE_ON_THRESHOLD)
+                    {
+                        rule.OnThreshold = floatValue;
+                    }
+                    else if (valid && parameter == CAN_MATH_RULE_OFF_THRESHOLD)
+                    {
+                        rule.OffThreshold = floatValue;
+                    }
+                    else if (valid && parameter == CAN_MATH_RULE_OPERAND_A_CONSTANT)
+                    {
+                        rule.OperandA.Constant = floatValue;
+                    }
+                    else if (valid)
+                    {
+                        rule.OperandB.Constant = floatValue;
+                    }
+                    break;
+                }
+                case CAN_MATH_RULE_OPERAND_A_TYPE:
+                case CAN_MATH_RULE_OPERAND_B_TYPE:
+                    valid = value < MATH_OPERAND_TYPE_COUNT;
+                    if (valid)
+                    {
+                        (parameter == CAN_MATH_RULE_OPERAND_A_TYPE ? rule.OperandA : rule.OperandB).Type = value;
+                    }
+                    break;
+                case CAN_MATH_RULE_OPERAND_A_INDEX:
+                case CAN_MATH_RULE_OPERAND_B_INDEX:
+                {
+                    MathOperand &operand = parameter == CAN_MATH_RULE_OPERAND_A_INDEX ? rule.OperandA : rule.OperandB;
+                    uint8_t limit = NUM_CHANNELS;
+                    if (operand.Type == MATH_OPERAND_ANALOGUE_INPUT)
+                    {
+                        limit = NUM_ANA_CHANNELS;
+                    }
+                    else if (operand.Type == MATH_OPERAND_DIGITAL_INPUT)
+                    {
+                        limit = NUM_DI_CHANNELS;
+                    }
+                    else if (operand.Type == MATH_OPERAND_SYSTEM_VALUE)
+                    {
+                        limit = MATH_SYSTEM_VALUE_COUNT;
+                    }
+                    else if (operand.Type == MATH_OPERAND_RULE)
+                    {
+                        limit = MAX_MATH_RULES_PER_CHANNEL;
+                    }
+                    else if (operand.Type == MATH_OPERAND_CAN_SIGNAL)
+                    {
+                        limit = MAX_CUSTOM_CAN_SIGNALS;
+                    }
+                    valid = operand.Type == MATH_OPERAND_CONSTANT || value < limit;
+                    if (valid)
+                    {
+                        operand.Index = value;
+                    }
+                    break;
+                }
+                default:
+                    valid = false;
+                    break;
+                }
+            }
+
+            if (valid)
+            {
+                ScheduleCANConfigSave();
+            }
+        }
+
         if (msg.id == SystemParams.ChannelConfigDataCANID + 15)
         {
             if (msg.len >= 8 && msg.buf[0] >= 1 && msg.buf[0] <= NUM_ANA_CHANNELS)
@@ -1796,6 +2092,11 @@ void PersistPendingCANConfigChanges()
     SaveChannelConfig();
     SaveSystemConfig();
     SaveAnalogueConfig();
+    if (CustomCANConfigDirty && !SaveCustomCANConfig())
+    {
+        SystemRuntimeParams.ErrorFlags |= CRC_CHECK_FAILED;
+        ScheduleCANConfigSave();
+    }
 
     if (pendingCANBitrateReinitialiseOnSave)
     {

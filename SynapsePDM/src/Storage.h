@@ -111,6 +111,16 @@ void SaveChannelConfig();
 /// @return True if the CRC check was successful
 bool LoadChannelConfig();
 
+/// @brief Saves the separately versioned MATH channel settings record.
+void SaveMathChannelConfig();
+
+/// @brief Loads MATH settings; invalid/missing records leave legacy channels unchanged.
+bool LoadMathChannelConfig();
+
+bool SaveCustomCANConfig();
+bool LoadCustomCANConfig();
+extern bool CustomCANConfigNeedsInitialSave;
+
 /// @brief Saves the system config data to EEPROM along with a calculated CRC
 void SaveSystemConfig();
 
@@ -150,6 +160,9 @@ void InitialiseStorageData();
 
 /// @brief Initialise the EEPROM storage
 void CleanEEPROM();
+
+bool ReadPINLockRecord(uint8_t slot, uint8_t *data, size_t length);
+bool WritePINLockRecord(uint8_t slot, const uint8_t *data, size_t length);
 
 /// @brief Initialises SD datalogging
 void InitialiseSD();

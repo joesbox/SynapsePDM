@@ -25,6 +25,7 @@
 
 #include "OutputHandler.h"
 #include "SerialComms.h"
+#include "AdcSampler.h"
 
 // Pins to update
 const uint16_t GPIOG_PINS[] = {GPIO_PIN_10, GPIO_PIN_9, GPIO_PIN_6, GPIO_PIN_5, GPIO_PIN_4, GPIO_PIN_3, GPIO_PIN_2}; // Outputs 1 to 7
@@ -59,8 +60,6 @@ static bool softStopActive[NUM_CHANNELS] = {false};
 static uint8_t softStopStartDuty[NUM_CHANNELS] = {0};
 static bool previousEnabled[NUM_CHANNELS] = {false};
 
-volatile uint8_t analogCounter;
-uint analogValues[NUM_CHANNELS][ANALOG_READ_SAMPLES];
 
 // Channel number used to identify associated channel
 int channelNum;
@@ -80,6 +79,8 @@ uint8_t retryCount[NUM_CHANNELS] = {0};
 // Per-channel EMA filter state for PWM current readback
 static float pwmCurrentFiltered[NUM_CHANNELS] = {0.0f};
 static bool pwmCurrentFilterPrimed[NUM_CHANNELS] = {false};
+// Shares pwmCurrentFilterPrimed; re-seeded whenever the average filter is re-primed.
+static float pwmOnPhaseFiltered[NUM_CHANNELS] = {0.0f};
 static uint8_t digitalTrySampleCount[NUM_CHANNELS] = {0};
 static float digitalTryCurrentSum[NUM_CHANNELS] = {0.0f};
 static bool outputsInhibited = false;
@@ -113,6 +114,22 @@ bool IsChannelEffectivelyEnabled(uint8_t channelIndex)
   }
 
   return IsChannelRuntimeEnabled(channelIndex) && !outputsInhibited && !IsChannelThermallyShed(channelIndex);
+}
+
+// sampledDuty is the duty that was being driven while the ADC samples were taken.
+static float PWMSenseToAmps(uint8_t channelIndex, float analogRaw, uint8_t sampledDuty)
+{
+  float amps = Channels[channelIndex].CurrentSenseKILIS * (((analogRaw / (float)ADCres) * V_REF) / R_IS);
+  if (sampledDuty > 0 && sampledDuty < 100)
+  {
+    float effectiveDuty = (float)sampledDuty - PWM_SENSE_LAG_DUTY;
+    if (effectiveDuty < PWM_SENSE_MIN_EFFECTIVE_DUTY)
+    {
+      effectiveDuty = PWM_SENSE_MIN_EFFECTIVE_DUTY;
+    }
+    amps *= (float)sampledDuty / effectiveDuty;
+  }
+  return amps;
 }
 
 static bool ApplySoftStartRamp(uint8_t channelIndex, bool triggerRamp, int targetDuty, int &rampDuty)
@@ -213,7 +230,6 @@ void InitialiseOutputs()
   }
 
   // Reset the counters
-  analogCounter = 0;
 }
 
 void SleepOutputs()
@@ -439,7 +455,12 @@ void UpdateOutputs()
       continue;
     }
 
-    switch (Channels[i].ChanType)
+    ChannelType outputType = Channels[i].ChanType;
+    if (outputType == MATH)
+    {
+      outputType = (MathChannels[i].OutputMode == MATH_OUTPUT_PWM) ? DIG_PWM : DIG;
+    }
+    switch (outputType)
     {
     case DIG_PWM:
     case ANA_PWM:
@@ -463,7 +484,7 @@ void UpdateOutputs()
         }
 
         float isVoltage = (ChannelRuntime[i].AnalogRaw / ADCres) * V_REF;
-        float measuredAmps = (PWM_M * ChannelRuntime[i].AnalogRaw) + PWM_C;
+        float measuredAmps = PWMSenseToAmps(i, ChannelRuntime[i].AnalogRaw, dutyCycles[i]);
 
         if (ChannelRuntime[i].AnalogRaw < 5)
         {
@@ -481,39 +502,61 @@ void UpdateOutputs()
           pwmActual = 0;
         }
 
+        // Divide by the duty the samples were taken at, not the new target, so duty
+        // changes cannot inflate the estimate.
+        float onPhaseSample = measuredAmps;
+        if (dutyCycles[i] >= PWM_ONPHASE_MIN_DUTY && dutyCycles[i] < 100)
+        {
+          onPhaseSample = measuredAmps * 100.0f / (float)dutyCycles[i];
+        }
+
         float amps = measuredAmps;
+        float onPhaseAmps = onPhaseSample;
         if (pwmActual <= 0)
         {
           // Keep true zero when duty is effectively off.
           pwmCurrentFiltered[i] = 0.0f;
+          pwmOnPhaseFiltered[i] = 0.0f;
           pwmCurrentFilterPrimed[i] = false;
           amps = 0.0f;
+          onPhaseAmps = 0.0f;
         }
         else
         {
           if (!pwmCurrentFilterPrimed[i])
           {
             pwmCurrentFiltered[i] = measuredAmps;
+            pwmOnPhaseFiltered[i] = onPhaseSample;
             pwmCurrentFilterPrimed[i] = true;
           }
           else
           {
             pwmCurrentFiltered[i] += PWM_CURRENT_FILTER_ALPHA * (measuredAmps - pwmCurrentFiltered[i]);
+            pwmOnPhaseFiltered[i] += PWM_CURRENT_FILTER_ALPHA * (onPhaseSample - pwmOnPhaseFiltered[i]);
           }
 
           if ((measuredAmps <= 0.0f) && (pwmCurrentFiltered[i] < PWM_CURRENT_ZERO_SNAP_AMPS))
           {
             pwmCurrentFiltered[i] = 0.0f;
+            pwmOnPhaseFiltered[i] = 0.0f;
           }
           amps = pwmCurrentFiltered[i];
+          onPhaseAmps = pwmOnPhaseFiltered[i];
         }
 
         bool inrushPeriod = (millis() - enabledTimers[i]) <= (unsigned long)(Channels[i].InrushDelay);
 
+        // Start-up current (inrush window or soft-start ramp) is judged on the average so
+        // inductive/motor inrush at low duty does not trip; steady state uses on-phase current.
         float overCurrentThreshold = Channels[i].CurrentThresholdHigh;
+        float overCurrentAmps = onPhaseAmps;
         if (inrushPeriod)
         {
           overCurrentThreshold = Channels[i].InrushCurrentThreshold;
+        }
+        if (inrushPeriod || softStartActive[i])
+        {
+          overCurrentAmps = amps;
         }
 
         if (isVoltage > FAULT_THRESHOLD)
@@ -521,7 +564,7 @@ void UpdateOutputs()
           ChannelRuntime[i].ErrorFlags |= IS_FAULT;
           criticalFault = true;
         }
-        else if (amps > overCurrentThreshold)
+        else if (overCurrentAmps > overCurrentThreshold)
         {
           ChannelRuntime[i].ErrorFlags |= CHN_OVERCURRENT;
           criticalFault = true;
@@ -593,19 +636,32 @@ void UpdateOutputs()
       {
         softStopActive[i] = false;
         softStopStartDuty[i] = 0;
-        int sum = 0;
-        uint8_t total = 0;
-        for (int j = 0; j < currentSenseSamples; j++)
-        {
-          sum += analogRead(Channels[i].CurrentSensePin);
-          total++;
-        }
         float analogMean = 0.0f;
-        if (total)
+        if (dutyCycles[i] == 100 && !softStartActive[i])
         {
-          analogMean = sum / total;
-          ChannelRuntime[i].AnalogRaw = analogMean;
+          uint16_t mean = 0;
+          if (!ReadCurrentSenseMean(Channels[i].CurrentSensePin, currentSenseSamples, &mean))
+          {
+            ChannelRuntime[i].ErrorFlags |= IS_FAULT | RETRY_LOCKOUT;
+            channelLocked[i] = true;
+            softStartActive[i] = false;
+            digitalTrySampleCount[i] = 0;
+            digitalTryCurrentSum[i] = 0.0f;
+            updatePWMDutyCycle(i, 0);
+            continue;
+          }
+          analogMean = mean;
         }
+        else
+        {
+          int sum = 0;
+          for (int j = 0; j < currentSenseSamples; j++)
+          {
+            sum += analogRead(Channels[i].CurrentSensePin);
+          }
+          analogMean = sum / currentSenseSamples;
+        }
+        ChannelRuntime[i].AnalogRaw = analogMean;
 
         float milliVolts = (analogMean / (float)ADCres) * V_REF;
         float I_IS = milliVolts / R_IS;

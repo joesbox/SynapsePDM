@@ -33,6 +33,7 @@
 
 /// @brief Setup serial port
 void InitialiseSerial();
+void InitialiseCortexPINLock();
 
 /// @brief End serial comms
 void SleepComms();
@@ -83,6 +84,10 @@ const byte COMMAND_ID_CALIBRATION_SET_KILIS = 'K';
 const byte COMMAND_ID_CONTROLLER_TELEMETRY = 'H';
 const byte COMMAND_ID_CELLULAR_TEST = 'm';
 const byte COMMAND_ID_OPENREMOTE_PROVISION = 'M';
+const byte COMMAND_ID_MATH_STATUS = 'j';
+const byte COMMAND_ID_DIGITAL_INPUT_STATUS = 'D';
+const byte COMMAND_ID_CUSTOM_CAN_STATUS = 'B';
+const byte COMMAND_ID_ADC_DIAGNOSTIC = '?';
 
 /// @brief Config type index, channel, input or system
 const byte CONFIG_TYPE_INDEX = 2;
@@ -102,9 +107,27 @@ const byte CONFIG_DATA_ANALOGUE = 1;
 const byte CONFIG_DATA_SYSTEM = 2;
 const byte CONFIG_DATA_DIGITAL = 3;
 const byte CONFIG_DATA_CELLULAR = 4;
+const byte CONFIG_DATA_CUSTOM_CAN_MESSAGE = 5;
+const byte CONFIG_DATA_CUSTOM_CAN_SIGNAL = 6;
+
+enum SerialMathChannelParameter : uint8_t
+{
+    SERIAL_MATH_RULE_COUNT = 33,
+    SERIAL_MATH_ROOT_RULE = 34,
+    SERIAL_MATH_OUTPUT_MODE = 35,
+    SERIAL_MATH_RULE_OPERATION = 36,
+    SERIAL_MATH_RULE_HYSTERESIS = 37,
+    SERIAL_MATH_RULE_ON_THRESHOLD = 38,
+    SERIAL_MATH_RULE_OFF_THRESHOLD = 39,
+    SERIAL_MATH_RULE_OPERAND_A_TYPE = 40,
+    SERIAL_MATH_RULE_OPERAND_A_INDEX = 41,
+    SERIAL_MATH_RULE_OPERAND_A_CONSTANT = 42,
+    SERIAL_MATH_RULE_OPERAND_B_TYPE = 43,
+    SERIAL_MATH_RULE_OPERAND_B_INDEX = 44,
+    SERIAL_MATH_RULE_OPERAND_B_CONSTANT = 45
+};
 
 /// @brief Config storage union
 extern ChannelConfigUnion SerialChannelData;
 
 #endif
-

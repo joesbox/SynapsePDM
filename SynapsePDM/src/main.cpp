@@ -28,6 +28,9 @@
     Version history:
     Date              Version       Description
     ----              -------       ------------------------------------------------------------
+    2026-10-15        v1.00         - New math channel defined.
+                                    - Custom CAN configuration added.
+                                    - PIN protection.
     2026-06-10        v0.10         - Wake sequence and display optimisations.
                                     - Added configurable CAN baud rates.
                                     - Extended CAN config protocol to include more parameters (DBC updated and wiki markdown added to this repository).
@@ -111,7 +114,9 @@
 #include <InputHandler.h>
 #include <Storage.h>
 #include <CANComms.h>
+#include "CustomCAN.h"
 #include <SerialComms.h>
+#include "AdcSampler.h"
 #include <GSM.h>
 #include <Display.h>
 
@@ -160,9 +165,9 @@ void SleepFunctions()
 {
   if (saveEEPROMOnTimeout)
   {
-    PersistPendingCANConfigChanges();
     saveEEPROMOnTimeout = false;
     EEPROMSaveTimout = 0;
+    PersistPendingCANConfigChanges();
   }
   ResetChannelInputTimingStates();
   ResetGPSPlausibilityFilter();
@@ -219,8 +224,12 @@ void setup()
 
     InitialiseCellularData();
     SaveCellularConfig();
+
+    InitialiseCustomCANData();
+    SaveCustomCANConfig();
   }
 
+  InitialiseCortexPINLock();
   IWatchdog.reload();
 
   // Load channel data first
@@ -283,6 +292,12 @@ void setup()
   }
 
   InitialiseInputs();
+
+  LoadCustomCANConfig();
+  if (CustomCANConfigNeedsInitialSave)
+  {
+    SaveCustomCANConfig();
+  }
 
   // Only initialise the SD card if we've got an accurate RTC
   if (HasUsableRtcTime())
@@ -618,6 +633,7 @@ void loop()
   if (powerStateBefore == RUN && PowerState == RUN)
   {
     CheckSerial();
+    RefreshGPSFixState();
     bool logTransferActive = IsLogTransferActive();
     bool cortexSaveActive = IsCortexConfigSaveActive();
     uint32_t now = millis();
@@ -635,18 +651,20 @@ void loop()
         }
 
         // Update channel outputs
+        uint32_t ioStartedAt = micros();
         UpdateOutputs();
 
         // Read input channel status
         HandleInputs();
 
+        UpdateSystem();
+        RecordIOServiceTiming(ioStartedAt, micros() - ioStartedAt, logTransferActive);
+
         // If we're heading for sleep, don't update the display. Something with the DMA seems to keeep the SPI bus active. Drastically increases sleep current.
-        if (backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
+        if (!logTransferActive && backgroundDrawn && PowerState != PREPARE_SLEEP && PowerState != SLEEPING)
         {
           UpdateDisplay();
         }
-
-        UpdateSystem();
       }
 
       if (!logTransferActive && (int32_t)(now - CommsTimer) >= 0)
@@ -666,11 +684,6 @@ void loop()
         if ((int32_t)(logNow - LogTimer) >= 0)
         {
           LogTimer = logNow + LOG_INTERVAL_US;
-        }
-
-        if (GPSFix)
-        {
-          ApplyUtcRtcDateTime((uint16_t)year, (uint8_t)month, (uint8_t)day, (uint8_t)hour, (uint8_t)minute, (uint8_t)second);
         }
 
         if (RTCSet)
@@ -738,6 +751,16 @@ void loop()
 
     if (logTransferActive)
     {
+      if ((int32_t)(now - GPSTimer) >= 0)
+      {
+        GPSTimer = now + GPS_INTERVAL;
+        UpdateSIM7600(GPS);
+      }
+      else
+      {
+        UpdateSIM7600();
+      }
+
       CheckSerial();
     }
 

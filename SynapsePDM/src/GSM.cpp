@@ -38,6 +38,7 @@ static const char INTERNET_PROBE_HOST[] = "www.google.com";
 
 static bool hasAcceptedGPSFix = false;
 static bool hasSeenGNSSResponse = false;
+static bool hasSeenGNSSFix = false;
 static float lastAcceptedLat = 0.0f;
 static float lastAcceptedLon = 0.0f;
 static float lastAcceptedSpeedKnots = 0.0f;
@@ -61,6 +62,9 @@ static uint8_t activeSimCommandType = 0;
 static bool activeGPSEnableState = false;
 static uint8_t cellularDataState = 0;
 static uint32_t nextCellularDataAttemptAt = 0;
+static uint32_t nextRegistrationCheckAt = 0;
+static int lastPsRegistrationStatus = -1;
+static int lastEpsRegistrationStatus = -1;
 static bool cellularTestBypassGpsWait = false;
 static bool internetProbeComplete = false;
 static bool internetProbeSucceeded = false;
@@ -109,6 +113,53 @@ static uint8_t openRemoteProvisioningPayloadHeaderMatch = 0;
 static bool openRemoteProvisioningWaitingForPayloadStart = false;
 static bool openRemoteProvisioningPayloadCaptureActive = false;
 
+// Asynchronous modem results (URCs) are captured line-by-line regardless of which command owns the
+// UART, so long MQTT/data waits can release the UART for GPS and status polling.
+enum SimUrcSlot
+{
+    SIM_URC_MQTT_CONNECT = 0,
+    SIM_URC_MQTT_PUB,
+    SIM_URC_MQTT_SUB,
+    SIM_URC_MQTT_UNSUB,
+    SIM_URC_MQTT_START,
+    SIM_URC_MQTT_STOP,
+    SIM_URC_MQTT_DISC,
+    SIM_URC_NETOPEN,
+    SIM_URC_CDNSGIP,
+    SIM_URC_MQTT_CONNLOST,
+    SIM_URC_MQTT_RXEND,
+    SIM_URC_SLOT_COUNT,
+    SIM_URC_NONE = 0xFF
+};
+
+static const char *const SIM_URC_TOKENS[SIM_URC_SLOT_COUNT] = {
+    "+CMQTTCONNECT:",
+    "+CMQTTPUB:",
+    "+CMQTTSUB:",
+    "+CMQTTUNSUB:",
+    "+CMQTTSTART:",
+    "+CMQTTSTOP:",
+    "+CMQTTDISC:",
+    "+NETOPEN:",
+    "+CDNSGIP:",
+    "+CMQTTCONNLOST:",
+    "+CMQTTRXEND:"};
+
+static char simUrcLines[SIM_URC_SLOT_COUNT][96] = {{0}};
+static bool simUrcSeen[SIM_URC_SLOT_COUNT] = {false};
+static char simLineBuffer[128] = {0};
+static size_t simLineLength = 0;
+static uint32_t lastSimRxAt = 0;
+static bool simGnssLineParsed = false;
+static bool simResyncRequired = false;
+static uint8_t activeSimAsyncSlot = SIM_URC_NONE;
+static bool simAsyncWaitActive = false;
+static SIM7600Commands simAsyncCommand = GPS;
+static uint8_t simAsyncSlot = SIM_URC_NONE;
+static uint32_t simAsyncStartedAt = 0;
+static uint32_t simAsyncDeadline = 0;
+static int mqttConnectionLostCause = -1;
+
 static void QueueSimCommand(SIM7600Commands command);
 static void ClearQueuedSimCommand(SIM7600Commands command);
 static bool IsMqttCommand(SIM7600Commands command);
@@ -119,6 +170,7 @@ enum CellularDataState
 {
     CELLULAR_DATA_IDLE = 0,
     CELLULAR_DATA_SET_APN,
+    CELLULAR_DATA_CHECK_REGISTRATION,
     CELLULAR_DATA_ATTACH,
     CELLULAR_DATA_ACTIVATE_PDP,
     CELLULAR_DATA_CHECK_ADDRESS,
@@ -321,7 +373,7 @@ static void UpdateGPSFixState(bool hasCurrentFix, uint32_t now)
         return;
     }
 
-    if (lastGNSSFixSeenAt != 0 && (now - lastGNSSFixSeenAt) <= GPS_FIX_GRACE_PERIOD_MS)
+    if (hasSeenGNSSFix && (now - lastGNSSFixSeenAt) <= GPS_FIX_GRACE_PERIOD_MS)
     {
         GPSFix = true;
         return;
@@ -445,6 +497,7 @@ static void ResetAcceptedGPSFixState()
 {
     hasAcceptedGPSFix = false;
     hasSeenGNSSResponse = false;
+    hasSeenGNSSFix = false;
     lastGNSSFixSeenAt = 0;
     lastGNSSInfoResponse[0] = '\0';
     snprintf(lastGPSParseStatus, sizeof(lastGPSParseStatus), "No GNSS response parsed.");
@@ -521,12 +574,38 @@ static uint32_t GetActiveSimCommandTimeoutMs()
     }
 
     if (activeSimCommandType == SIM_ACTIVE_COMMAND_QUEUED &&
+        pendingCommand == CELLULAR_CONNECT &&
+        cellularDataState == CELLULAR_DATA_CHECK_REGISTRATION)
+    {
+        return SIM7600_RESPONSE_TIMEOUT_MS;
+    }
+
+    if (activeSimCommandType == SIM_ACTIVE_COMMAND_QUEUED &&
         (pendingCommand == CELLULAR_CONNECT || pendingCommand == CELLULAR_DISCONNECT))
     {
         return SIM7600_DATA_RESPONSE_TIMEOUT_MS;
     }
 
     return SIM7600_RESPONSE_TIMEOUT_MS;
+}
+
+// Commands with an asynchronous result only hold the UART until the modem accepts them; the
+// full GetActiveSimCommandTimeoutMs() budget then applies to the URC wait.
+static uint32_t GetActiveSimCommandPhaseTimeoutMs()
+{
+    if (activeSimCommandType == SIM_ACTIVE_COMMAND_RESYNC)
+    {
+        return SIM7600_RESYNC_TIMEOUT_MS;
+    }
+
+    uint32_t timeoutMs = GetActiveSimCommandTimeoutMs();
+    if (activeSimCommandType == SIM_ACTIVE_COMMAND_QUEUED && activeSimAsyncSlot != SIM_URC_NONE &&
+        timeoutMs > SIM7600_ASYNC_ACCEPT_TIMEOUT_MS)
+    {
+        return SIM7600_ASYNC_ACCEPT_TIMEOUT_MS;
+    }
+
+    return timeoutMs;
 }
 
 static void ScheduleCellularDataRetry(uint32_t now)
@@ -560,6 +639,7 @@ static void StartCellularDataConnection(uint32_t now)
     cellularDataFailureMessage[0] = '\0';
     cellularDataState = CELLULAR_DATA_SET_APN;
     nextCellularDataAttemptAt = now + SIM7600_DATA_RETRY_MS;
+    nextRegistrationCheckAt = now;
     QueueSimCommand(CELLULAR_CONNECT);
 }
 
@@ -584,6 +664,8 @@ static const char *GetCellularDataStateName()
         return "Idle";
     case CELLULAR_DATA_SET_APN:
         return "SetAPN";
+    case CELLULAR_DATA_CHECK_REGISTRATION:
+        return "CheckRegistration";
     case CELLULAR_DATA_ATTACH:
         return "Attach";
     case CELLULAR_DATA_ACTIVATE_PDP:
@@ -664,6 +746,147 @@ static bool IsCellularDataCommand(SIM7600Commands command)
 static bool IsMqttCommand(SIM7600Commands command)
 {
     return command == MQTT_CONNECT || command == MQTT_PUBLISH || command == MQTT_SUBSCRIBE || command == MQTT_UNSUBSCRIBE || command == MQTT_DISCONNECT || command == MQTT_PING || command == MQTT_STATUS;
+}
+
+static void ClearSimUrc(uint8_t slot)
+{
+    if (slot < SIM_URC_SLOT_COUNT)
+    {
+        simUrcSeen[slot] = false;
+        simUrcLines[slot][0] = '\0';
+    }
+}
+
+static void ClearAllSimUrcs()
+{
+    for (uint8_t slot = 0; slot < SIM_URC_SLOT_COUNT; slot++)
+    {
+        ClearSimUrc(slot);
+    }
+}
+
+static void ProcessSimLine(const char *line)
+{
+    while (*line == '>' || *line == ' ' || *line == '\r')
+    {
+        line++;
+    }
+
+    for (uint8_t slot = 0; slot < SIM_URC_SLOT_COUNT; slot++)
+    {
+        size_t tokenLength = strlen(SIM_URC_TOKENS[slot]);
+        if (strncmp(line, SIM_URC_TOKENS[slot], tokenLength) != 0)
+        {
+            continue;
+        }
+
+        size_t writeIndex = 0;
+        for (; line[writeIndex] != '\0' && line[writeIndex] != '\r' && writeIndex < sizeof(simUrcLines[slot]) - 1; writeIndex++)
+        {
+            simUrcLines[slot][writeIndex] = line[writeIndex];
+        }
+        simUrcLines[slot][writeIndex] = '\0';
+        simUrcSeen[slot] = true;
+
+        if (slot == SIM_URC_MQTT_CONNLOST)
+        {
+            int client = -1;
+            int cause = -1;
+            if (sscanf(line + tokenLength, " %d,%d", &client, &cause) >= 1 && client == 0)
+            {
+                mqttConnectionLostCause = cause;
+                mqttConnected = false;
+            }
+        }
+        return;
+    }
+}
+
+static void ProcessSimLineChar(char incoming)
+{
+    if (incoming == '\n')
+    {
+        simLineBuffer[simLineLength] = '\0';
+        if (simLineLength > 0)
+        {
+            ProcessSimLine(simLineBuffer);
+        }
+        simLineLength = 0;
+        return;
+    }
+
+    if (simLineLength < sizeof(simLineBuffer) - 1)
+    {
+        simLineBuffer[simLineLength++] = incoming;
+    }
+}
+
+// Returns the URC that completes the command about to be sent, or SIM_URC_NONE when the command's
+// final OK/ERROR is its complete result.
+static uint8_t GetAsyncUrcSlotForCommand(SIM7600Commands command)
+{
+    switch (command)
+    {
+    case MQTT_CONNECT:
+        switch (mqttClientState)
+        {
+        case MQTT_CLIENT_CLEAN_DISCONNECT:
+            return SIM_URC_MQTT_DISC;
+        case MQTT_CLIENT_CLEAN_STOP:
+            return SIM_URC_MQTT_STOP;
+        case MQTT_CLIENT_START:
+            return SIM_URC_MQTT_START;
+        case MQTT_CLIENT_CONNECT:
+            return SIM_URC_MQTT_CONNECT;
+        default:
+            return SIM_URC_NONE;
+        }
+    case MQTT_PUBLISH:
+        return mqttClientState == MQTT_CLIENT_PUBLISH ? SIM_URC_MQTT_PUB : SIM_URC_NONE;
+    case MQTT_SUBSCRIBE:
+        return mqttClientState == MQTT_CLIENT_WRITE_SUBSCRIBE_TOPIC ? SIM_URC_MQTT_SUB : SIM_URC_NONE;
+    case MQTT_UNSUBSCRIBE:
+        return mqttClientState == MQTT_CLIENT_WRITE_UNSUBSCRIBE_TOPIC ? SIM_URC_MQTT_UNSUB : SIM_URC_NONE;
+    case CELLULAR_CONNECT:
+        if (cellularDataState == CELLULAR_DATA_OPEN_NETWORK)
+        {
+            return SIM_URC_NETOPEN;
+        }
+        return cellularDataState == CELLULAR_DATA_PROBE_INTERNET ? SIM_URC_CDNSGIP : SIM_URC_NONE;
+    default:
+        return SIM_URC_NONE;
+    }
+}
+
+static bool IsMqttModemBusy()
+{
+    return (simCommandPending && IsMqttCommand(pendingCommand)) ||
+           (simAsyncWaitActive && IsMqttCommand(simAsyncCommand));
+}
+
+// Commands in these states write raw data after a '>' prompt; nothing else may be sent first.
+static bool IsSimPromptInputQueued(SIM7600Commands *command)
+{
+    if ((queuedSimCommands & CommandBit(MQTT_PUBLISH)) != 0 &&
+        (mqttClientState == MQTT_CLIENT_WRITE_TOPIC || mqttClientState == MQTT_CLIENT_WRITE_PAYLOAD))
+    {
+        *command = MQTT_PUBLISH;
+        return true;
+    }
+
+    if ((queuedSimCommands & CommandBit(MQTT_SUBSCRIBE)) != 0 && mqttClientState == MQTT_CLIENT_WRITE_SUBSCRIBE_TOPIC)
+    {
+        *command = MQTT_SUBSCRIBE;
+        return true;
+    }
+
+    if ((queuedSimCommands & CommandBit(MQTT_UNSUBSCRIBE)) != 0 && mqttClientState == MQTT_CLIENT_WRITE_UNSUBSCRIBE_TOPIC)
+    {
+        *command = MQTT_UNSUBSCRIBE;
+        return true;
+    }
+
+    return false;
 }
 
 static bool IsMqttConfigured()
@@ -800,6 +1023,7 @@ static void ResetOpenRemoteProvisioningReceiveCapture()
     openRemoteProvisioningPayloadHeaderMatch = 0;
     openRemoteProvisioningWaitingForPayloadStart = false;
     openRemoteProvisioningPayloadCaptureActive = false;
+    ClearSimUrc(SIM_URC_MQTT_RXEND);
 }
 
 static void CaptureOpenRemoteProvisioningIncomingChar(char incoming)
@@ -897,16 +1121,19 @@ static void CaptureOpenRemoteProvisioningResponseIfAvailable()
     }
 
     char responsePayload[sizeof(openRemoteProvisioningResponse)] = {0};
-    if (strstr(simBuffer, "+CMQTTRXEND:") == nullptr)
+    bool receiveEndInBuffer = strstr(simBuffer, "+CMQTTRXEND:") != nullptr;
+    if (!receiveEndInBuffer && !simUrcSeen[SIM_URC_MQTT_RXEND])
     {
         return;
     }
 
     openRemoteProvisioningPayloadCaptureActive = false;
-    if (openRemoteProvisioningResponse[0] == '\0' && !ExtractMqttReceivePayload(simBuffer, openRemoteProvisioningResponse, sizeof(openRemoteProvisioningResponse)))
+    if (openRemoteProvisioningResponse[0] == '\0' &&
+        (!receiveEndInBuffer || !ExtractMqttReceivePayload(simBuffer, openRemoteProvisioningResponse, sizeof(openRemoteProvisioningResponse))))
     {
         return;
     }
+    ClearSimUrc(SIM_URC_MQTT_RXEND);
 
     snprintf(responsePayload, sizeof(responsePayload), "%s", openRemoteProvisioningResponse);
     ExtractJsonStringValue(responsePayload, "\"realm\"", openRemoteProvisioningRealm, sizeof(openRemoteProvisioningRealm));
@@ -1716,6 +1943,22 @@ static bool TryDequeueNextSimCommand(SIM7600Commands *command)
         return true;
     }
 
+    if (simAsyncWaitActive)
+    {
+        // MQTT/data steps resume when the awaited modem result arrives; only status polls may use the UART meanwhile.
+        const SIM7600Commands statusOrder[] = {MODULE_TEMPERATURE, NETWORK_MODE};
+        for (SIM7600Commands candidate : statusOrder)
+        {
+            if ((queuedSimCommands & CommandBit(candidate)) != 0)
+            {
+                ClearQueuedSimCommand(candidate);
+                *command = candidate;
+                return true;
+            }
+        }
+        return false;
+    }
+
     if ((queuedSimCommands & CommandBit(CELLULAR_CONNECT)) != 0 &&
         cellularDataState != CELLULAR_DATA_IDLE &&
         cellularDataState != CELLULAR_DATA_CONNECTED &&
@@ -1804,6 +2047,7 @@ static void ResetSimResponseBuffer()
 {
     memset(simBuffer, 0, sizeof(simBuffer));
     simBufferLength = 0;
+    simGnssLineParsed = false;
 }
 
 static void CaptureLastCellularModemResponse()
@@ -1866,11 +2110,6 @@ static bool HasCompleteGNSSInfoLine(const char *response)
     return strchr(payload, '\r') != nullptr || strchr(payload, '\n') != nullptr;
 }
 
-static bool HasInternetProbeResult(const char *response)
-{
-    return response != nullptr && strstr(response, "+CDNSGIP:") != nullptr;
-}
-
 static bool WasInternetProbeSuccessful(const char *response)
 {
     const char *result = response != nullptr ? strstr(response, "+CDNSGIP:") : nullptr;
@@ -1886,14 +2125,6 @@ static bool WasInternetProbeSuccessful(const char *response)
     }
 
     return *result == '1';
-}
-
-static bool HasNetworkOpenResult(const char *response)
-{
-    return response != nullptr &&
-           (strstr(response, "+NETOPEN:") != nullptr ||
-            HasSimResponseSuccess(response) ||
-            HasSimResponseError(response));
 }
 
 static bool WasNetworkOpenSuccessful(const char *response)
@@ -2127,6 +2358,9 @@ static void SendSimCommand(SIM7600Commands command)
             snprintf(commandBuffer, sizeof(commandBuffer), "AT+CGDCONT=1,\"IP\",\"%s\"\r", CellularParams.APN);
             Serial1.print(commandBuffer);
             break;
+        case CELLULAR_DATA_CHECK_REGISTRATION:
+            Serial1.print("AT+CGREG?;+CEREG?\r");
+            break;
         case CELLULAR_DATA_ATTACH:
             Serial1.print("AT+CGATT=1\r");
             break;
@@ -2140,7 +2374,7 @@ static void SendSimCommand(SIM7600Commands command)
             Serial1.print("AT+NETOPEN\r");
             break;
         case CELLULAR_DATA_SET_DNS:
-            Serial1.print("AT+CDNSCFG=\"1.1.1.1\",\"8.8.8.8\"\r");
+            Serial1.print("AT+CDNSCFG=\"1.1.1.1\",\"1.0.0.1\"\r");
             break;
         case CELLULAR_DATA_PROBE_INTERNET:
             snprintf(commandBuffer, sizeof(commandBuffer), "AT+CDNSGIP=\"%s\"\r", GetInternetProbeHost());
@@ -2162,6 +2396,55 @@ static void SendSimCommand(SIM7600Commands command)
     case MODULE_TEMPERATURE:
         Serial1.print("AT+CPMUTEMP\r");
         break;
+    }
+}
+
+static int GetRegistrationStatus(const char *response, const char *token)
+{
+    const char *result = response != nullptr ? strstr(response, token) : nullptr;
+    if (result == nullptr)
+    {
+        return -1;
+    }
+
+    int mode = -1;
+    int status = -1;
+    if (sscanf(result + strlen(token), " %d,%d", &mode, &status) != 2)
+    {
+        return -1;
+    }
+
+    return status;
+}
+
+static bool IsRegistrationStatusRegistered(int status)
+{
+    return status == 1 || status == 5;
+}
+
+static bool IsPacketNetworkRegistered()
+{
+    return IsRegistrationStatusRegistered(lastEpsRegistrationStatus) || IsRegistrationStatusRegistered(lastPsRegistrationStatus);
+}
+
+static const char *GetRegistrationStatusName(int status)
+{
+    switch (status)
+    {
+    case 0:
+        return "not searching";
+    case 1:
+        return "home";
+    case 2:
+        return "searching";
+    case 3:
+        return "denied";
+    case 4:
+        return "unknown";
+    case 5:
+        return "roaming";
+    default:
+        return "no reply";
     }
 }
 
@@ -2214,11 +2497,29 @@ static void ProcessCellularDataCommandResult(bool responseSuccess, bool response
         return;
     }
 
+    if (cellularDataState == CELLULAR_DATA_CHECK_REGISTRATION)
+    {
+        // Attach/PDP commands block the modem (and GPS polling) for up to 30 s while it has no
+        // service, so only proceed once the modem reports packet-network registration.
+        lastPsRegistrationStatus = GetRegistrationStatus(simBuffer, "+CGREG:");
+        lastEpsRegistrationStatus = GetRegistrationStatus(simBuffer, "+CEREG:");
+        if (IsPacketNetworkRegistered())
+        {
+            cellularDataState = CELLULAR_DATA_ATTACH;
+            QueueSimCommand(CELLULAR_CONNECT);
+        }
+        else
+        {
+            nextRegistrationCheckAt = now + SIM7600_REGISTRATION_POLL_MS;
+        }
+        return;
+    }
+
     if (commandFailed)
     {
         if (cellularDataState == CELLULAR_DATA_SET_APN && responseError)
         {
-            cellularDataState = CELLULAR_DATA_ATTACH;
+            cellularDataState = CELLULAR_DATA_CHECK_REGISTRATION;
             QueueSimCommand(CELLULAR_CONNECT);
             return;
         }
@@ -2266,7 +2567,7 @@ static void ProcessCellularDataCommandResult(bool responseSuccess, bool response
     switch (cellularDataState)
     {
     case CELLULAR_DATA_SET_APN:
-        cellularDataState = CELLULAR_DATA_ATTACH;
+        cellularDataState = CELLULAR_DATA_CHECK_REGISTRATION;
         QueueSimCommand(CELLULAR_CONNECT);
         break;
     case CELLULAR_DATA_ATTACH:
@@ -2398,7 +2699,10 @@ static void ProcessMqttConnectCommandResult(bool responseError, bool commandTime
         return;
     }
 
-    if (commandTimedOut || responseError)
+    // SIM7600 reports some immediate failures as "+CMQTTxxx: code" followed by ERROR; the code is the useful result.
+    bool hasStartResult = mqttClientState == MQTT_CLIENT_START && GetMqttSingleResultCode(simBuffer, "+CMQTTSTART:") >= 0;
+    bool hasConnectResult = mqttClientState == MQTT_CLIENT_CONNECT && GetMqttClientResultCode(simBuffer, "+CMQTTCONNECT:") >= 0;
+    if ((commandTimedOut || responseError) && !hasStartResult && !hasConnectResult)
     {
         FailMqttCommand(commandTimedOut ? "MQTT connect command timed out." : "MQTT connect command returned ERROR.", now);
         return;
@@ -2508,14 +2812,14 @@ static void ProcessMqttConnectCommandResult(bool responseError, bool commandTime
 
 static bool WaitForActiveMqttCommandToFinish(uint32_t deadline)
 {
-    while (simCommandPending && IsMqttCommand(pendingCommand) && (int32_t)(millis() - deadline) < 0)
+    while (IsMqttModemBusy() && (int32_t)(millis() - deadline) < 0)
     {
         UpdateSIM7600();
         IWatchdog.reload();
         delay(5);
     }
 
-    return !(simCommandPending && IsMqttCommand(pendingCommand));
+    return !IsMqttModemBusy();
 }
 
 static void ProcessMqttPublishCommandResult(bool responseError, bool commandTimedOut, uint32_t now)
@@ -2714,8 +3018,9 @@ static void ProcessSimResponseBuffer()
         SIM7600State = 2;
     }
 
-    if (HasCompleteGNSSInfoLine(simBuffer))
+    if (!simGnssLineParsed && HasCompleteGNSSInfoLine(simBuffer))
     {
+        simGnssLineParsed = true;
         parseGPSData(simBuffer);
         SIM7600State = 2;
     }
@@ -2811,8 +3116,22 @@ void InitialiseGSM()
     queuedSimCommands = 0;
     activeSimCommandType = SIM_ACTIVE_COMMAND_NONE;
     activeGPSEnableState = false;
+    activeSimAsyncSlot = SIM_URC_NONE;
+    simAsyncWaitActive = false;
+    simAsyncCommand = GPS;
+    simAsyncSlot = SIM_URC_NONE;
+    simAsyncStartedAt = 0;
+    simAsyncDeadline = 0;
+    simResyncRequired = false;
+    simLineLength = 0;
+    lastSimRxAt = 0;
+    mqttConnectionLostCause = -1;
+    ClearAllSimUrcs();
     cellularDataState = CELLULAR_DATA_IDLE;
     nextCellularDataAttemptAt = simStartupDeadline;
+    nextRegistrationCheckAt = 0;
+    lastPsRegistrationStatus = -1;
+    lastEpsRegistrationStatus = -1;
     cellularTestBypassGpsWait = false;
     internetProbeComplete = false;
     internetProbeSucceeded = false;
@@ -2862,6 +3181,11 @@ void ResetGPSPlausibilityFilter()
     GPSFix = false;
 }
 
+void RefreshGPSFixState()
+{
+    UpdateGPSFixState(false, millis());
+}
+
 void RequestCellularConnectionTest()
 {
     uint32_t now = millis();
@@ -2886,7 +3210,7 @@ void RequestCellularConnectionTest()
 
 void ResetCellularConnectionTest()
 {
-    if (simCommandPending)
+    if (simCommandPending || simAsyncWaitActive)
     {
         return;
     }
@@ -2958,9 +3282,11 @@ bool RunOpenRemoteProvisioningRequest(const char *requestJson, size_t requestLen
         return false;
     }
 
-    if (simCommandPending && IsMqttCommand(pendingCommand))
+    if (IsMqttModemBusy())
     {
-        uint32_t quiesceDeadline = millis() + GetActiveSimCommandTimeoutMs() + 1000UL;
+        int32_t asyncRemainingMs = (int32_t)(simAsyncDeadline - millis());
+        uint32_t remainingMs = simAsyncWaitActive ? (asyncRemainingMs > 0 ? (uint32_t)asyncRemainingMs : 0UL) : GetActiveSimCommandTimeoutMs();
+        uint32_t quiesceDeadline = millis() + remainingMs + 1000UL;
         if (!WaitForActiveMqttCommandToFinish(quiesceDeadline))
         {
             if (resultBuffer != nullptr && resultBufferSize > 0)
@@ -3001,7 +3327,7 @@ bool RunOpenRemoteProvisioningRequest(const char *requestJson, size_t requestLen
     ClearQueuedSimCommand(MQTT_UNSUBSCRIBE);
 
     uint32_t start = millis();
-    if (!IsCellularInternetReady() && !simCommandPending)
+    if (!IsCellularInternetReady() && !simCommandPending && !simAsyncWaitActive)
     {
         StartCellularDataConnection(start);
     }
@@ -3114,6 +3440,7 @@ void GetCellularDiagnosticReport(char *buffer, size_t bufferSize)
         return;
     }
 
+    RefreshGPSFixState();
     uint32_t now = millis();
 
     const char *settingsStatus = "OK";
@@ -3154,7 +3481,20 @@ void GetCellularDiagnosticReport(char *buffer, size_t bufferSize)
             gpsStatus = "Fix";
             snprintf(gpsMessageBuffer,
                      sizeof(gpsMessageBuffer),
-                     "GNSS is enabled and has a current fix. %s Last=%s",
+                     "GNSS is enabled; last valid fix %lu s ago. %s Last=%s",
+                     (unsigned long)((now - lastGNSSFixSeenAt) / 1000UL),
+                     lastGPSParseStatus,
+                     lastGNSSInfoResponse[0] != '\0' ? lastGNSSInfoResponse : "none");
+            gpsMessage = gpsMessageBuffer;
+        }
+        else if (hasSeenGNSSFix)
+        {
+            gpsStatus = "Stale";
+            snprintf(gpsMessageBuffer,
+                     sizeof(gpsMessageBuffer),
+                     "No valid GNSS fix within %lu ms; last valid fix %lu s ago. %s Last=%s",
+                     (unsigned long)GPS_FIX_GRACE_PERIOD_MS,
+                     (unsigned long)((now - lastGNSSFixSeenAt) / 1000UL),
                      lastGPSParseStatus,
                      lastGNSSInfoResponse[0] != '\0' ? lastGNSSInfoResponse : "none");
             gpsMessage = gpsMessageBuffer;
@@ -3207,6 +3547,15 @@ void GetCellularDiagnosticReport(char *buffer, size_t bufferSize)
         case CELLULAR_DATA_SET_APN:
             dataStatus = "Connecting";
             snprintf(dataMessageBuffer, sizeof(dataMessageBuffer), "Setting the APN (%lus).", (unsigned long)activeCommandAgeSeconds);
+            dataMessage = dataMessageBuffer;
+            break;
+        case CELLULAR_DATA_CHECK_REGISTRATION:
+            dataStatus = "Connecting";
+            snprintf(dataMessageBuffer,
+                     sizeof(dataMessageBuffer),
+                     "Waiting for mobile network registration (LTE %s, GPRS %s); GPS keeps polling meanwhile.",
+                     GetRegistrationStatusName(lastEpsRegistrationStatus),
+                     GetRegistrationStatusName(lastPsRegistrationStatus));
             dataMessage = dataMessageBuffer;
             break;
         case CELLULAR_DATA_ATTACH:
@@ -3435,11 +3784,18 @@ void GetCellularDiagnosticReport(char *buffer, size_t bufferSize)
         mqttMessage = "MQTT settings look usable; waiting for packet data connection.";
     }
 
+    char asyncWaitText[40] = "None";
+    if (simAsyncWaitActive)
+    {
+        snprintf(asyncWaitText, sizeof(asyncWaitText), "%s(%lus)", GetSimCommandName(simAsyncCommand), (unsigned long)((millis() - simAsyncStartedAt) / 1000UL));
+    }
+
     snprintf(buffer, bufferSize,
-             "SIM: %s - State=%s Pending=%s Active=%u GPSSeen=%u Queued=0x%04X.\nSettings: %s - %s\nStorage: %s - %s\nGPS: %s - %s\nData: %s - %s\nInternet: %s - %s\nMQTT: %s - %s\nTelemetry: %s - %s\nHealth: %s - %s",
+             "SIM: %s - State=%s Pending=%s Waiting=%s Active=%u GPSSeen=%u Queued=0x%04X.\nSettings: %s - %s\nStorage: %s - %s\nGPS: %s - %s\nData: %s - %s\nInternet: %s - %s\nMQTT: %s - %s\nTelemetry: %s - %s\nHealth: %s - %s",
              simCommandPending ? "Busy" : "Ready",
              GetSimStateName(),
              simCommandPending ? GetSimCommandName(pendingCommand) : "None",
+             asyncWaitText,
              (unsigned int)activeSimCommandType,
              hasSeenGNSSResponse ? 1U : 0U,
              (unsigned int)queuedSimCommands,
@@ -3461,6 +3817,99 @@ void GetCellularDiagnosticReport(char *buffer, size_t bufferSize)
              healthMessage);
 }
 
+static void ProcessQueuedSimCommandResult(bool responseSuccess, bool responseError, bool commandTimedOut, uint32_t now)
+{
+    if (IsCellularDataCommand(pendingCommand))
+    {
+        CaptureLastCellularModemResponse();
+        ProcessCellularDataCommandResult(responseSuccess, responseError, commandTimedOut, now);
+    }
+    else if (IsMqttCommand(pendingCommand))
+    {
+        CaptureLastMqttModemResponse();
+        if (pendingCommand == MQTT_CONNECT)
+        {
+            ProcessMqttConnectCommandResult(responseError, commandTimedOut, now);
+        }
+        else if (pendingCommand == MQTT_PUBLISH)
+        {
+            ProcessMqttPublishCommandResult(responseError, commandTimedOut, now);
+        }
+        else if (pendingCommand == MQTT_SUBSCRIBE)
+        {
+            ProcessMqttSubscribeCommandResult(responseError, commandTimedOut, now);
+        }
+        else if (pendingCommand == MQTT_UNSUBSCRIBE)
+        {
+            ProcessMqttUnsubscribeCommandResult(responseError, commandTimedOut, now);
+        }
+    }
+}
+
+// Releases the UART while the modem works on an accepted asynchronous command (MQTT connect,
+// publish, NETOPEN, DNS probe...). The result URC is captured by the line router whenever it
+// arrives, so GPS and status polls keep running in the meantime.
+static void BeginSimAsyncWait(uint32_t now)
+{
+    simAsyncWaitActive = true;
+    simAsyncCommand = pendingCommand;
+    simAsyncSlot = activeSimAsyncSlot;
+    simAsyncStartedAt = now;
+    simAsyncDeadline = simCommandSentAt + GetActiveSimCommandTimeoutMs();
+}
+
+static void CancelSimAsyncWait()
+{
+    simAsyncWaitActive = false;
+    simAsyncSlot = SIM_URC_NONE;
+}
+
+static void ServiceSimAsyncWait(uint32_t now)
+{
+    if (!simAsyncWaitActive || simCommandPending)
+    {
+        return;
+    }
+
+    bool urcSeen = simAsyncSlot < SIM_URC_SLOT_COUNT && simUrcSeen[simAsyncSlot];
+    if (!urcSeen && (int32_t)(now - simAsyncDeadline) < 0)
+    {
+        return;
+    }
+
+    ResetSimResponseBuffer();
+    if (urcSeen)
+    {
+        int written = snprintf(simBuffer, sizeof(simBuffer), "\r\n%s\r\n", simUrcLines[simAsyncSlot]);
+        simBufferLength = written > 0 ? (size_t)written : 0;
+        if (simBufferLength >= sizeof(simBuffer))
+        {
+            simBufferLength = sizeof(simBuffer) - 1;
+        }
+        ClearSimUrc(simAsyncSlot);
+    }
+
+    pendingCommand = simAsyncCommand;
+    activeSimCommandType = SIM_ACTIVE_COMMAND_QUEUED;
+    CancelSimAsyncWait();
+    ProcessQueuedSimCommandResult(urcSeen, false, !urcSeen, now);
+    pendingCommand = GPS;
+    activeSimCommandType = SIM_ACTIVE_COMMAND_NONE;
+    ResetSimResponseBuffer();
+}
+
+static void DispatchQueuedSimCommand(SIM7600Commands command, uint32_t now)
+{
+    ResetSimResponseBuffer();
+    pendingCommand = command;
+    activeSimCommandType = SIM_ACTIVE_COMMAND_QUEUED;
+    activeSimAsyncSlot = GetAsyncUrcSlotForCommand(command);
+    ClearSimUrc(activeSimAsyncSlot);
+    SendSimCommand(command);
+    simCommandPending = true;
+    simCommandSentAt = now;
+}
+
 void UpdateSIM7600(SIM7600Commands command)
 {
     QueueSimCommand(command);
@@ -3472,10 +3921,13 @@ void UpdateSIM7600()
 {
     SIM7600Commands command = GPS;
     uint32_t now = millis();
+    UpdateGPSFixState(false, now);
 
     while (Serial1.available())
     {
         char incoming = Serial1.read();
+        lastSimRxAt = millis();
+        ProcessSimLineChar(incoming);
         CaptureOpenRemoteProvisioningIncomingChar(incoming);
         if (simBufferLength < sizeof(simBuffer) - 1)
         {
@@ -3506,21 +3958,24 @@ void UpdateSIM7600()
         bool responseError = HasSimResponseError(simBuffer);
         bool responseSuccess = HasSimResponseSuccess(simBuffer);
         bool responseComplete = false;
+        bool asyncUrcSeen = activeSimAsyncSlot < SIM_URC_SLOT_COUNT && simUrcSeen[activeSimAsyncSlot];
         if (activeSimCommandType == SIM_ACTIVE_COMMAND_AT || activeSimCommandType == SIM_ACTIVE_COMMAND_GPS_POWER)
         {
             responseComplete = IsSimResponseComplete(simBuffer) || responseSuccess || responseError;
         }
-        else if (pendingCommand == CELLULAR_CONNECT && cellularDataState == CELLULAR_DATA_PROBE_INTERNET)
+        else if (activeSimCommandType == SIM_ACTIVE_COMMAND_RESYNC)
         {
-            responseComplete = HasInternetProbeResult(simBuffer) || responseError;
+            // Wait for the modem to go quiet after OK so late output from a timed-out command is drained.
+            responseComplete = IsSimResponseComplete(simBuffer) && (millis() - lastSimRxAt) >= SIM7600_RESYNC_QUIET_MS;
         }
-        else if (pendingCommand == CELLULAR_CONNECT && cellularDataState == CELLULAR_DATA_OPEN_NETWORK)
+        else if (activeSimAsyncSlot != SIM_URC_NONE)
         {
-            responseComplete = HasNetworkOpenResult(simBuffer);
+            responseComplete = asyncUrcSeen || IsSimResponseComplete(simBuffer) || responseError;
         }
         else if (pendingCommand == GPS)
         {
-            responseComplete = HasCompleteGNSSInfoLine(simBuffer) || responseError;
+            // Wait for the final OK so it cannot be mistaken for the next command's result.
+            responseComplete = IsSimResponseComplete(simBuffer) || responseError;
         }
         else if (IsMqttCommand(pendingCommand))
         {
@@ -3530,13 +3985,24 @@ void UpdateSIM7600()
         {
             responseComplete = IsSimResponseComplete(simBuffer);
         }
-        bool commandTimedOut = (now - simCommandSentAt) >= GetActiveSimCommandTimeoutMs();
+        bool commandTimedOut = (now - simCommandSentAt) >= GetActiveSimCommandPhaseTimeoutMs();
         if (!responseComplete && !commandTimedOut)
         {
             return;
         }
 
-        if (activeSimCommandType == SIM_ACTIVE_COMMAND_AT)
+        if (commandTimedOut && !responseComplete &&
+            (activeSimCommandType == SIM_ACTIVE_COMMAND_QUEUED || activeSimCommandType == SIM_ACTIVE_COMMAND_GPS_POWER))
+        {
+            simResyncRequired = true;
+        }
+
+        if (activeSimCommandType == SIM_ACTIVE_COMMAND_RESYNC)
+        {
+            // One drain attempt only; a further command timeout will request another resync.
+            simResyncRequired = false;
+        }
+        else if (activeSimCommandType == SIM_ACTIVE_COMMAND_AT)
         {
             if (commandTimedOut || responseError)
             {
@@ -3569,39 +4035,26 @@ void UpdateSIM7600()
         }
         else if (activeSimCommandType == SIM_ACTIVE_COMMAND_QUEUED)
         {
-            if (IsCellularDataCommand(pendingCommand))
+            if (activeSimAsyncSlot != SIM_URC_NONE && !asyncUrcSeen && !responseError)
             {
-                CaptureLastCellularModemResponse();
-                ProcessCellularDataCommandResult(responseSuccess, responseError, commandTimedOut, now);
+                BeginSimAsyncWait(now);
             }
-            else if (IsMqttCommand(pendingCommand))
+            else
             {
-                CaptureLastMqttModemResponse();
-                if (pendingCommand == MQTT_CONNECT)
-                {
-                    ProcessMqttConnectCommandResult(responseError, commandTimedOut, now);
-                }
-                else if (pendingCommand == MQTT_PUBLISH)
-                {
-                    ProcessMqttPublishCommandResult(responseError, commandTimedOut, now);
-                }
-                else if (pendingCommand == MQTT_SUBSCRIBE)
-                {
-                    ProcessMqttSubscribeCommandResult(responseError, commandTimedOut, now);
-                }
-                else if (pendingCommand == MQTT_UNSUBSCRIBE)
-                {
-                    ProcessMqttUnsubscribeCommandResult(responseError, commandTimedOut, now);
-                }
+                ProcessQueuedSimCommandResult(responseSuccess || asyncUrcSeen, responseError, commandTimedOut && !asyncUrcSeen, now);
+                ClearSimUrc(activeSimAsyncSlot);
             }
         }
 
         simCommandPending = false;
         pendingCommand = GPS;
         activeSimCommandType = SIM_ACTIVE_COMMAND_NONE;
+        activeSimAsyncSlot = SIM_URC_NONE;
         activeGPSEnableState = false;
         ResetSimResponseBuffer();
     }
+
+    ServiceSimAsyncWait(now);
 
     switch (SIM7600State)
     {
@@ -3628,6 +4081,28 @@ void UpdateSIM7600()
         break;
     case 2:
         // Ready for command
+        if ((millis() - lastSimRxAt) < SIM7600_INTER_COMMAND_QUIET_MS)
+        {
+            break;
+        }
+
+        if (!simAsyncWaitActive && IsSimPromptInputQueued(&command))
+        {
+            ClearQueuedSimCommand(command);
+            DispatchQueuedSimCommand(command, now);
+            break;
+        }
+
+        if (simResyncRequired)
+        {
+            ResetSimResponseBuffer();
+            Serial1.print("AT\r");
+            activeSimCommandType = SIM_ACTIVE_COMMAND_RESYNC;
+            simCommandPending = true;
+            simCommandSentAt = now;
+            break;
+        }
+
         if (previousGPSEnable != SystemParams.AllowGPS)
         {
             if (SystemParams.AllowGPS && nextGPSEnableRetryAt != 0 && (int32_t)(now - nextGPSEnableRetryAt) < 0)
@@ -3656,6 +4131,14 @@ void UpdateSIM7600()
             cellularDataState = CELLULAR_DATA_IDLE;
             mqttConnected = false;
             mqttClientState = MQTT_CLIENT_IDLE;
+            CancelSimAsyncWait();
+        }
+
+        if (!mqttConnected && mqttClientState == MQTT_CLIENT_CONNECTED && !simCommandPending && !simAsyncWaitActive)
+        {
+            char lostMessage[64];
+            snprintf(lostMessage, sizeof(lostMessage), "MQTT connection lost (cause %d).", mqttConnectionLostCause);
+            FailMqttCommand(lostMessage, now);
         }
 
         if (IsCellularDataEnabled() && !dataConnected &&
@@ -3665,8 +4148,15 @@ void UpdateSIM7600()
             StartCellularDataConnection(now);
         }
 
+        if (IsCellularDataEnabled() && cellularDataState == CELLULAR_DATA_CHECK_REGISTRATION &&
+            (queuedSimCommands & CommandBit(CELLULAR_CONNECT)) == 0 && !simCommandPending && !simAsyncWaitActive &&
+            (int32_t)(now - nextRegistrationCheckAt) >= 0)
+        {
+            QueueSimCommand(CELLULAR_CONNECT);
+        }
+
         if (IsCellularDataEnabled() && dataConnected && cellularDataState == CELLULAR_DATA_CONNECTED &&
-            internetProbeComplete && !internetProbeSucceeded && !simCommandPending &&
+            internetProbeComplete && !internetProbeSucceeded && !simCommandPending && !simAsyncWaitActive &&
             (int32_t)(now - nextCellularDataAttemptAt) >= 0)
         {
             internetProbeComplete = false;
@@ -3674,7 +4164,7 @@ void UpdateSIM7600()
             QueueSimCommand(CELLULAR_CONNECT);
         }
 
-        if (IsMqttConfigured() && dataConnected && internetProbeComplete && internetProbeSucceeded && !simCommandPending)
+        if (IsMqttConfigured() && dataConnected && internetProbeComplete && internetProbeSucceeded && !simCommandPending && !simAsyncWaitActive)
         {
             if (!mqttConnected && (mqttClientState == MQTT_CLIENT_IDLE || mqttClientState == MQTT_CLIENT_FAILED) && (int32_t)(now - nextMqttPublishAt) >= 0)
             {
@@ -3702,12 +4192,7 @@ void UpdateSIM7600()
             break;
         }
 
-        ResetSimResponseBuffer();
-        pendingCommand = command;
-        activeSimCommandType = SIM_ACTIVE_COMMAND_QUEUED;
-        SendSimCommand(command);
-        simCommandPending = true;
-        simCommandSentAt = now;
+        DispatchQueuedSimCommand(command, now);
         break;
     }
 }
@@ -3779,6 +4264,7 @@ void parseGPSData(const char *response)
     // A valid SIM7600 GNSS fix should drive the user-facing GPS status immediately.
     // The plausibility filter below only decides whether to accept/update logged coordinates.
     lastGNSSFixSeenAt = now;
+    hasSeenGNSSFix = true;
     GPSFix = true;
     snprintf(lastGPSParseStatus, sizeof(lastGPSParseStatus), "Valid CGNSSINFO fix received.");
 
@@ -3805,9 +4291,11 @@ void parseGPSData(const char *response)
     candidate.speedKnots = atof(tokens[11]);
 
     int parsedYear = 0;
+    bool hasFreshDate = false;
+    bool hasFreshTime = false;
     if (strlen(tokens[8]) == 6)
     {
-        sscanf(tokens[8], "%2d%2d%2d", &candidate.parsedDay, &candidate.parsedMonth, &parsedYear);
+        hasFreshDate = sscanf(tokens[8], "%2d%2d%2d", &candidate.parsedDay, &candidate.parsedMonth, &parsedYear) == 3;
         candidate.parsedYear = parsedYear + 2000;
     }
     else
@@ -3819,7 +4307,7 @@ void parseGPSData(const char *response)
 
     if (strlen(tokens[9]) >= 6)
     {
-        sscanf(tokens[9], "%2d%2d%2d", &candidate.parsedHour, &candidate.parsedMinute, &candidate.parsedSecond);
+        hasFreshTime = sscanf(tokens[9], "%2d%2d%2d", &candidate.parsedHour, &candidate.parsedMinute, &candidate.parsedSecond) == 3;
     }
     else
     {
@@ -3838,6 +4326,12 @@ void parseGPSData(const char *response)
     }
 
     AcceptCandidateFix(candidate, now);
+    if (hasFreshDate && hasFreshTime)
+    {
+        ApplyUtcRtcDateTime((uint16_t)candidate.parsedYear, (uint8_t)candidate.parsedMonth,
+                           (uint8_t)candidate.parsedDay, (uint8_t)candidate.parsedHour,
+                           (uint8_t)candidate.parsedMinute, (uint8_t)candidate.parsedSecond);
+    }
 }
 
 uint8_t csq_to_bars()

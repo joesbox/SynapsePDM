@@ -45,6 +45,7 @@
 #define CAN_BUS_BITRATE_500K 500000UL
 #define CAN_BUS_BITRATE_1M 1000000UL
 #define DEFAULT_CAN_BUS_BITRATE CAN_BUS_BITRATE_500K
+#define MAX_CHANNEL_CONFIG_CAN_ID (0x7FFU - 27U)
 
 /* Analog read resolution */
 #define LL_ADC_RESOLUTION LL_ADC_RESOLUTION_12B
@@ -193,14 +194,14 @@ bool HasUsableRtcTime();
 /// @return True when the RTC was updated.
 bool ApplyRtcDateTime(uint16_t fullYear, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second);
 
-/// @brief Apply a UTC date/time to the RTC after converting using the stored time zone rule.
+/// @brief Synchronize a fresh GPS UTC fix using the stored time zone rule.
 /// @param fullYear Four-digit UTC year.
 /// @param month UTC month value in range 1-12.
 /// @param day UTC day value in range 1-31.
 /// @param hour UTC hour value in range 0-23.
 /// @param minute UTC minute value in range 0-59.
 /// @param second UTC second value in range 0-59.
-/// @return True when the RTC was updated or already matches the converted local time.
+/// @return False for invalid fields; true for applied, within-one-second or stale fixes.
 bool ApplyUtcRtcDateTime(uint16_t fullYear, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute, uint8_t second);
 
 /// @brief Clamp or clear an invalid time zone rule received from storage or Cortex.
@@ -212,14 +213,5 @@ void SleepSystem();
 
 /// @brief Power up the peripheral supply rails
 void WakeSystem();
-
-/// @brief Reads the internal STM32 temp sensor
-/// @param VRef Voltage reference
-/// @return Temperature in celcius
-static int32_t readTempSensor(int32_t VRef);
-
-/// @brief Reads the internal voltage reference
-/// @return Internal voltage reference valiue
-static int32_t readVref();
 
 #endif

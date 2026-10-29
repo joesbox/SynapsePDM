@@ -36,7 +36,7 @@
 #include <backup.h>
 
 // Firmware version
-#define FW_VER "v0.10"
+#define FW_VER "v1.00"
 
 // Build date
 #define BUILD_DATE __DATE__ " " __TIME__
@@ -159,6 +159,7 @@
 #define IS_FAULT 0x04
 #define RETRY_LOCKOUT 0x08
 #define CHN_TEMP_SHUTDOWN 0x10
+#define CHN_MATH_ERROR 0x20
 
 // ECU CAN addresses
 #define CHAN_CAN_ID 0x700
@@ -399,6 +400,12 @@ extern int blLevel;
 
 /// @brief HSD Output channels
 extern ChannelConfig Channels[NUM_CHANNELS];
+
+/// @brief Structured expression configuration for MATH channels; stored separately from legacy ChannelConfig.
+extern MathChannelConfig MathChannels[NUM_CHANNELS];
+
+/// @brief Last evaluated MATH value and runtime error for each output channel.
+extern MathChannelRuntime MathChannelStates[NUM_CHANNELS];
 
 /// @brief Channel runtime data
 extern ChannelConfigRuntime ChannelRuntime[NUM_CHANNELS];

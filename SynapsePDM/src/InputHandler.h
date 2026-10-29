@@ -53,6 +53,8 @@ void SanitizeAnalogueInputConfig(AnalogueInputs &input);
 /// @brief Read an analogue input and update its live voltage and converted value.
 float ReadAnalogueInputValue(int inputIndex);
 
+bool ReadDigitalInputState(uint8_t inputIndex);
+
 /// @brief Returns the live runtime enabled state for a channel.
 bool IsChannelRuntimeEnabled(uint8_t channelIndex);
 

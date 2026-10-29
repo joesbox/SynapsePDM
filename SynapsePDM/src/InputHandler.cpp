@@ -21,6 +21,7 @@
 */
 
 #include "InputHandler.h"
+#include "MathHandler.h"
 #include <math.h>
 
 static bool intermittentInputActive[NUM_CHANNELS] = {false};
@@ -552,6 +553,11 @@ static bool ApplyIgnitionDelayedOffOverride(uint8_t channelIndex, bool runtimeEn
     return runtimeEnabled || IsIgnitionDelayedOffActive(channelIndex);
 }
 
+bool ReadDigitalInputState(uint8_t inputIndex)
+{
+    return inputIndex < NUM_DI_CHANNELS && digitalRead(DIchannelInputPins[inputIndex]) != LOW;
+}
+
 static bool ReadChannelDigitalInputState(uint8_t channelIndex, int inputPin, bool inputIsDigital, bool requireDigitalAnalogueConfig)
 {
     if (inputIsDigital)
@@ -627,7 +633,6 @@ static bool ComputeIntermittentOutputState(uint8_t channelIndex, bool inputActiv
 void InitialiseInputs()
 {
     analogReadResolution(12);
-
     // Ignition inout is used for wake/sleep
     pinMode(IGN_INPUT, INPUT_PULLDOWN);
 
@@ -658,7 +663,6 @@ void InitialiseInputs()
 void HandleInputs()
 {
     analogReadResolution(12);
-
     // Check channel type and enable for active level
     for (int i = 0; i < NUM_CHANNELS; i++)
     {
@@ -816,15 +820,84 @@ void HandleInputs()
             }
             break;
         }
+        case MATH:
+            break;
         default:
             break;
         }
 
-        if (!IsChannelRuntimeEnabled(i))
+        if (!IsChannelRuntimeEnabled(i) && Channels[i].ChanType != MATH)
         {
             // Clear error flags on disable
             ChannelRuntime[i].ErrorFlags = 0;
         }
+    }
+
+    EvaluateMathChannels();
+    for (uint8_t i = 0; i < NUM_CHANNELS; i++)
+    {
+        if (Channels[i].ChanType != MATH)
+        {
+            continue;
+        }
+
+        bool pwmOutput = MathChannels[i].OutputMode == MATH_OUTPUT_PWM;
+        if (MathChannelStates[i].Error != MATH_ERROR_NONE)
+        {
+            ChannelRuntime[i].ErrorFlags |= CHN_MATH_ERROR;
+            ResetChannelInputTimingState(i);
+            if (pwmOutput)
+            {
+                Channels[i].PWMSetDuty = 0;
+            }
+            SetChannelRuntimeEnabledState(i, false);
+            continue;
+        }
+        ChannelRuntime[i].ErrorFlags &= (uint8_t)~CHN_MATH_ERROR;
+
+        uint8_t requestedDuty = 0;
+        bool requestEnabled = false;
+        {
+            float value = MathChannelStates[i].Value;
+            requestEnabled = value != 0.0f;
+            if (pwmOutput)
+            {
+                // MATH PWM values are percentages; clamp before feeding the existing PWM state machine.
+                if (value < 0.0f)
+                {
+                    value = 0.0f;
+                }
+                if (value > 100.0f)
+                {
+                    value = 100.0f;
+                }
+                requestedDuty = (uint8_t)lroundf(value);
+                requestEnabled = requestedDuty > 0;
+            }
+        }
+
+        if (IsChannelOverrideActive(i))
+        {
+            requestEnabled = true;
+            if (pwmOutput)
+            {
+                requestedDuty = 100;
+            }
+            ResetChannelInputTimingState(i);
+        }
+        else
+        {
+            requestEnabled = ApplyChannelDelayTiming(i, requestEnabled);
+        }
+
+        if (pwmOutput)
+        {
+            if (requestedDuty > 0 || !requestEnabled)
+            {
+                Channels[i].PWMSetDuty = requestedDuty;
+            }
+        }
+        SetChannelRuntimeEnabledState(i, ApplyIgnitionDelayedOffOverride(i, requestEnabled));
     }
 
     // Check analogue inputs. Set pull-ups/pull-downs

@@ -9,3 +9,668 @@ in the development cycle.
 
 More information about PlatformIO Unit Testing:
 - https://docs.platformio.org/en/latest/advanced/unit-testing/index.html
+
+GPS/RTC timestamp regression tests (native only):
+
+  python test\test_rtc_sync\test_rtc_sync.py
+
+  Compiles production RTC synchronization functions and CSV timestamp formatting
+  with a mocked clock. Requires the installed Python ziglang C++17 compiler.
+  Covers repeated/out-of-order GPS times, the +/-1 second
+  whole-second GPS tolerance, larger corrections, unset/invalid RTC, timezone and
+  DST changes, invalid fields, manual adjustment, 3000 simulated 10 Hz samples,
+  and coherent seconds/milliseconds across midnight, year and leap-day rollovers.
+  The source-wiring test checks that synchronization follows a fresh accepted GPS
+  fix, not the 100 ms logging scheduler.
+
+GPS freshness and SIM7600 scheduling tests (native only):
+
+  python test\test_gps_scheduler\test_gps_scheduler.py
+
+  Compiles the production GPS freshness and command-timeout helpers with native
+  state. Verifies cellular attach/activation retains its 30-second timeout,
+  DNS retains 12 seconds, MQTT connect retains 90 seconds, and prompt/publish
+  stages use their configured timeouts. Also verifies stale fixes clear cached
+  coordinates after the grace period and millis rollover is handled.
+
+  The old scheduler repeatedly reapplied cached whole-second GPS time and could
+  rewind the RTC/reset milliseconds, producing different measurement rows with
+  the same timestamp. Fresh GPS fixes now synchronize once per advancing UTC
+  second; small whole-second differences no longer reset the subsecond phase.
+  CSV logging also uses one RTC epoch/subsecond snapshot rather than independent
+  field reads. Existing logs are unchanged. Deliberate large clock corrections,
+  manual changes and DST transitions can still move local wall time backward;
+  Cortex does not hide or discard measurement rows.
+
+  COM18 hardware check, 2026-10-27: uploaded the signed ZIP over authenticated
+  USB serial and recorded/downloaded a fresh log. All 2159 measurement rows
+  had unique, increasing timestamps; 1621 rows had valid GPS coordinates,
+  spanning approximately 162 seconds with 82-118 ms intervals after GPS lock.
+  No duplicate full rows occurred. Initial GPS acquisition legitimately advanced
+  the RTC by about 29 seconds; the near-second tolerance did not suppress this
+  real correction. The encrypted bulk download passed framing/checksum checks
+  (1225385 bytes; SHA256
+  d37a7b598688d59c8b7458b1696a8a270d35011cf790122dc12d8b03a02ef78e).
+  The PIN remained enabled; Status/Lock succeeded and COM18 was closed afterward.
+
+PIN lock and encrypted Cortex transport tests (native only):
+
+test_pin_lock compiles the production PinLock.cpp, CortexPort.cpp and installed
+Crypto primitives, with only the serial/time/storage hardware mocked. It has
+its own native main() and is excluded from STM32_test. Do not flash it.
+The RNG stub deliberately aborts on use of the library's unseeded platform RNG.
+Long-command coverage simulates a three-minute provisioning handler with and
+without a PIN, verifies its reply and subsequent configuration request, and
+checks the five-second idle timeout starts again at command completion.
+
+Use a GCC/Clang-compatible C++17 compiler (or "zig c++") with:
+  include paths: test\test_pin_lock\mocks and .pio\libdeps\STM32\Crypto\src
+  project sources: src\PinLock.cpp src\CortexPort.cpp test\test_pin_lock\test_main.cpp
+  Crypto sources: Crypto.cpp Hash.cpp SHA256.cpp HKDF.cpp Curve25519.cpp
+    BigNumberUtil.cpp ChaChaPoly.cpp AuthenticatedCipher.cpp Cipher.cpp
+    ChaCha.cpp Poly1305.cpp
+
+Compile all listed sources and run the resulting executable. No extra test
+framework or device is required. MSVC alone cannot compile Crypto's GNU
+statement-expression rotation macros.
+
+Coverage includes an independently generated Python PBKDF2/salt/recovery vector,
+PIN format and privilege checks, retry thresholds and millis wraparound,
+microsecond hashing budgets/wraparound and stalled-clock round limits,
+cached HMAC prefixes checked against the reference KDF across PIN changes,
+disconnect/aborted-verification/reboot retry persistence, recovery replacement,
+rotation/disable, corrupt storage and write failure failing closed, default
+legacy compatibility, the locked plaintext allowlist, encrypted unlock and
+responses, plaintext bypass attempts after unlock, replay and ciphertext/tag
+tampering, fragmented/truncated/oversized envelopes, session expiry/explicit
+locking, bounded transmit backpressure, unique handshake IDs without repeated
+EEPROM writes, authorized plaintext log output without changing encryption or
+sequence counters for other replies, locked/expired plaintext log rejection,
+plaintext log transmit backpressure,
+no recovery readback, and factory erasure preserving the exact security region with a
+destructive mock SPI EEPROM driver.
+
+Wire formats, the Cortex pairing/identity requirements and hardware limitations
+are in Documentation\PIN-lock-protocol.txt. Build firmware with "pio run -e STM32".
+Bench checks in that document are still required before deployment.
+
+COM18 plaintext log / DTR A-B benchmark, 2026-10-27:
+
+  Changed only the CheckSerial disconnect test from !Serial to !Serial.dtr().
+  USBSerial::operator bool() in the installed STM32 core delays 10 ms; dtr()
+  returns the same DTR state without that delay. Uploaded the signed ZIP over
+  authenticated USB serial. PIN remained enabled.
+  The same closed 884713-byte log, with plaintext bulk output after PIN unlock,
+  took 5.9597/5.9593 seconds before the change (144.97/144.98 KiB/s) and
+  1.4670/1.4650 seconds after it (588.93/589.73 KiB/s), using the same buffered
+  receiver. Median packet gaps fell from 12.8 ms to 2.8 ms; gaps above 10 ms
+  fell from 432/433 packets to zero. All download lengths and SHA-256 values
+  matched 994774ff54f199995021fcad9c29acee6b4c22b854b73f5ad58c9a8e4fdaf0af.
+  An additional exact-read receiver completed in 1.472 seconds (586.9 KiB/s).
+  PIN unlock wall time fell from approximately 3.3 seconds to 1.14 seconds.
+  Encrypted Status/Lock succeeded after plaintext output, and COM18 was closed.
+  This confirms the blocking check was the dominant current slowdown, but does
+  not explain the remaining difference from the historical 704 KiB/s result
+  on a different file/build. Hardware disconnect timing is not qualified here.
+
+  Follow-up, same flashed firmware and buffered receiver: the 884713-byte file
+  completed in 1.4648/1.4664 seconds (589.83/589.16 KiB/s). A closed
+  20450328-byte log completed in 32.1084/32.1025 seconds (621.99/622.10 KiB/s),
+  with repeat SHA-256
+  00418374c00cacfec26af8fc5883b6deb5f3be21122c16964a4658a35c040f06.
+  No packet gaps exceeded 10 ms in any of these four runs.
+  Download I/O service count increased by 1342; observed download maxima were
+  4521 us per service and 58159 us start-to-start. ADC batch failures remained
+  zero. These counters do not measure total SD-read or USB-write time and do
+  not qualify loaded fault response. No further firmware/settings changes
+  were made during these follow-up measurements.
+
+COM18 sector-aligned log read A-B benchmark, 2026-10-27:
+
+  Added one terminator byte to logChunkTextBuffer so ReadLogTransferChunk can
+  read 2048 data bytes rather than 2047, keeping successive reads on 512-byte
+  SD-sector boundaries. Packet formats and the reader's terminator contract
+  are unchanged. Built STM32 and uploaded the signed ZIP over COM18.
+  Same buffered receiver, same closed files, PIN enabled and plaintext bulk:
+
+    884713 bytes: before 1.4648/1.4664 s, after 1.2058/1.2032 s;
+                 589 KiB/s -> 717 KiB/s, 433 -> 432 packets.
+    20450328 bytes: before 32.1084/32.1025 s, after 26.5641/26.5628 s;
+                   622 KiB/s -> 752 KiB/s, 9991 -> 9986 packets.
+
+  Both after-runs matched the pre-change SHA-256 values recorded above.
+  Every nonfinal packet contained exactly 2048 bytes, final progress was 100,
+  and every additive checksum passed. Throughput improved approximately 21%.
+  Download I/O service count increased by 1110; observed download maxima
+  were 4640 us per service and 56321 us start-to-start. ADC failures stayed
+  zero; these observations do not qualify loaded fault response.
+  Encrypted pull and encrypted bulk were also verified on the 884713-byte
+  file: 2.4664 s / 350.3 KiB/s and 1.8049 s / 478.7 KiB/s respectively.
+  Both matched the original hash; all authentication tags/checksums passed.
+  Session locked and COM18 closed. No SD-clock, configuration, sampling or
+  protection-schedule changes were made.
+
+COM18 Cortex plaintext download cancellation verification, 2026-10-27:
+
+  Fixed the desktop client's cancellation path without changing/flashing firmware.
+  The bulk reader owns cancellation: finish the current packet, send protected
+  LOG_CANCEL, drain queued bulk packets/pending Status, authenticate the cancel
+  ACK and only then return the serial reader to normal polling. Redundant
+  screen cleanup cancels are ignored after a completed/cancelled bulk transfer.
+  Failed cleanup remains bounded to five seconds and requires reconnecting;
+  ordinary cancellation preserves session keys, sequences and authorization.
+
+  Actual Cortex SerialPortService on COM18 passed four cancel/restart cycles,
+  exercising token cancellation, direct CancelLogTransfer, cancellation after
+  a keepalive interval and cancellation on the final packet. ACK/drain times
+  were 11, 14, 12 and 1 ms. Each cycle resumed live updates, opened the other
+  closed log and downloaded its complete 884713 bytes with the original hash.
+  The original large file could also be reopened/cancelled. Session ID remained
+  unchanged throughout; no reconnect or second PIN unlock was performed.
+  Protected Status remained authorized, then explicit Lock succeeded and the
+  port closed. No parameter writes, log deletion or firmware upload occurred.
+
+  Cortex build and 62 focused serial/cancellation tests passed, including the
+  opt-in hardware test. Unit cases cover cancellation inside headers/payloads/
+  checksums, queued packets, final-packet/pending-Status races, repeated cancel
+  requests, legacy raw ACKs, tampered/negative ACKs and missing ACK rejection.
+  The real-client workflow was exercised, not GUI automation.
+
+COM18 PIN-unlock bench result, 2026-10-27: cached HMAC prefixes and a 5 ms
+hashing slice (maximum 256 rounds) reduced unlock from 8.73-8.77 seconds to
+3.313, 3.316, 3.356, 3.366 and 3.431 seconds in five repeated checks on the
+final signed firmware (median 3.356 seconds, approximately 62% faster).
+All five were below the 4.5-second bench acceptance threshold and returned
+valid static configuration packets. The existing PIN, 10,000 PBKDF2 rounds,
+encrypted transport and retry policy were unchanged; no PIN migration is needed.
+Live/static, math, digital-input, custom-CAN, controller and ADC replies passed
+encryption/sequence/checksum checks, as did 50 consecutive live reads, locked
+plaintext rejection, explicit Lock and five-second session expiry. I/O and ADC
+counters advanced across re-authentication without new acquisition errors.
+Temporary timing instrumentation and display/ignition scheduling experiments
+were removed before the final build. There is no final display or power-state
+behavior change. These measurements do not establish loaded electrical fault
+response, worst-case I/O deadlines, or end-to-end Cortex GUI behavior.
+
+Custom CAN and math tests:
+
+  pio test -e STM32_test -f test_custom_can -f test_math
+
+This command uploads test firmware; use only a disconnected bench controller.
+To compile both suites without accessing hardware:
+
+  pio test -e STM32_test -f test_custom_can -f test_math --without-uploading --without-testing
+
+test_custom_can also has a native main() when ARDUINO is not defined. It can be
+compiled with a desktop C++ compiler and Unity's unity.c, using the Unity src
+directory as an include path. It requires no CAN hardware or Arduino stubs.
+Coverage includes the 100-slot capacity, shared frames, both DBC byte orders,
+cross-byte and 1-64-bit signed/unsigned decoding, invalid configurations and
+frames, exact timeout boundaries, the 60-second ceiling, timestamp wraparound,
+cache invalidation, parameter read/write validation, and float overflow.
+It also covers whole-record serial payloads (including little-endian extended
+IDs and floats), atomic rejection, relocation without invalid intermediate
+states, exact payload lengths, clearing defaults without cascading to shared
+signals, and unchanged writes preserving runtime values and dirty state.
+
+test_math includes a shared custom CAN input used by two math channels, missing
+and expired source errors, recovery, and rejection of signal index 100.
+
+On-device validation is still required for EEPROM save/reboot/CRC corruption
+and receive-queue behavior under the intended bus load. EEPROM CRC failure
+must disable the custom bank without damaging legacy or math records.
+
+test_eeprom_blocks exercises the production page writer with a fake M95640R
+that overwrites its input buffer, matching the real driver's in-place SPI
+transfers. It verifies source preservation, page boundaries, unaligned CAN
+bank writes, headers/checksums, and empty writes. Like test_custom_can, it
+supports a native Unity main() and the STM32_test environment.
+Compare-before-write coverage verifies all 100 signal positions: each changed
+signal requires at most two payload writes plus a CRC write, versus 66 write
+cycles for an entirely changed bank. Unchanged banks require zero writes.
+Tests also cover repair of unrelated EEPROM corruption and adjacent-byte
+preservation. Full-bank readback verification remains in SaveCustomCANConfig.
+
+Compile these focused suites without uploading:
+
+  pio test -e STM32_test -f test_custom_can -f test_eeprom_blocks --without-uploading --without-testing
+
+On the bench, also check fragmented/back-to-back serial frames, c/f responses,
+save/reboot persistence, failed-write retry, and actual Cortex save/delete
+latency. Native tests measure EEPROM write counts, not wall-clock hardware time.
+The serial-only record/clear protocol and recommended one-save-per-edit-batch
+flow are documented in src/canwiki.txt under "Cortex serial interface".
+
+ADC batch sampler tests (native only):
+
+This mock-HAL suite is excluded from the STM32_test environment.
+Compile src/AdcSampler.cpp and test/test_adc_sampler/test_main.cpp with Unity,
+putting test/test_adc_sampler/mocks before the Arduino include paths. For example,
+with a native C/C++ compiler (compile unity.c as C before linking):
+
+  cc -I .pio/libdeps/STM32_test/Unity/src -c .pio/libdeps/STM32_test/Unity/src/unity.c -o unity.o
+  c++ -std=c++17 -I test/test_adc_sampler/mocks -I .pio/libdeps/STM32_test/Unity/src src/AdcSampler.cpp test/test_adc_sampler/test_main.cpp unity.o -o adc-tests
+
+Eight tests exercise the production synchronous batch sampler: 100 distinct
+conversions with one initialisation, single samples on each sense pin,
+full-scale accumulator range, conversion/setup/start/cleanup failures,
+invalid requests, and I/O/download timing including timestamp wraparound.
+Failed acquisitions never publish a mean; the output handler shuts off and
+locks a digital output if its batch acquisition fails.
+
+Downloads skip TFT redraws, but retain the existing I/O service schedule,
+input/math evaluation, battery/thermal protection and CAN processing.
+The read-only serial command '?' returns the normal framed response with a
+40-byte payload: ten little-endian uint32 values in this order:
+  batch count, completed samples, failed batches, maximum batch time (us),
+  I/O services, maximum I/O duration (us), maximum I/O start gap (us),
+  download I/O services, maximum download I/O duration (us),
+  maximum gap between consecutive download I/O services (us).
+Counters reset on boot and maxima include all observations since boot. Do not
+inject diagnostic commands into an active raw bulk stream; query before/after.
+
+Hardware qualification must compare current readings under load, PWM/ramp
+behaviour, input-to-output and fault-to-shutoff latency during download, and
+sampling failures. Native tests do not establish electrical fault response.
+Firmware builds produce a signed .zip containing .bin, .sig and .sha256;
+normally install that package through Cortex's USB update workflow. For
+authorised ST-Link recovery, program only the application at 0x08010000;
+preserve the bootloader and EEPROM configuration.
+
+COM18 bench result, 2026-10-25: actual Cortex ReadLogBulkAsync downloaded the
+same 20,389,822-byte file in 32.86 s versus 351.05 s before this change, and the
+same 5,840,452-byte file in 8.51 s versus 99.45 s. Both files matched their
+original SHA-256 hashes; each new measurement was repeated. The bench had 11
+steady enabled digital outputs with zero reported load current. Timing counters
+showed I/O continuing during download, a maximum observed service duration of
+4.537 ms and start-to-start gap of 58.235 ms, with zero batch acquisition errors.
+These are observed bench maxima, not guaranteed protection-response bounds.
+The SDIO divider and normal I/O schedule were unchanged; ADC batching and skipped
+download TFT redraws were both enabled. PWM/load/fault-injection qualification
+remains required before treating these measurements as production validation.
+
+CURRENT ACQUISITION: ADC DMA rollback (supersedes all DMA notes below)
+
+The STM32 build now uses synchronous acquisition only. Steady, fully-on digital
+outputs collect 100 distinct ADC1 conversions per mean with one HAL setup and
+teardown (one conversion during configuration saves). PWM and digital ramps,
+analogue inputs, temperature, reference and battery use ordinary analogRead.
+The previous PWM coefficients/filter/protection behavior has been restored;
+the DMA full-cycle current calibration is not applicable and has been removed.
+There are no ADC DMA buffers, interrupts, trigger timers or runtime ADC modes.
+The existing GPIO PWM generator still uses DMA, as before the ADC experiment.
+DMA-only bench commands '=', 'W' and '@' have been removed; '?' remains.
+The SD recovery recursion fix, skipped download TFT redraws, original I/O
+schedule, watchdog and unrelated custom CAN/math support are retained.
+The SDIO divider is unchanged. No card formatting or configuration reset is
+part of this rollback. Reset stability, SD health and channel 7's unloaded
+current must be rechecked on hardware; the historical DMA tests below do not
+qualify this firmware.
+
+Rollback bench verification, 2026-10-25:
+
+  Default STM32 application built successfully and was programmed/verified at
+  0x08010000 through the authorised ST-Link. Build label: Oct 25 2026 23:09:15.
+  Eight sampler tests and the five retained SD recovery regression tests passed.
+  All original static configuration sections matched the pre-test backup;
+  no EEPROM configuration changes were required. Tenma remained OFF at 16 ohms.
+  Channel 7 reported zero raw counts, zero amps and no channel error, rather
+  than the approximately 1.2 A observed with ADC DMA.
+
+  A five-minute Cortex monitor received 19773 updates without interruption.
+  Subsequent non-halting debugger uptime reached 383 seconds before an
+  intentional restart to freeze the large log for repeatable benchmarking.
+  Before that restart the sampler recorded over eight million conversions
+  with zero failures. SD error was absent, HAL SD error was zero, and the
+  current log grew from 1917715 to 1936473 bytes during a three-second check.
+  GPS/telemetry status flags are separate from SD health.
+
+  After the intentional restart, actual Cortex ReadLogBulkAsync downloaded the
+  same closed 2147950-byte log twice in 2.982 and 2.980 seconds, approximately
+  704 KiB/s. Both lengths matched the listing and both SHA-256 values matched:
+  CBC178890DF6BAF4709802CBE338173F4BC4C3925E0D4668A36A43B6F9A614D7.
+  An earlier active-log measurement was not used for integrity qualification:
+  the file grew between listing and opening, causing the harness length check
+  to fail. No card files were erased or formatted.
+
+  Download I/O diagnostics observed a maximum service time of 4516 us and
+  start gap of 51596 us, with zero batch failures. Whole-runtime maxima were
+  64263 us per service and 464060 us between services, including startup and
+  normal non-download activity; these are observations, not fault-response
+  guarantees. No electrical fault was injected during these rollback checks.
+  Removing ADC DMA coincided with recovery of SD logging and channel 7 readings,
+  but does not establish the exact fault mechanism or long-term stability.
+
+HISTORICAL ONLY: all-channel ADC DMA experiment (removed):
+
+  pio run -e STM32
+
+All firmware environments use DMA unconditionally. The alternate ADC build
+environment and acquisition feature flag have been removed, along with the
+analogRead and synchronous batch fallback paths. Firmware has been uploaded
+to COM18 through the signed USB ZIP updater, with outputs isolated before
+each installation. PWM mean calibration is shared by all 14 channels;
+channel 7 remains unvalidated because of the protection trip recorded below.
+Loaded protection and transient response remain unqualified.
+Use the signed ZIP in
+.pio\build\STM32 through Cortex's USB updater only after bench review.
+Do not use PlatformIO's default ST-Link upload target.
+
+The DMA path owns all three ADCs for their entire awake lifetime. No analogRead,
+HAL_ADC_DeInit, or synchronous current batch may run alongside it:
+  ADC1: PC4 battery, internal temperature and VREFINT, TIM3 TRGO at 1 kHz,
+        DMA2 stream 4/channel 0, 480-cycle sampling.
+  ADC2: all 14 current-sense pins in channelCurrentSensePins order, TIM1 CC1
+        every 66.5 us, DMA2 stream 2/channel 1, 15-cycle sampling.
+  ADC3: PF3..PF10 analogue inputs, TIM3 TRGO at 1 kHz,
+        DMA2 stream 0/channel 2, 84-cycle sampling.
+All use 12-bit conversion and PCLK2 / 4. DMA2 streams 1 and 5 remain reserved
+for PWM GPIO writes. PB10 backlight PWM remains on TIM2; TIM3 is reserved for
+slow ADC scans in this environment. ADC/DMA IRQ priorities are 5.
+TIM5 is reserved as a free-running 1 MHz acquisition clock. Arduino micros()
+can move backwards around a pending SysTick while interrupts are masked; it
+must not be used for acquisition freshness or DMA callback timestamps.
+
+TIM1 enable/TRGO starts TIM8 through ITR0. Both retain the existing 100-slot,
+approximately 150 Hz waveform. The first update writes GPIO slot zero, then
+TIM1 CC1 in PWM2 mode triggers current scans 32 us into each slot. Frozen
+output-compare mode did not generate ADC2 acquisitions on the COM18 hardware.
+Fourteen conversions
+nominally take 18 us at the configured ADC clock. Circular DMA stores two full
+PWM cycles (5600 bytes), with one completed half processed per cycle.
+
+For the diagnostic on-window mean/maximum, slots 0..4 and the final on-slot
+are excluded. The first retained
+sample starts approximately 364.5 us after the commanded rising edge; this is
+an INITIAL BLANKING ASSUMPTION, not a measured current-sense settling guarantee.
+Every retained on-window sample contributes to the integer window mean.
+At 100% duty all 100 samples are used. Bench waveform acquisition established
+that channel 1's ADC signal is already PWM-averaged: at 50% it varies only a few
+counts across both on/off portions. The full 100-slot floating-point raw mean
+now drives telemetry; multiplying that signal by duty again was incorrect.
+This is not an RMS current or measurement of inductive recirculation current
+outside the high-side switch. Other channels' analogue response still requires
+qualification; the shared calibration does not establish transient accuracy.
+
+Intentional, opt-in behaviour changes:
+  - Any nonzero duty below 10% (including soft ramps) is raised to 10%, because
+    shorter pulses do not have the configured settled measurement window.
+  - A duty edit invalidates the intersecting cycle. Only a full subsequent
+    stable cycle can publish current. While settling, the last valid displayed
+    current is retained, AnalogRaw is -1, and CHN_CURRENT_STALE (0x40) is set.
+    That held display value is never used for overcurrent protection.
+  - Maximum valid window raw reading is retained across cycles until the
+    output service consumes it. This is NOT instantaneous on-current, because
+    the signal is already filtered in the acquisition path. Protection uses
+    the larger of the two pre-existing raw-to-current conversions, divided by
+    actual duty, as a conservative on-current estimate, without display EMA.
+    This also applies during ramps/soft-stop. It cannot recover short-circuit
+    transients removed by analogue filtering. Sense-fault voltage checks still
+    use the measured signal. Current limits are not increased. Trips latch
+    RETRY_LOCKOUT until the channel is disabled; they do not automatically retry.
+    Existing digital three-pass checks remain as secondary checks, while PWM
+    low-current checks retain their displayed-mean basis.
+  - ADC/DMA errors, buffer overwrite, unavailable channels, zero VREFINT,
+    stopped PWM timers and stale acquisition fail closed. ADC_ERROR (system
+    bit 0x0200) reports acquisition failure; the PWM DMA requests/timers are
+    stopped and GPIO outputs cleared. Recovery requires acquisition restart
+    on a subsequent wake or reboot. Retained telemetry is explicitly stale,
+    not a successful zero-current or zero-voltage measurement.
+  - Read freshness is limited to 20 ms. Duty-change settling must also finish
+    within 20 ms. Input/system readings are latest completed 1 ms scans.
+    Sleep stops acquisition and wake rebuilds ownership before input evaluation.
+
+The '?' response remains exactly 40 bytes. In DMA builds its first four values
+count completed DMA halves (plus failure records), converted samples, latched
+acquisition failures, and maximum DMA-half processing time. I/O fields retain
+their original meanings. Counts are copied atomically for the response.
+
+Bench serial commands:
+  '=' returns a normal framed packet containing 17 little-endian uint32 values:
+      first fault reason, acquisition-clock timestamp, TIM1 CR1, TIM8 CR1,
+      current DMA NDTR, ADC2 SR, DMA2 LISR, DMA2 HISR, ADC2 CR2, TIM1 CCR1,
+      TIM1 CCMR1, TIM1 CCER, TIM1 CNT, TIM1 SR, TIM1 ARR, ADC2 SQR1,
+      live PWM test status.
+      The final word packs actual selected-channel duty in bits 0..7, fixed test duty
+      in bits 8..15, and the 1-based test channel in bits 16..23.
+      With no test channel selected, the actual duty is channel 1's.
+      Fault reason zero means no latched acquisition failure.
+  'W' followed by two raw bytes (1-based channel, physical duty) selects a
+      volatile fixed-duty test override of battery compensation. Channel zero
+      clears it. Nonzero duty must be 10..100%; zero is also permitted.
+      Response is c/f. This command does NOT enable a channel, alter current
+      thresholds, clear lockouts, or disable acquisition protection. It applies
+      only to the selected channel's PWM path. Wake/reboot clears the test
+      override; the persisted configured duty uses normal compensation again.
+      It does not expire on serial disconnect, so a user can check their load.
+      Isolate other channels and verify the applied duty/status before testing.
+  '@' returns a normal framed 208-byte payload for the channel selected by W
+      (channel 1 when no override is selected): uint32 TIM5
+      timestamp, uint32 applied duty, then 100 little-endian uint16 ADC samples
+      in PWM-slot order. It snapshots the latest complete cycle without
+      consuming protection peak history. Failure returns f and fails closed.
+
+COM18 bring-up found and corrected two issues before enabling the load:
+frozen TIM1 compare produced no ADC2 trigger, and SysTick-derived timestamps
+caused false stale-data faults. With PWM2 and TIM5, complete current scans and
+zero acquisition failures were observed with outputs isolated. During the
+initial compensated-duty load trial, the user observed approximately 3 A on
+the PDM and 4.1 A on the electronic load (2 ohm setting). That is approximately
+27% low, but is NOT a calibration result: exact applied duty and the load's
+mean/RMS reporting must be established first. Supply voltage changed under
+load, motivating the explicit fixed-physical-duty bench command.
+Initial fixed-duty bench build: v0.11, Oct 25 2026 22:06:51. Serial readback
+confirmed channel 1 at exactly 50% applied duty (test word 0x00013232), with
+channels 2..14 disabled and their control sources isolated. The configured
+duty is also 50%; reboot clears the fixed-duty override and resumes voltage
+compensation. Original configuration was backed up before test isolation.
+At the first fixed-duty snapshot the PDM reported approximately 1.92 A and
+15.4 V. This has NOT been reconciled with an external current measurement.
+After more than seven million acquired samples the failure counter remained
+zero. Existing current thresholds were not increased. Acquisition health
+does not establish current calibration or loaded protection accuracy.
+
+Read-only Tenma comparison, COM6, same fixed-50% configuration:
+  ID: TENMA 72-13210 V3.30 SN:00022848, 115200 baud, 8N1.
+  Queries: *IDN?, :RES?, :MEAS:VOLT?, :MEAS:CURR?, :MEAS:POW?.
+  Resistance readback: 2.0000 ohms. Twelve paired samples gave:
+    Tenma voltage 7.70369 V, current 3.647475 A, power 28.09725 W;
+    PDM supply 15.44167 V, reported current 1.9279835 A.
+  The PDM reading was 47.14% below the Tenma current (ratio 1.89186).
+  Channel 1 stayed enabled without channel faults; channels 2..14 stayed off.
+  No load settings, firmware, duty or calibration were changed for these reads.
+  The load voltage is approximately half the supply, consistent with a
+  cycle-averaged voltage reading. Its power is approximately voltage readback
+  times current readback, so it is not independent proof of true PWM power.
+  The PDM pre-duty-scaled estimate (approximately 3.856 A) is much closer to
+  the load current. This suggests the assumption that settled ADC readings
+  represent instantaneous on-current must be checked against the actual
+  current-sense analogue response/calibration. It does not justify removing
+  duty scaling or applying a one-point gain correction without waveform tests.
+
+Native DMA arithmetic/state-boundary tests (no hardware, not an upload target):
+
+  cc -I .pio\libdeps\STM32_test\Unity\src -c .pio\libdeps\STM32_test\Unity\src\unity.c -o unity.o
+  c++ -std=c++17 -I .pio\libdeps\STM32_test\Unity\src test\test_dma_adc\test_main.cpp unity.o -o dma-adc-tests
+
+These fourteen tests execute the production reducer, conversion and timing/buffer guards. They
+cover all 14 scan ranks, every supported duty, edge/off-time rejection, varying
+pulse averages, full-cycle fractional mean, filtered-peak protection estimates,
+shared calibration on all 14 ranks and held-out Tenma regression fixtures,
+full-scale accumulation, invalid requests, overwritten halves, freshness and timer wrap.
+They do NOT simulate the HAL, prove timer wiring, or establish electrical
+protection timing. The three DMA diagnostics tests also remain applicable.
+
+Required hardware qualification before deployment:
+  1. Scope TIM1/TIM8-driven GPIO edges and ADC trigger timing on both port groups;
+     verify each scan rank stays within its valid window at 10%, 50%, 95%, 100%.
+  2. Measure sense settling/turn-off tails and recalibrate current with resistive
+     and inductive loads, including soft-start/stop and duty changes.
+  3. Inject ADC/DMA faults and interrupt delays; confirm physical shutdown,
+     latched status, stale telemetry, sleep/wake and restart behaviour.
+  4. Measure loaded overcurrent/fault-to-shutoff and input-to-output latency while
+     downloading logs and saving configuration. Peak retention prevents a valid
+     sampled spike being lost between I/O passes, but overcurrent decisions
+     STILL run on the existing main-loop I/O schedule (normally 50 ms).
+     This is not cycle-by-cycle shutdown; filtered ADC measurements cannot
+     qualify switching transient protection. Hardware driver protection remains vital.
+  5. Re-run Cortex downloads and check hashes, ISR overhead, stack/heap headroom
+     and RAM use. The calibrated DMA bench build uses 116260 bytes static RAM (88.7%),
+     leaving roughly 15 KiB for stack/heap. No new speedup is claimed without
+     benchmarking this build on hardware.
+
+Original channel-1 PWM calibration experiment, 2026-10-25 (historical):
+
+  Fit data: Tenma CR at 16, 8, 4 ohms, with physical duty
+  0, 10, 20, 35, 50, 65, 80, 95, 100 percent; five paired samples/point.
+  ADC waveform readback was captured for each pair. Zero/low-signal points
+  below five ADC counts are excluded from the linear fit and retain the
+  existing noise-floor clamp. No resistance-to-current idealisation was used;
+  the reference is the Tenma's measured current, not V/R or its power readback.
+
+  Channel 1 mean amps = 0.0152108531 * full-cycle ADC mean + 0.0182784096.
+  Duty zero or raw mean below five counts reports zero. No second duty scaling.
+  Coefficients are compiled in src/PWMCurrent.h for this bench channel only,
+  survive reboot/USB reinstall, and do not overwrite digital KILIS calibration.
+  Other PWM channels use their stored individual KILIS conversion without
+  the extra duty multiplier; they are explicitly not calibrated by this test.
+
+  Held-out validation after USB installation used 12, 6, 3 ohms and duties
+  0, 15, 25, 40, 55, 70, 90, 100 percent. These resistances were not fit data.
+  All 24 point averages met max(0.10 A, 5% of reference). Mean absolute error
+  was 0.04071 A; worst absolute error was 0.10557 A at approximately 5.015 A.
+  Example reference/PDM pairs:
+    12 ohms, 55%: 0.60858 / 0.62917 A
+     6 ohms, 55%: 1.32072 / 1.31069 A
+     3 ohms, 55%: 2.69770 / 2.62909 A
+     3 ohms,100%: 5.01480 / 5.12037 A
+  At very low current the five-count clamp can report zero for a nonzero load:
+  12 ohms/15% gave approximately 0.063 A on the Tenma. No sub-0.1 A accuracy
+  is claimed. Near the lower limit, absolute rather than percentage error
+  dominates. Settling between settings was 2.2 seconds; these tests do not
+  establish fast transient response.
+
+  Both port groups remained isolated except channel 1, and limits were kept.
+  Sweeps always ended at zero duty and 16 ohms. Final manual comparison uses
+  4 ohms/50%, not the original 2 ohms: 2 ohms can exceed the existing 7 A
+  on-current limit at this supply. Never increase that limit just to calibrate.
+  Final installed build: Oct 25 2026 22:21:53. Twelve paired readings at
+  4 ohms/physical 50% averaged 1.81899 A Tenma and 1.77698 A PDM (2.31% low).
+  Only channel 1 was enabled, with no channel faults, no latched DMA fault
+  and zero acquisition failures after 5.8 million samples. System error 0x0040
+  was the GPS warning, not an ADC fault. Both serial ports were closed afterward.
+  The fixed-duty override is volatile: reboot resumes configured,
+  voltage-compensated PWM rather than guaranteeing physical 50%.
+  This is empirical agreement with this Tenma under these conditions, not
+  traceable metrology, all-channel calibration or loaded protection approval.
+
+Cross-channel transfer check, 2026-10-25 (before global application):
+
+  With the outputs externally tied to the same Tenma load, only one channel
+  was enabled at a time. The existing channel-1 coefficients were applied
+  OFFLINE to each selected channel's full-cycle ADC waveform, without changing
+  its firmware calibration or current limits. W now selects the channel for
+  both waveform readback and the actual-duty diagnostic.
+  Tests used 16, 8 and 4 ohms at physical duties 25, 50, 75 and 100 percent,
+  five paired samples/point and 2.2 seconds settling. All outputs were disabled
+  and load current checked between channels. This shared-output fixture is
+  not representative of independent-load fault behavior.
+
+  Channels 1-5, 8 and 10-14 passed all 12 points each. Channel 6 passed its
+  four 16-ohm points; its existing 2 A limit excluded heavier loads.
+  Channel 9 passed eight points at 16/8 ohms; its 5 A limit and the test's
+  conservative supply/current margin excluded 4 ohms.
+  All 144 completed point averages passed max(0.10 A, 5% of reference):
+  mean absolute error 0.03467 A, maximum absolute error 0.11957 A.
+  These are candidate shared-calibration results, not the currently installed
+  conversion on channels 2-14, and do not establish accuracy outside the
+  measured range (approximately 0.11-3.86 A overall).
+
+  Channel 7 could not complete its first 16-ohm/25% point: protection latched
+  CHN_OVERCURRENT | RETRY_LOCKOUT (0x09). After shutdown the Tenma reported
+  zero current while its selected ADC waveform still averaged 78.1 counts
+  (range 74-87). This does not identify the cause of the trip. Do not mask
+  it with calibration changes, increase its threshold, or claim a transfer
+  pass for this channel. Further automatic tests of channel 7 were excluded.
+  Consequently the condition for applying calibration to ALL channels was
+  not met: channel-1-only coefficients remain unchanged.
+
+  The selected-waveform diagnostic firmware was installed by signed USB ZIP;
+  incremental main.cpp retained the build label Oct 25 2026 22:21:53.
+  Final saved state: all 14 control sources unassigned/off, overrides cleared,
+  original channel types/configured duties/current limits restored. Tenma
+  remains CR at 16 ohms, input OFF, measured current zero. Both ports closed.
+  Final diagnostics: 178170135 samples, zero acquisition failures, no latched
+  DMA fault. Default STM32 and STM32_adc_dma builds passed; the unchanged
+  thirteen DMA/calibration and eight legacy native tests were rerun and passed.
+
+DMA-only default and global PWM calibration, 2026-10-25:
+
+  At the user's request, the same slope/offset now apply to PWM mean telemetry
+  on ALL 14 channels, including channel 7 despite its unresolved transfer-test
+  exception. This is not an individual calibration or validation of channel 7.
+  Digital KILIS calibration, conservative protection conversion, channel limits
+  and acquisition-fault shutdown remain unchanged. The coefficients are
+  compiled into PWMCurrent.h, not written over per-channel EEPROM records.
+
+  DMA is unconditional in every firmware environment. There is no legacy
+  acquisition flag or separate opt-in environment. The default STM32 signed
+  ZIP was installed through Cortex's USB updater; installed build label:
+  Oct 25 2026 22:46:02. The linked image has no analogRead, ADC polling,
+  ADC deinitialisation or synchronous batch acquisition implementation.
+  Static RAM is 116244 bytes (88.7%); stack/heap headroom still needs qualification.
+  Fourteen reducer/conversion tests and three diagnostics tests passed.
+
+  Installed shared-calibration telemetry was checked on channel 2 at 16 ohms
+  and 25/50/75/100% duty. All four means matched the Tenma within the existing
+  tolerance and the expected conversion within 0.001 A.
+  The original pre-dma-load-test-snapshot.json configuration was then restored
+  and saved: channel 1 is digital again with configured PWM duty zero, all 14
+  original input assignments restored, and bench overrides cleared. Two
+  separate readbacks matched all original configuration sections, excluding
+  live telemetry. Original control sources can enable outputs automatically.
+  Tenma input was left OFF at 16 ohms because outputs remain externally tied.
+
+  Final post-restoration USB checks encountered intermittent COM18 disappearance
+  and I/O errors; a continuous stability check and final acquisition-counter
+  read could not be completed. No root cause has been established. Do not
+  interpret configuration readback as controller stability qualification.
+  The last successful readback had no channel faults or ADC_ERROR, but channel
+  7 still reported approximately 1.15 A with the Tenma input off. That sensing
+  anomaly and the earlier PWM protection trip remain unresolved.
+
+SD recovery/reset-loop correction, 2026-10-25:
+
+  ST-Link captured a HardFault (CFSR 0x00020000, forced HFSR 0x40000000)
+  with MSP 0x2001a8b8, inside static data rather than free stack. Repeated
+  stack frames alternated FlushPendingLogBuffer and CloseSDFile. A short/failed
+  write entered RecoverSDLogging, whose call to CloseSDFile tried to flush
+  the same pending batch again. Recursion exhausted stack before watchdog reset.
+  This was not fixed by increasing watchdog timeouts or feeding it in the fault.
+
+  RecoverSDLogging now explicitly discards the failed batch and closes the
+  handle without flushing before remounting. Partial writes are not replayed,
+  avoiding recursive recovery and duplicate data. A failed batch can lose log
+  data; the change does not make a failing SD card healthy.
+  Five native mock tests compiled the exact production recovery/flush/close
+  function bodies and passed: successful write accounting, zero-byte failure,
+  partial failure during close, failed remount and failed reopen.
+
+  The corrected application was programmed and verified through ST-Link at
+  0x08010000, leaving bootloader and EEPROM configuration intact. main.cpp's
+  incremental build label remains Oct 25 2026 22:46:02; that label alone does
+  not distinguish the corrected Storage.cpp image.
+  Cortex then received uninterrupted telemetry for 30 seconds (1988 updates).
+  Subsequent diagnostics recorded 20990960 ADC samples, zero acquisition
+  failures and no latched ADC fault. All original configuration sections
+  were checked again after flashing and still matched the pre-test backup.
+  The normal watchdog remains enabled.
+  A second 30-second Cortex monitor also passed (1965 updates). Final counters
+  reached 57856525 samples with zero acquisition failures; SD-card and
+  telemetry-offline status were reported, with no ADC fault.
+
+  SD-card error 0x0010 remains reported. Non-halting ST-Link inspection showed
+  SD HAL error 0x2024 (RX overrun, command-response timeout and illegal command).
+  Its initiating cause is not established. Card logging/recovery needs further
+  investigation; do not treat a stable controller as proof of successful logging.
+  Do not format or erase the card as part of this recovery verification.

@@ -30,6 +30,13 @@
 
 #define MAX_CURRENT_X10 170
 
+enum CustomCANConfigOffset : uint8_t
+{
+    CUSTOM_CAN_CONFIG_WRITE_OFFSET = 25,
+    CUSTOM_CAN_CONFIG_READ_OFFSET = 26,
+    CUSTOM_CAN_CONFIG_RESPONSE_OFFSET = 27
+};
+
 /// @brief Initialise CAN bus and related timers/interrupts
 void InitialiseCAN();
 

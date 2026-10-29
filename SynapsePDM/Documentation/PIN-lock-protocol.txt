@@ -1,0 +1,343 @@
+PIN locking and Cortex secure serial protocol, version 1
+=======================================================
+
+Scope and limitations
+---------------------
+This is a firmware feature; Cortex does not yet implement its client workflow.
+Existing Cortex versions work unchanged until a PIN is enabled. After enabling,
+only USB identification, pairing/session negotiation, and authentication are
+public. All configuration, telemetry, logs, calibration, provisioning, resets,
+RTC changes and firmware-update commands require an authenticated encrypted
+session. A successful unlock does NOT enable legacy plaintext commands.
+
+Normal autonomous PDM operation is unchanged. This lock protects Cortex/USB,
+not the CAN bus: existing CAN telemetry, runtime control AND configuration
+interfaces remain unchanged and must be on a trusted vehicle bus. It is not
+protection against debug-port access, EEPROM extraction/modification, physical
+reflashing, SD-card manipulation, a compromised PC, or malicious firmware.
+There is no claim that this feature is "unhackable" or independently audited.
+Physical/debug/bootloader security is a separate deployment requirement.
+
+Only a salted PBKDF2-HMAC-SHA256 PIN verifier (10,000 iterations, 16-byte salt)
+is stored, not the four ASCII PIN digits. A four-digit PIN has only 10,000
+possibilities. It is not an adequate offline secret if storage is extracted.
+Online retry throttling and the authenticated encrypted transport are essential.
+Hashing reuses the keyed SHA256 inner/outer prefixes without changing PBKDF2's
+output or iteration count. Each scheduler pass hashes for up to 5 ms, plus the
+last round, with a hard cap of 256 rounds even if the microsecond clock stalls.
+Normal PDM tasks run between slices; the complete unlock can take longer than
+the hashing CPU time. The budget excludes the existing EEPROM commit/readback
+and encrypted-reply work. Input/output deadlines still need bench qualification
+under the intended load.
+
+The MCU/library has no configured trustworthy hardware RNG. On a trusted initial
+USB connection, Cortex must supply a fresh 32-byte operating-system CSPRNG seed.
+Do NOT use timestamps, device IDs, a PIN, System.Random, Arduino random(), or
+the Crypto library's unseeded RNG. The seed is persisted as a DEVICE SECRET.
+Cortex must neither retain nor log it. This initial provisioning is plaintext;
+the initial pairing connection must not be intercepted or impersonated.
+Subsequent PINs/recovery keys are exchanged only inside encrypted frames.
+Recovery generation uses HMAC-SHA256 with domain-separated labels and a unique
+persistent generation, not ADC noise or a deterministic public device ID.
+
+Cortex must record the device public key at trusted pairing and verify it on
+EVERY connection BEFORE sending an encrypted PIN or recovery key. Reject a
+changed identity; never silently trust a new one or fall back to plaintext.
+For an already-provisioned device on a new PC, obtain/compare that public key
+through a trusted channel. Unauthenticated identity discovery is not proof of
+identity. Static-device X25519 provides no forward secrecy after seed compromise.
+
+Persistent state and retry policy
+--------------------------------
+Two 160-byte versioned SHA256-checksummed records occupy the 320 bytes immediately
+before the existing custom-CAN EEPROM bank. Compile-time checks prohibit overlap
+with existing configuration. The highest valid generation is current.
+Writes alternate banks and are read back before success is reported.
+A non-erased invalid bank alongside a valid bank, failed write/readback, or
+counter exhaustion fails closed. Do not fall back to an older record that might
+have the lock disabled. Because writes alternate banks, a valid bank always
+remains once any record has been committed; if neither bank is valid (legacy
+EEPROM contents or a torn first write before provisioning completed) both banks
+are erased at boot and the device starts unprovisioned. If that erase fails, it
+fails closed.
+After provisioning, a damaged bank can therefore require trusted physical
+servicing; it does not silently disable the lock. Recovery authentication cannot
+repair damaged storage. While faulted, Info reports the PIN as enabled and the
+storage-fault flag set, and only the public commands below are available. Note
+that this includes firmware upload: a faulted device needs debug-port reflashing.
+Checksums detect damage, not malicious physical modification of EEPROM.
+
+Factory reset and FORCE_EEPROM_WIPE_ON_BOOT preserve these records. Neither
+configuration imports nor reset/default loading can remove the PIN or retry
+history. Authenticated Disable is the supported way to remove the PIN.
+The persistent device identity remains after Disable.
+
+Before checking a PIN/recovery key, a failed attempt is reserved durably.
+Aborting verification, disconnecting, or resetting cannot erase this attempt.
+Delay after consecutive attempts:
+  1-3: 1 second; 4-6: 30 seconds; 7-9: 5 minutes; 10+: 1 hour.
+A failed PIN starts the full delay again when verification completes.
+Boot restarts the full delay for the persisted failure count. This intentionally
+does not rely on the user-adjustable RTC. Throttled requests cause no writes.
+Successful PIN verification/recovery clears the failure history.
+PIN and recovery share the throttle; an attacker may delay legitimate recovery.
+There is no permanent automatic erase/lockout that destroys device configuration.
+
+The session ID consists of a durable boot epoch (uint32) and a RAM handshake
+counter (uint32). The epoch is reserved once before the first session per boot.
+Subsequent handshakes do not write EEPROM. Each accepted handshake uses a new
+ID, even if a client repeats its public key. The handshake is limited to once
+per second. The epoch and generation must never wrap.
+
+Session lifecycle
+-----------------
+Authorization is in RAM only. Disconnect/DTR loss, sleep, reboot, explicit Lock,
+Disable, a new Hello, malformed/incomplete frames, invalid authentication
+tags/sequences, a stalled transmission, or five seconds without valid protected
+traffic ends the session. Ending a session also ends the legacy PC-comms state:
+log streaming/transfers are cancelled, calibration mode is exited and channel
+overrides are cleared, exactly as for the existing comms timeout.
+Cortex must send protected Status (or another protected request) more often
+than every five seconds while its session is open.
+Public identification requests do not keep a secure session alive.
+A pending PIN KDF keeps the session alive; Cortex must wait for its final reply.
+An authenticated command's completion restarts the five-second idle timer.
+Blocking operations such as OpenRemote provisioning can take up to three minutes;
+Cortex must wait for their reply before resuming protected polling or settings saves.
+Closing Cortex must close the serial port and preferably send protected Lock.
+After a crash without a detected disconnect, the five-second timeout applies.
+
+Legacy commands are run one per decrypted envelope; their payload reads are
+bounded to that envelope. Remaining input bytes are discarded after dispatch,
+never interpreted as additional commands. Include a complete command payload,
+including any existing inner headers/checksums, in a single envelope.
+All replies and streamed log data are protected while the session is active,
+except for explicitly requested plaintext bulk log packets described below.
+A logical legacy response may span several encrypted frames (one per write);
+decrypt and concatenate them before using the existing Cortex response parser.
+Single-byte replies such as 'c'/'f' arrive as their own small frames.
+An encrypted request whose plaintext does not start with 'a' is a legacy
+command. If it is empty, the session is not authorized, or a PIN KDF is pending,
+it is not run; the device replies with an encrypted management response for
+operation 9 (Status) with result Locked or Busy.
+
+A session can also be opened while no PIN is enabled. Its legacy commands run
+without a PIN, but all of its replies are encrypted, and plaintext legacy
+commands other than 'b', 'k', 'v' and 'd' are rejected with 'f' until the
+session ends. Without a session and with no PIN enabled, plaintext legacy
+commands behave exactly as in earlier firmware. Firmware upload ('U', 'J', 'E',
+'I') works the same way inside envelopes; send each 'J' chunk (up to 1024 data
+bytes) with its length prefix in a single envelope.
+
+No legacy command uses 'a' or '!', so these bytes unambiguously begin control
+frames and envelopes.
+
+Wire encoding
+-------------
+All new integer fields are little-endian. ASCII labels below exclude a trailing
+NUL. No whitespace, line ending, or separator is added to wire messages.
+
+Plain control request:
+  'a' | operation:u8 | payloadLength:u16 | payload
+Plain control response:
+  'a' | operation:u8 | result:u8 | payloadLength:u16 | payload
+
+Result values:
+  0 OK, 1 Invalid, 2 Locked, 3 Throttled, 4 StorageError,
+  5 NotProvisioned, 6 Busy.
+Internal Pending (7) is not sent: the completed operation is replied to later.
+Plain control payloads are limited to 32 bytes.
+Frame-level errors close any session and are answered in plaintext with
+  'a' | 255 | 1 (Invalid) | 0x0000
+These are: a control payload over 32 bytes, an envelope plaintext length over
+6656, a frame not completed within one second of its first byte, an envelope
+with no session, a wrong sequence, or a failed authentication tag.
+Unknown plain operations or wrong payload lengths return Invalid for that
+operation without closing the session.
+Disallowed legacy plaintext command bytes receive legacy 'f' replies.
+Legacy public identification commands 'b', 'k', 'v', and 'd' retain their
+existing responses. They do not authorize anything.
+
+Plain operations:
+  0 Info: empty request, 42-byte response:
+      protocolVersion:u8 = 1
+      flags:u8: bit0 PIN enabled, bit1 provisioned, bit2 storage fault,
+                bit3 authorized plaintext bulk log downloads supported
+      pbkdf2Iterations:u32 = 10000
+      retryAfterMs:u32
+      devicePublicKey:32 bytes (zero before provisioning)
+    Storage faults return StorageError plus these fields.
+  1 Provision: 32-byte CSPRNG seed, response devicePublicKey:32 bytes
+    (always present; zero if the device is still unprovisioned).
+    Accepted ONCE, only for an unprovisioned device. It does not enable a PIN.
+    Results: OK; Locked if already provisioned; Invalid for an all-zero or
+    all-identical-byte seed; StorageError. Firmware cannot prove that a client
+    used a proper CSPRNG.
+  2 Hello: clientEphemeralX25519PublicKey:32 bytes.
+    Success response: devicePublicKey:32 | sessionID:8.
+    A throttled handshake returns Throttled with retryAfterMs:u32.
+    Other failures have an empty payload: NotProvisioned, Invalid (bad client
+    key / all-zero shared secret), StorageError.
+    This starts an encrypted channel, NOT PIN authorization.
+    Any non-throttled Hello ends the previous session/authorization first, even
+    if the new handshake then fails.
+    While a PIN KDF is pending, ALL plaintext control requests (including Info)
+    return Busy with an empty payload.
+
+Device identity and session key derivation
+-----------------------------------------
+The persisted seed is 32 bytes. Device private key:
+  HMAC-SHA256(seed, ASCII("SynapsePDM identity v1") || LE64(0))
+Clamp as X25519: key[0] &= 248; key[31] = (key[31] & 127) | 64.
+devicePublicKey = X25519(devicePrivateKey, basepoint).
+The seed/private key is NEVER returned over the protocol.
+
+Cortex generates a new cryptographically random X25519 private/public key pair
+for every Hello, verifies the returned pinned devicePublicKey, and calculates:
+  shared = X25519(clientPrivateKey, devicePublicKey)
+Reject invalid public keys/all-zero shared secrets.
+
+Use RFC 5869 HKDF-SHA256 with IKM=shared, salt=sessionID:
+  clientToDeviceKey = HKDF(...,
+    info=ASCII("SynapsePDM client v1") || clientPublicKey || devicePublicKey,
+    length=32)
+  deviceToClientKey = HKDF(...,
+    info=ASCII("SynapsePDM device v1") || clientPublicKey || devicePublicKey,
+    length=32)
+
+Encrypted envelope in either direction:
+  '!' | plaintextLength:u16 | sequence:u32 | ciphertext | tag:16 bytes
+Use IETF ChaCha20-Poly1305:
+  key = direction-specific key above
+  nonce = sessionID:8 || LE32(sequence)       (12 bytes total)
+  associatedData = the complete 7-byte envelope header
+  ciphertext length = plaintextLength, tag length = 16
+Independent transmit/receive sequences start at zero and increase exactly by
+one. Reject replays, skipped sequences and altered tags; close the session.
+Sequence UINT32_MAX is never used: establish a new session before exhaustion.
+Never reuse a sequence under the same key. Require strict sequence checks on
+Cortex's receive side too. Maximum plaintext is 6656 bytes; frame assembly has
+a one-second deadline measured from the first header byte.
+Protected transmission has a 250 ms progress/frame budget; backpressure closes
+the session instead of indefinitely spinning and starving normal PDM tasks.
+The USB driver's individual write call is synchronous, so if it blocks internally
+for longer than this budget, wall-clock latency can include that final driver call.
+Do not use a PIN-derived key to encrypt/prove a challenge: with only four digits,
+an observed challenge would allow cheap offline enumeration.
+
+Authorized plaintext bulk log downloads
+--------------------------------------
+Info flag bit3 advertises this optional extension. Older clients/firmware retain
+their existing encrypted log behavior; never infer support from protocol version.
+After PIN unlock, send the complete legacy command payload ['y', 1] INSIDE an
+authenticated encrypted envelope. A plain 'y' remains rejected while PIN locking
+is enabled, even after unlock. Encrypted ['y'] retains encrypted bulk responses.
+Other option values or extra payload bytes return encrypted 'f'.
+
+Only the selected transfer's bulk log packets bypass encryption. Their existing
+wire format is unchanged:
+  LE16(0x4C42) | progress:u8 | done:u8 | textLength:u16 | text |
+  additiveChecksum:u32
+The checksum covers the six-byte header and text, not the checksum itself.
+Log bytes are neither confidential nor cryptographically authenticated in this
+mode. Do not treat their contents as trusted configuration or commands.
+These raw packets consume NO secure transmit sequence numbers. All requests,
+log listing/open/cancel/delete replies, management responses and parameter writes
+remain encrypted. No global plaintext authorization or parameter-write bypass
+is introduced. Switching bulk modes during a running transfer is rejected.
+
+Cortex must demultiplex raw bulk packets and encrypted Status responses at packet
+boundaries, verify each packet's length/checksum and preserve both secure sequence
+counters. Send encrypted Status keepalives at least once per second while reading;
+outgoing raw log packets do NOT extend the five-second authorization timeout.
+Drain any pending Status reply even if the final raw packet arrives first.
+Disconnect, explicit Lock, timeout and transmission failure still end the session
+and cancel streaming. After a successful transfer the encrypted session continues.
+On user cancellation, finish reading the current packet, send encrypted ['x'],
+then drain and validate queued raw packets and any pending encrypted Status reply
+through the encrypted single-byte 'c' cancellation acknowledgement. Do not abort
+an in-progress packet read with the user's cancellation token. Bound the complete
+cancel/drain handshake to five seconds. Only return ownership to the normal
+encrypted parser after consuming the acknowledgement, keeping both sequence
+counters and authorization intact. The user can then reopen the same log or
+select another file without reconnecting or entering the PIN again.
+If the stream is malformed, the connection is lost or the cancel/drain handshake
+fails, close the port rather than handing partial raw bytes to the secure parser.
+Those error cases require reconnecting and unlocking before retrying.
+
+Protected management
+--------------------
+Request plaintext:
+  'a' | operation:u8 | operationPayload
+Response plaintext:
+  'a' | operation:u8 | result:u8 | retryAfterMs:u32 | flags:u8 |
+      [newRecoveryKey:32 ASCII bytes]
+Response flags: bit0 PIN enabled, bit1 authorized, bit2 storage fault.
+Exactly 8 bytes normally; exactly 40 when a NEW recovery key is issued.
+There is no command to read an existing recovery key.
+Common results: StorageError if storage is faulted; Busy while a PIN KDF is
+pending; Invalid for a wrong payload length/format; Locked if the operation
+needs authorization the session does not have.
+Unlock, SetPIN and successful-key Recover are asynchronous: the device sends no
+immediate reply, runs the KDF in the background (~10,000 HMAC iterations), then
+sends the single final reply. Retry-limited operations return Throttled
+immediately while retryAfterMs is non-zero, without consuming an attempt.
+
+Operations:
+  3 Unlock: exactly four ASCII digits ('0000' is valid).
+    Valid PIN authorizes this encrypted session; failure returns Locked with
+    retry timing. Wait for the asynchronous final reply.
+    Returns Invalid if no PIN is enabled.
+  4 SetPIN: exactly four ASCII digits.
+    Allowed before a PIN is enabled, or in an already-authorized session.
+    Sets/replaces the PIN and issues a new recovery key, invalidating the old
+    one. Authorizes this session after successful persistent storage.
+  5 Recover: recoveryKey:32 ASCII bytes | newPIN:4 ASCII digits.
+    No current PIN is required, but retry throttling applies. A valid recovery
+    key atomically replaces the PIN AND recovery key and authorizes the session.
+    The old recovery key cannot be used again. A wrong recovery key returns
+    Locked immediately (the attempt is counted). Invalid if no PIN is enabled.
+  6 RotateRecovery: empty payload, requires authorization and an enabled PIN
+    (Invalid if no PIN is enabled).
+    Returns a new recovery key and invalidates the old one.
+  7 Disable: empty payload, requires authorization.
+    Removes PIN/recovery verifiers and retry history; retains device identity.
+    Reply is encrypted, then the session closes. Legacy operation resumes.
+  8 Lock: empty payload. Reply is encrypted, then the session closes.
+  9 Status: empty payload. Returns flags/retry timing; no configuration or key.
+    Available before PIN authentication; suitable for protected keepalives.
+
+Recovery keys use 32 uppercase RFC 4648 base32 alphabet characters (A-Z, 2-7),
+without padding: 160 bits of pseudorandom key material. The user must save the
+key when generated; firmware retains only its salted SHA256 verifier.
+Do not log PINs, pairing seeds, decrypted recovery keys, or session keys.
+Cortex must show/persist a newly issued key only in its authenticated workflow,
+not in diagnostics, background notifications, or unauthenticated account APIs.
+No Cortex account backend is implemented by this firmware.
+
+Recovery derivation (for interoperability tests only; clients do not need seed):
+  material = HMAC-SHA256(seed,
+    ASCII("SynapsePDM recovery key v1") || LE64(nextRecordGeneration))
+  recovery[i] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"[material[i] & 31]
+PIN salt uses the first 16 bytes of the same construction with label
+"SynapsePDM PIN salt v1".
+Recovery verifier is SHA256(ASCII("SynapsePDM recovery v1") || salt || recovery).
+
+Public, non-secret test vector (never provision a real device with this seed):
+  seed = bytes 01,02,...,20 hexadecimal
+  after Provision generation=1, SetPIN("0123") uses generation=2
+  salt = 1b1389a36afa5cd7170497c89b3b7b4b
+  PBKDF2 = c3f398b7edd4f86f863a7af3731aac6de60a4ecbe31836afc755a0527a8ecef2
+  recovery = OXGD5MU5UDB762B6AOO4EAEX6WBBT645
+This vector sets the PIN directly in the core test. A real Hello reserves an
+additional epoch generation, so the actual setup salt/recovery will differ.
+
+Required bench checks before deployment
+--------------------------------------
+Check USB DTR/disconnect and Cortex crash/reconnect behavior; locked rejection
+of every legacy command; real EEPROM save/readback and induced power loss;
+retry delay after repeated power cycles; factory reset preserving the PIN;
+recovery/rotation across reboot; maximum-size OpenRemote and log payloads;
+watchdog margins, stack headroom and input/output deadlines under CAN/USB load.
+Native tests and a successful firmware build do not validate those hardware
+properties or constitute a cryptographic protocol audit.

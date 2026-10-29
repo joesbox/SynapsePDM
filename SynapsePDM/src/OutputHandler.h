@@ -28,12 +28,17 @@
 #include <Globals.h>
 #include <System.h>
 
-// How many current sense samples to collect to calculate a mean
 #define ANALOG_READ_SAMPLES 100
-
-#define PWM_M 0.0168F
-#define PWM_C 0.0062F
-
+// The current-sense output loses a roughly fixed slice of every PWM pulse, so the
+// unsynchronised ADC average reads proportionally low as duty falls. Measured on all
+// 14 channels at 1/8/16 A: I = KILIS slope * raw * D / (D - PWM_SENSE_LAG_DUTY).
+#define PWM_SENSE_LAG_DUTY 2.8F
+#define PWM_SENSE_MIN_EFFECTIVE_DUTY 1.0F
+// PWM over-current protection compares the estimated on-phase current (average / duty)
+// against the threshold, so low-duty faults are not masked by averaging. Below this
+// sampled duty the estimate is too noise-sensitive and the average is used instead.
+// During the inrush window and soft-start ramps the average is always used.
+#define PWM_ONPHASE_MIN_DUTY 5
 #define V_REF 3.294F  // Reference voltage for ADC
 #define R_IS 1000.0F  // Sense resistor value in ohms (1kΩ)
 #define ADCres 4095 // 12-bit ADC resolution

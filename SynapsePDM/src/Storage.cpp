@@ -24,6 +24,10 @@
 #include "Storage.h"
 #include "FirmwareUpdate.h"
 #include "InputHandler.h"
+#include "MathHandler.h"
+#include "CustomCAN.h"
+#include "EEPROMBlocks.h"
+#include "PinLock.h"
 #include <stdarg.h>
 
 extern M95640R EEPROMext;
@@ -90,24 +94,52 @@ static uint16_t GetCellularConfigEEPROMOffset()
     return GetAnalogueConfigEEPROMOffset() + sizeof(AnalogueConfigData.dataBytes) + sizeof(uint32_t);
 }
 
-static void WriteEEPROMBlock(uint16_t startAddress, const uint8_t *src, uint16_t length)
+static const uint16_t EEPROM_TOTAL_BYTES = 8192;
+static const uint32_t MATH_CONFIG_MAGIC = 0x4D415448UL;
+static const uint8_t MATH_CONFIG_VERSION = 1;
+
+struct __attribute__((packed)) MathConfigEEPROMRecord
 {
-    uint16_t addr = startAddress;
-    uint16_t bytesRemaining = length;
+    uint32_t Magic;
+    uint8_t Version;
+    MathChannelConfig Channels[NUM_CHANNELS];
+    uint32_t Checksum;
+};
 
-    while (bytesRemaining > 0)
-    {
-        uint8_t pageOffset = addr % EEPROM_PAGE_SIZE;
-        uint8_t spaceInPage = EEPROM_PAGE_SIZE - pageOffset;
-        uint8_t writeLen = (bytesRemaining < spaceInPage) ? bytesRemaining : spaceInPage;
+static const uint16_t MATH_CONFIG_EEPROM_OFFSET = EEPROM_TOTAL_BYTES - sizeof(MathConfigEEPROMRecord);
 
-        EEPROMext.EepromWrite(addr, writeLen, (uint8_t *)src);
-        EEPROMext.EepromWaitEndWriteOperation();
+static_assert(sizeof(MathConfigEEPROMRecord) <= EEPROM_TOTAL_BYTES, "MATH graph config must fit in EEPROM");
 
-        addr += writeLen;
-        src += writeLen;
-        bytesRemaining -= writeLen;
-    }
+struct __attribute__((packed)) CustomCANEEPROMHeader
+{
+    uint32_t Magic;
+    uint8_t Version;
+};
+
+struct __attribute__((packed)) CustomCANEEPROMRecord
+{
+    CustomCANEEPROMHeader Header;
+    CustomCANConfiguration Config;
+    uint32_t Checksum;
+};
+
+static const uint32_t CUSTOM_CAN_MAGIC = 0x43414E31UL;
+static const uint8_t CUSTOM_CAN_VERSION = 2;
+static const uint16_t CUSTOM_CAN_EEPROM_OFFSET = MATH_CONFIG_EEPROM_OFFSET - sizeof(CustomCANEEPROMRecord);
+static const uint16_t LEGACY_CONFIG_END = sizeof(ChannelConfigUnion) + sizeof(SystemConfigUnion) +
+    sizeof(StorageConfigUnion) + sizeof(AnalogueConfigUnion) + sizeof(CellularConfigUnion) + 5 * sizeof(uint32_t);
+static const uint16_t PIN_LOCK_EEPROM_OFFSET = CUSTOM_CAN_EEPROM_OFFSET - 2 * PinLock::RecordSize;
+static_assert(LEGACY_CONFIG_END <= PIN_LOCK_EEPROM_OFFSET, "PIN records overlap existing EEPROM configuration");
+static_assert(sizeof(CustomCANEEPROMHeader) == 5, "Custom CAN header EEPROM layout");
+static_assert(sizeof(CustomCANEEPROMRecord) == 2209, "Custom CAN record EEPROM layout");
+static_assert(sizeof(CustomCANEEPROMRecord) <= MATH_CONFIG_EEPROM_OFFSET, "Custom CAN record exceeds available EEPROM");
+static_assert(LEGACY_CONFIG_END <= CUSTOM_CAN_EEPROM_OFFSET, "Custom CAN overlaps existing EEPROM configuration");
+bool CustomCANConfigNeedsInitialSave = false;
+
+static void WriteEEPROMBlock(uint16_t startAddress, const uint8_t *src, uint16_t length,
+                             bool skipUnchanged = false)
+{
+    WriteEEPROMPages<EEPROM_PAGE_SIZE>(EEPROMext, startAddress, src, length, skipUnchanged);
 }
 
 static void ReadEEPROMBlock(uint16_t startAddress, uint8_t *dst, uint16_t length)
@@ -127,6 +159,29 @@ static void ReadEEPROMBlock(uint16_t startAddress, uint8_t *dst, uint16_t length
     }
 }
 
+bool ReadPINLockRecord(uint8_t slot, uint8_t *data, size_t length)
+{
+    if (slot > 1 || data == nullptr || length != PinLock::RecordSize) return false;
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+    ReadEEPROMBlock(PIN_LOCK_EEPROM_OFFSET + slot * PinLock::RecordSize, data, length);
+    EEPROMext.end();
+    SPI_2.end();
+    return true;
+}
+
+bool WritePINLockRecord(uint8_t slot, const uint8_t *data, size_t length)
+{
+    if (slot > 1 || data == nullptr || length != PinLock::RecordSize) return false;
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+    WriteEEPROMBlock(PIN_LOCK_EEPROM_OFFSET + slot * PinLock::RecordSize, data, length, true);
+    EEPROMext.end();
+    SPI_2.end();
+    // PinLock verifies the complete record through ReadPINLockRecord before using it.
+    return true;
+}
+
 static void EncodeCRC(uint32_t checksum, uint8_t *crcBuf)
 {
     crcBuf[0] = (checksum >> 24) & 0xFF;
@@ -141,6 +196,95 @@ static uint32_t DecodeCRC(const uint8_t *crcBuf)
            (uint32_t(crcBuf[1]) << 16) |
            (uint32_t(crcBuf[2]) << 8) |
            (uint32_t(crcBuf[3]));
+}
+
+bool SaveCustomCANConfig()
+{
+    if (!ValidateCustomCANConfig())
+    {
+        CustomCANCRCValid = false;
+        return false;
+    }
+    CustomCANEEPROMHeader header = {CUSTOM_CAN_MAGIC, CUSTOM_CAN_VERSION};
+    CRC32 crc;
+    crc.update(reinterpret_cast<const uint8_t *>(&header), sizeof(header));
+    crc.update(reinterpret_cast<const uint8_t *>(&CustomCANConfig), sizeof(CustomCANConfig));
+    uint8_t checksum[4];
+    EncodeCRC(crc.finalize(), checksum);
+
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+    WriteEEPROMBlock(CUSTOM_CAN_EEPROM_OFFSET, reinterpret_cast<const uint8_t *>(&header), sizeof(header), true);
+    WriteEEPROMBlock(CUSTOM_CAN_EEPROM_OFFSET + sizeof(header),
+                     reinterpret_cast<const uint8_t *>(&CustomCANConfig), sizeof(CustomCANConfig), true);
+    WriteEEPROMBlock(CUSTOM_CAN_EEPROM_OFFSET + sizeof(header) + sizeof(CustomCANConfig), checksum, sizeof(checksum), true);
+
+    // Verify against RAM in page-sized chunks without duplicating the 2 KB bank.
+    bool verified = true;
+    uint8_t buffer[EEPROM_PAGE_SIZE];
+    const uint8_t *parts[] = {reinterpret_cast<const uint8_t *>(&header),
+                             reinterpret_cast<const uint8_t *>(&CustomCANConfig), checksum};
+    const uint16_t lengths[] = {sizeof(header), sizeof(CustomCANConfig), sizeof(checksum)};
+    uint16_t address = CUSTOM_CAN_EEPROM_OFFSET;
+    for (uint8_t part = 0; part < 3; part++)
+    {
+        for (uint16_t offset = 0; offset < lengths[part];)
+        {
+            uint16_t remaining = lengths[part] - offset;
+            uint8_t count = remaining > sizeof(buffer) ? sizeof(buffer) : remaining;
+            ReadEEPROMBlock(address, buffer, count);
+            verified = (memcmp(buffer, parts[part] + offset, count) == 0) && verified;
+            offset += count;
+            address += count;
+        }
+    }
+    EEPROMext.end();
+    SPI_2.end();
+    CustomCANCRCValid = verified;
+    if (verified)
+    {
+        CustomCANConfigDirty = false;
+        CustomCANConfigNeedsInitialSave = false;
+    }
+    return verified;
+}
+
+bool LoadCustomCANConfig()
+{
+    InitialiseCustomCANData();
+    CustomCANCRCValid = false;
+    CustomCANConfigNeedsInitialSave = false;
+    CustomCANEEPROMHeader header = {};
+    uint8_t checksum[4] = {};
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+    ReadEEPROMBlock(CUSTOM_CAN_EEPROM_OFFSET, reinterpret_cast<uint8_t *>(&header), sizeof(header));
+    ReadEEPROMBlock(CUSTOM_CAN_EEPROM_OFFSET + sizeof(header),
+                    reinterpret_cast<uint8_t *>(&CustomCANConfig), sizeof(CustomCANConfig));
+    ReadEEPROMBlock(CUSTOM_CAN_EEPROM_OFFSET + sizeof(header) + sizeof(CustomCANConfig), checksum, sizeof(checksum));
+    EEPROMext.end();
+    SPI_2.end();
+
+    // Only an entirely erased record is treated as a first-install default.
+    bool erased = true;
+    const uint8_t *parts[] = {reinterpret_cast<const uint8_t *>(&header),
+                             reinterpret_cast<const uint8_t *>(&CustomCANConfig), checksum};
+    const uint16_t lengths[] = {sizeof(header), sizeof(CustomCANConfig), sizeof(checksum)};
+    for (uint8_t part = 0; part < 3; part++)
+        for (uint16_t i = 0; i < lengths[part]; i++)
+            erased = (parts[part][i] == 0xFF) && erased;
+
+    CRC32 crc;
+    crc.update(reinterpret_cast<const uint8_t *>(&header), sizeof(header));
+    crc.update(reinterpret_cast<const uint8_t *>(&CustomCANConfig), sizeof(CustomCANConfig));
+    CustomCANCRCValid = header.Magic == CUSTOM_CAN_MAGIC && header.Version == CUSTOM_CAN_VERSION &&
+                        DecodeCRC(checksum) == crc.finalize() && ValidateCustomCANConfig();
+    if (!CustomCANCRCValid)
+    {
+        InitialiseCustomCANData();
+        CustomCANConfigNeedsInitialSave = erased;
+    }
+    return CustomCANCRCValid;
 }
 
 static void RestoreLoggingAfterFailedTransferStart()
@@ -335,7 +479,14 @@ static bool OpenLogFile(const char *targetFileName, bool trackAsNewLog)
 
 static bool RecoverSDLogging()
 {
-    CloseSDFile();
+    // The failed batch cannot be flushed again: CloseSDFile would recurse here.
+    pendingLogBytes = 0;
+    if (SDFileOpen)
+    {
+        dataFile.close();
+        SDFileOpen = false;
+    }
+    SD.end();
     SDCardOK = false;
 
     if (!InitialiseSDCardInterface())
@@ -450,6 +601,8 @@ static const char *GetChannelTypeLabel(ChannelType channelType)
         return "CANP";
     case DIG_INTERMITTENT:
         return "INT";
+    case MATH:
+        return "MATH";
     default:
         return "UNK";
     }
@@ -547,6 +700,71 @@ void SaveChannelConfig()
     EEPROMindex = 0;
     EEPROMext.end();
     SPI_2.end();
+
+    SaveMathChannelConfig();
+}
+
+void SaveMathChannelConfig()
+{
+    uint32_t legacyConfigEnd = GetCellularConfigEEPROMOffset() + sizeof(CellularConfigData.dataBytes) + sizeof(uint32_t);
+    if (legacyConfigEnd > MATH_CONFIG_EEPROM_OFFSET)
+    {
+        return;
+    }
+
+    MathConfigEEPROMRecord record = {};
+    record.Magic = MATH_CONFIG_MAGIC;
+    record.Version = MATH_CONFIG_VERSION;
+    memcpy(record.Channels, MathChannels, sizeof(record.Channels));
+    record.Checksum = CRC32::calculate((const uint8_t *)&record, sizeof(record) - sizeof(record.Checksum));
+
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+    WriteEEPROMBlock(MATH_CONFIG_EEPROM_OFFSET, (const uint8_t *)&record, sizeof(record));
+    EEPROMext.end();
+    SPI_2.end();
+}
+
+bool LoadMathChannelConfig()
+{
+    InitialiseMathChannelData();
+    uint32_t legacyConfigEnd = GetCellularConfigEEPROMOffset() + sizeof(CellularConfigData.dataBytes) + sizeof(uint32_t);
+    if (legacyConfigEnd > MATH_CONFIG_EEPROM_OFFSET)
+    {
+        for (uint8_t i = 0; i < NUM_CHANNELS; i++)
+        {
+            if (Channels[i].ChanType == MATH)
+            {
+                Channels[i].ChanType = DIG;
+                ChannelConfigNeedsRewriteAfterLoad = true;
+            }
+        }
+        return false;
+    }
+
+    MathConfigEEPROMRecord record = {};
+    SPI_2.begin();
+    EEPROMext.begin(EEPROM_SPI_SPEED);
+    ReadEEPROMBlock(MATH_CONFIG_EEPROM_OFFSET, (uint8_t *)&record, sizeof(record));
+    EEPROMext.end();
+    SPI_2.end();
+
+    uint32_t checksum = CRC32::calculate((const uint8_t *)&record, sizeof(record) - sizeof(record.Checksum));
+    if (record.Magic == MATH_CONFIG_MAGIC && record.Version == MATH_CONFIG_VERSION && record.Checksum == checksum)
+    {
+        memcpy(MathChannels, record.Channels, sizeof(record.Channels));
+        return true;
+    }
+
+    for (uint8_t i = 0; i < NUM_CHANNELS; i++)
+    {
+        if (Channels[i].ChanType == MATH)
+        {
+            Channels[i].ChanType = DIG;
+            ChannelConfigNeedsRewriteAfterLoad = true;
+        }
+    }
+    return false;
 }
 
 bool LoadChannelConfig()
@@ -618,6 +836,8 @@ bool LoadChannelConfig()
     EEPROMext.end();
     SPI_2.end();
 
+    LoadMathChannelConfig();
+
     return validCRC;
 }
 
@@ -673,7 +893,7 @@ static bool SanitizeLoadedSystemConfig()
         changed = true;
     }
 
-    if (SystemParams.ChannelConfigDataCANID == 0)
+    if (SystemParams.ChannelConfigDataCANID == 0 || SystemParams.ChannelConfigDataCANID > MAX_CHANNEL_CONFIG_CAN_ID)
     {
         SystemParams.ChannelConfigDataCANID = CONF_CAN_ID;
         changed = true;
@@ -1408,14 +1628,9 @@ void CleanEEPROM()
     SPI_2.begin();
     EEPROMext.begin(EEPROM_SPI_SPEED);
 
-    uint8_t dummy[32];
-    memset(dummy, 0xFF, sizeof(dummy));
-
-    for (uint16_t addr = 0; addr < 8192; addr += 32)
-    {
-        EEPROMext.EepromWrite(addr, 32, dummy);
-        EEPROMext.EepromWaitEndWriteOperation();
-    }
+    // Factory/default resets must not remove the security boundary or its retry history.
+    EraseEEPROMOutsideRange<EEPROM_PAGE_SIZE>(EEPROMext, EEPROM_TOTAL_BYTES,
+                                             PIN_LOCK_EEPROM_OFFSET, 2 * PinLock::RecordSize);
 
     EEPROMext.end();
     SPI_2.end();
@@ -1492,17 +1707,20 @@ void LogData()
 
     if (!(SystemRuntimeParams.ErrorFlags & UNDERVOLTAGE) && SDCardOK)
     {
+        uint32_t logMilliseconds = 0;
+        const time_t logEpoch = rtc.getEpoch(&logMilliseconds);
+        const struct tm logTime = *gmtime(&logEpoch);
         if (!AppendFormattedText(logLine,
                                  sizeof(logLine),
                                  &logLineIndex,
                                  "%04d-%02d-%02d,%02d:%02d:%02d.%03lu,",
-                                 (2000 + rtc.getYear()),
-                                 rtc.getMonth(),
-                                 rtc.getDay(),
-                                 rtc.getHours(),
-                                 rtc.getMinutes(),
-                                 rtc.getSeconds(),
-                                 static_cast<unsigned long>(rtc.getSubSeconds())))
+                                 logTime.tm_year + 1900,
+                                 logTime.tm_mon + 1,
+                                 logTime.tm_mday,
+                                 logTime.tm_hour,
+                                 logTime.tm_min,
+                                 logTime.tm_sec,
+                                 static_cast<unsigned long>(logMilliseconds)))
         {
             return;
         }
